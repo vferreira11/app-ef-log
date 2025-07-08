@@ -66,11 +66,14 @@ if st.button("Gerar visualização"):
                     showlegend=False
                 ))
 
-    # Desenhar produtos (largura=X, profundidade=Y, altura=Z)
+        # Centralizar os blocos na LARGURA (eixo X)
+    largura_total_usada = n_largura * largura_produto
+    offset_x = (largura_estoque - largura_total_usada) / 2
+
     for i in range(n_largura):
         for j in range(n_profundidade):
             for k in range(n_altura):
-                x0 = i * largura_produto
+                x0 = offset_x + i * largura_produto  # aplica o deslocamento
                 y0 = j * profundidade_produto
                 z0 = k * altura_produto
                 adicionar_cubo(x0, y0, z0, largura_produto, profundidade_produto, altura_produto, cor='royalblue', opacidade=1, borda=True)
