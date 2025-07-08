@@ -14,15 +14,18 @@ with col_estoque:
             largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
             altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
             profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
-            quantidade_produto = st.number_input("Quantidade de produtos", min_value=1, value=1)
+
+            quantidade_produto = st.number_input("Quantidade de produtos", min_value=1, value=64)
+
             layout_opcao = st.selectbox(
-                "Distribuição das células",
+                "Layout de empacotamento",
                 ["📏 Lado a lado", "📐 Vertical", "🔢 Definir manualmente"]
             )
 
             if layout_opcao == "🔢 Definir manualmente":
-                qtd_horizontal = st.number_input("Qtd. horizontal", min_value=1, value=2
-                qtd_vertical = st.number_input("Qtd. vertical", min_value=1, value=2)
+                qtd_horizontal = st.number_input("Qtd. horizontal", min_value=1, value=8)
+                qtd_vertical = st.number_input("Qtd. vertical", min_value=1, value=8)
+
 
 
 with col_produto:
