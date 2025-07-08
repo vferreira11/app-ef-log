@@ -6,17 +6,21 @@ st.title("📦 Simulador de Armazenamento 3D")
 
 col1, col2 = st.columns(2)
 
-with st.expander("🧮 Parâmetros da Simulação", expanded=True):
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        largura_estoque = st.number_input("Largura do estoque (mm)", min_value=1, value=1760)
-        largura_produto = st.number_input("Largura do produto (mm)", min_value=1, value=200)
-    with col2:
-        altura_estoque = st.number_input("Altura do estoque (mm)", min_value=1, value=850)
-        altura_produto = st.number_input("Altura do produto (mm)", min_value=1, value=200)
-    with col3:
-        profundidade_estoque = st.number_input("Profundidade do estoque (mm)", min_value=1, value=400)
-        profundidade_produto = st.number_input("Profundidade do produto (mm)", min_value=1, value=200)
+col_estoque, col_produto = st.columns(2)
+
+with col_estoque:
+    with st.container():
+        with st.expander("📉 Dimensões do Estoque (em mm)", expanded=True):
+            largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
+            altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
+            profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
+
+with col_produto:
+    with st.container():
+        with st.expander("🛋️ Dimensões de 1 produto (em mm)", expanded=True):
+            largura_produto = st.number_input("Largura do produto", min_value=1, value=200)
+            altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
+            profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
 
 if st.button("GERAR SIMULAÇÃO"):
     
