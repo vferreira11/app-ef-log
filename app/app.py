@@ -3,7 +3,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import math
 
-def plot_cubo_3d_com_itens(container_dims, item_dims, n_items):
+def plot_cubo_3d_com_itens(container_dims, item_dims):
     largura_c, altura_c, profundidade_c = container_dims
     largura_i, altura_i, profundidade_i = item_dims
 
@@ -24,14 +24,12 @@ def plot_cubo_3d_com_itens(container_dims, item_dims, n_items):
     stacks = math.floor(altura_c / altura_i)
     total_fit = cols * rows * stacks
 
-    n_items = min(n_items, total_fit)
+    st.markdown(f"### 🧮 Máximo de produtos que cabem: `{total_fit}`")
 
     count = 0
     for i in range(cols):
         for j in range(rows):
             for k in range(stacks):
-                if count >= n_items:
-                    break
                 x0 = i * largura_i
                 y0 = j * profundidade_i
                 z0 = k * altura_i
@@ -75,13 +73,9 @@ largura_i = st.number_input("Largura do produto", min_value=1, value=200)
 altura_i = st.number_input("Altura do produto", min_value=1, value=200)
 profundidade_i = st.number_input("Profundidade do produto", min_value=1, value=200)
 
-st.subheader("🔢 Quantidade de produtos a empacotar")
-n = st.number_input("Qtd. total", min_value=1, value=30)
-
 if st.button("Gerar visualização"):
     fig = plot_cubo_3d_com_itens(
         container_dims=(largura_c, altura_c, profundidade_c),
-        item_dims=(largura_i, altura_i, profundidade_i),
-        n_items=n
+        item_dims=(largura_i, altura_i, profundidade_i)
     )
     st.plotly_chart(fig, use_container_width=True)
