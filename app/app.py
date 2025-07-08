@@ -14,9 +14,7 @@ with col_estoque:
             largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
             altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
             profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
-
             quantidade_produto = st.number_input("Quantidade de produtos", min_value=1, value=64)
-
             layout_opcao = st.selectbox(
                 "Layout de empacotamento",
                 ["📏 Lado a lado", "📐 Vertical", "🔢 Definir manualmente"]
@@ -25,8 +23,6 @@ with col_estoque:
             if layout_opcao == "🔢 Definir manualmente":
                 qtd_horizontal = st.number_input("Qtd. horizontal", min_value=1, value=8)
                 qtd_vertical = st.number_input("Qtd. vertical", min_value=1, value=8)
-
-
 
 with col_produto:
     with st.container():
@@ -122,3 +118,41 @@ if st.button("GERAR SIMULAÇÃO"):
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+    # === Gráfico 2D (vista frontal) ===
+    import plotly.express as px
+
+    fig2d = go.Figure()
+
+    n_largura = largura_estoque // largura_produto
+    n_altura = altura_estoque // altura_produto
+    n_total = n_largura * n_altura
+
+    qtd_plotar = min(quantidade_produto, n_total)
+
+    for idx in range(qtd_plotar):
+        i = idx % n_largura
+        j = idx // n_largura
+        if j >= n_altura:
+            break
+        x0 = i * largura_produto
+        y0 = j * altura_produto
+
+        fig2d.add_shape(
+            type="rect",
+            x0=x0, x1=x0 + largura_produto,
+            y0=y0, y1=y0 + altura_produto,
+            line=dict(color="black", width=2),
+            fillcolor="royalblue"
+        )
+
+    fig2d.update_layout(
+        title="📐 Visão Frontal da Célula de Estoque",
+        xaxis=dict(title="Largura (mm)", range=[0, largura_estoque], showgrid=False, zeroline=False),
+        yaxis=dict(title="Altura (mm)", range=[0, altura_estoque], showgrid=False, zeroline=False, scaleanchor="x"),
+        height=500,
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+
+    st.plotly_chart(fig2d, use_container_width=True)
+
