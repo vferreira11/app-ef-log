@@ -14,8 +14,10 @@ with st.expander("🛋️ Dimensões de 1 produto (em mm)", expanded=True):
     altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
     profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
 
-if st.button("Gerar visualização (Aguarde, pode demorar alguns segundos)"):
-
+if st.button("GERAR SIMULAÇÃO"):
+    
+    st.caption("⚠️ Pode demorar alguns segundos. Aguarde!")
+   
     n_largura = largura_estoque // largura_produto
     n_altura = altura_estoque // altura_produto
     n_profundidade = profundidade_estoque // profundidade_produto
