@@ -1,86 +1,83 @@
 
 import streamlit as st
 import plotly.graph_objects as go
-import math
 
-st.set_page_config(page_title="Simulador de Empacotamento 3D", layout="wide")
+def gerar_caixas(largura_estoque, altura_estoque, profundidade_estoque,
+                 largura_produto, altura_produto, profundidade_produto):
+
+    qtd_x = largura_estoque // largura_produto
+    qtd_y = altura_estoque // altura_produto
+    qtd_z = profundidade_estoque // profundidade_produto
+    total_caixas = int(qtd_x * qtd_y * qtd_z)
+
+    caixas = []
+    for ix in range(int(qtd_x)):
+        for iy in range(int(qtd_y)):
+            for iz in range(int(qtd_z)):
+                x0 = ix * largura_produto
+                y0 = iy * altura_produto
+                z0 = iz * profundidade_produto
+                caixas.append((x0, y0, z0))
+    return caixas, total_caixas
+
+def criar_cubo(x0, y0, z0, dx, dy, dz, cor="blue", opacidade=1.0, nome=""):
+    x = [x0, x0+dx, x0+dx, x0, x0, x0+dx, x0+dx, x0]
+    y = [y0, y0, y0+dy, y0+dy, y0, y0, y0+dy, y0+dy]
+    z = [z0, z0, z0, z0, z0+dz, z0+dz, z0+dz, z0+dz]
+
+    vertices = list(range(8))
+    faces = [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [2,3,7,6], [1,2,6,5], [0,3,7,4]
+    ]
+
+    i, j, k = zip(*[(f[0], f[1], f[2]) for f in faces])
+    mesh = go.Mesh3d(x=x, y=y, z=z, i=i, j=j, k=k,
+                     color=cor, opacity=opacidade,
+                     name=nome, hoverinfo="skip", showscale=False)
+    return mesh
+
+st.set_page_config(page_title="Empacotamento 3D", layout="wide")
 
 st.title("📦 Simulador de Empacotamento 3D")
 
 with st.expander("🔻 Dimensões do Estoque (em mm)", expanded=True):
-    largura_estoque = st.number_input("Largura do estoque", min_value=100, value=1760)
-    altura_estoque = st.number_input("Altura do estoque", min_value=100, value=850)
-    profundidade_estoque = st.number_input("Profundidade do estoque", min_value=100, value=400)
+    largura_estoque = st.number_input("Largura do estoque", value=1760, step=10)
+    altura_estoque = st.number_input("Altura do estoque", value=850, step=10)
+    profundidade_estoque = st.number_input("Profundidade do estoque", value=400, step=10)
 
 with st.expander("📦 Dimensões de 1 produto (em mm)", expanded=True):
-    largura_produto = st.number_input("Largura do produto", min_value=10, value=200)
-    altura_produto = st.number_input("Altura do produto", min_value=10, value=200)
-    profundidade_produto = st.number_input("Profundidade do produto", min_value=10, value=200)
+    largura_produto = st.number_input("Largura do produto", value=200, step=10)
+    altura_produto = st.number_input("Altura do produto", value=200, step=10)
+    profundidade_produto = st.number_input("Profundidade do produto", value=200, step=10)
 
 if st.button("Gerar visualização"):
+    caixas, total_caixas = gerar_caixas(largura_estoque, altura_estoque, profundidade_estoque,
+                                         largura_produto, altura_produto, profundidade_produto)
 
-    if (
-        largura_produto > largura_estoque
-        or altura_produto > altura_estoque
-        or profundidade_produto > profundidade_estoque
-    ):
-        st.error("❌ As dimensões do produto são maiores que as do estoque.")
-    else:
-        # Calcular quantas caixas cabem em cada eixo
-        n_x = largura_estoque // largura_produto
-        n_y = altura_estoque // altura_produto
-        n_z = profundidade_estoque // profundidade_produto
-        total_caixas = int(n_x * n_y * n_z)
+    st.markdown(f"<h3 style='color:lime'>✅ Máximo de produtos que cabem: {total_caixas}</h3>", unsafe_allow_html=True)
 
-        st.markdown(f"### ✅ Máximo de produtos que cabem: **:green[{total_caixas}]**")
+    fig = go.Figure()
 
-        fig = go.Figure()
+    for idx, (x, y, z) in enumerate(caixas):
+        cubo = criar_cubo(x, y, z, largura_produto, altura_produto, profundidade_produto,
+                          cor="royalblue", opacidade=0.9, nome=f"Caixa {idx}")
+        fig.add_trace(cubo)
 
-        # Adicionar cubo do estoque (volume total)
-        fig.add_trace(go.Mesh3d(
-            x=[0, largura_estoque, largura_estoque, 0, 0, largura_estoque, largura_estoque, 0],
-            y=[0, 0, profundidade_estoque, profundidade_estoque, 0, 0, profundidade_estoque, profundidade_estoque],
-            z=[0, 0, 0, 0, altura_estoque, altura_estoque, altura_estoque, altura_estoque],
-            i=[0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 7],
-            j=[1, 2, 3, 5, 6, 3, 0, 5, 6, 7, 4, 0],
-            k=[2, 3, 0, 6, 7, 0, 4, 6, 7, 4, 5, 1],
-            color='rgba(0, 128, 0, 0.1)',
-            opacity=0.1,
-            name='Estoque',
-            showscale=False
-        ))
+    # Cubo do volume do estoque
+    estoque = criar_cubo(0, 0, 0, largura_estoque, altura_estoque, profundidade_estoque,
+                         cor="green", opacidade=0.15, nome="Estoque")
+    fig.add_trace(estoque)
 
-        # Adicionar caixas
-        idx = 0
-        for i in range(int(n_x)):
-            for j in range(int(n_y)):
-                for k in range(int(n_z)):
-                    x0 = i * largura_produto
-                    y0 = k * profundidade_produto
-                    z0 = j * altura_produto
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(title="Largura (mm)", range=[0, largura_estoque]),
+            yaxis=dict(title="Altura (mm)", range=[0, altura_estoque]),
+            zaxis=dict(title="Profundidade (mm)", range=[0, profundidade_estoque]),
+            aspectmode="data"
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=700
+    )
 
-                    fig.add_trace(go.Mesh3d(
-                        x=[x0, x0+largura_produto, x0+largura_produto, x0, x0, x0+largura_produto, x0+largura_produto, x0],
-                        y=[y0, y0, y0+profundidade_produto, y0+profundidade_produto, y0, y0, y0+profundidade_produto, y0+profundidade_produto],
-                        z=[z0, z0, z0, z0, z0+altura_produto, z0+altura_produto, z0+altura_produto, z0+altura_produto],
-                        i=[0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 7],
-                        j=[1, 2, 3, 5, 6, 3, 0, 5, 6, 7, 4, 0],
-                        k=[2, 3, 0, 6, 7, 0, 4, 6, 7, 4, 5, 1],
-                        color='rgba(0,0,255,0.4)',
-                        opacity=0.5,
-                        showscale=False,
-                        name=f"Caixa {idx}"
-                    ))
-                    idx += 1
-
-        fig.update_layout(
-            scene=dict(
-                xaxis=dict(title="Largura (mm)", range=[0, largura_estoque]),
-                yaxis=dict(title="Profundidade (mm)", range=[0, profundidade_estoque]),
-                zaxis=dict(title="Altura (mm)", range=[0, altura_estoque]),
-                aspectmode='data'
-            ),
-            title="Empacotamento 3D"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
