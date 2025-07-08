@@ -1,0 +1,92 @@
+{
+  "name": "Importar CSV e Gerar Insights",
+  "nodes": [
+    {
+      "parameters": {
+        "filePath": "/home/node/.n8n/dados_simulados.csv",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Read Binary File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "input": "data"
+      },
+      "id": "2",
+      "name": "Extract From CSV",
+      "type": "n8n-nodes-base.csv",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "\nreturn items.map(item => {\n  const preco = parseFloat(item.json[\"preco_atual\"]);\n  const vendas = parseInt(item.json[\"vendas_30d\"]);\n  const margem = preco - parseFloat(item.json[\"custo_unitario\"]);\n\n  const destaque = (vendas > 1000 && margem > 30)\n    ? \"\ud83d\ude80 Produto campe\u00e3o de margem e vendas\"\n    : \"\u26a0\ufe0f Pode melhorar pre\u00e7o ou descri\u00e7\u00e3o\";\n\n  return {\n    json: {\n      ...item.json,\n      insight: destaque,\n    }\n  };\n});\n"
+      },
+      "id": "3",
+      "name": "Gerar Insights",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "4",
+      "name": "NoOp",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Read Binary File": {
+      "main": [
+        [
+          {
+            "node": "Extract From CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract From CSV": {
+      "main": [
+        [
+          {
+            "node": "Gerar Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Insights": {
+      "main": [
+        [
+          {
+            "node": "NoOp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

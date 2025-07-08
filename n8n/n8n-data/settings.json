@@ -1,0 +1,11 @@
+{
+  "nodes": {
+    "default": {
+      "readBinaryFile": {
+        "allowedPaths": [
+          "/home/node/.n8n"
+        ]
+      }
+    }
+  }
+}

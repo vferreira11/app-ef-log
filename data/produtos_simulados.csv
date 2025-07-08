@@ -1,0 +1,31 @@
+﻿sku,nome_produto,categoria,preco,qtd_vendida_90d,largura_m,profundidade_m,altura_m,volume_embalado_m3,peso_embalado_kg
+SKU0001,Quebra-Cabeça,Brinquedos,28.09,195,0.062,0.057,0.028,0.0001,0.08
+SKU0002,Panela Antiaderente,Utilidades Domésticas,37.92,210,0.055,0.062,0.068,0.0002,0.19
+SKU0003,Porta-Temperos,Utilidades Domésticas,37.23,184,0.079,0.09,0.021,0.0001,0.25
+SKU0004,Escorredor Inox,Utilidades Domésticas,52.88,123,0.129,0.163,0.183,0.0038,0.55
+SKU0005,Kit de Pintura,Brinquedos,24.12,216,0.089,0.099,0.088,0.0008,0.09
+SKU0006,Mini Liquidificador,Utilidades Domésticas,229.7,52,0.233,0.271,0.301,0.019,2.34
+SKU0007,Jogo Educativo,Brinquedos,93.85,113,0.153,0.124,0.119,0.0023,0.18
+SKU0008,Blocos de Montar,Brinquedos,133.31,58,0.369,0.355,0.169,0.0221,0.34
+SKU0009,Faqueiro Colorido,Utilidades Domésticas,29.47,205,0.096,0.078,0.077,0.0006,0.1
+SKU0010,Ventilador Portátil,Utilidades Domésticas,26.71,191,0.057,0.087,0.063,0.0003,0.24
+SKU0011,Faqueiro Colorido,Utilidades Domésticas,132.47,119,0.2,0.114,0.124,0.0028,0.83
+SKU0012,Jogo Educativo,Brinquedos,248.34,52,0.358,0.284,0.119,0.0121,0.76
+SKU0013,Panela Antiaderente,Utilidades Domésticas,121.46,123,0.168,0.111,0.183,0.0034,0.83
+SKU0014,Ventilador Portátil,Utilidades Domésticas,20.27,204,0.072,0.073,0.096,0.0005,0.27
+SKU0015,Boneca Interativa,Brinquedos,40.55,113,0.187,0.13,0.146,0.0035,0.28
+SKU0016,Carrinho de Controle,Brinquedos,46.62,126,0.136,0.199,0.171,0.0046,0.17
+SKU0017,Pelúcia Musical,Brinquedos,30.83,181,0.091,0.099,0.063,0.0006,0.04
+SKU0018,Carrinho Elétrico,Brinquedos,79.19,112,0.196,0.193,0.163,0.0062,0.31
+SKU0019,Mini Liquidificador,Utilidades Domésticas,154.04,56,0.288,0.304,0.136,0.0119,1.29
+SKU0020,Kit de Pintura,Brinquedos,79.91,121,0.151,0.128,0.123,0.0024,0.26
+SKU0021,Porta-Temperos,Utilidades Domésticas,26.52,228,0.09,0.06,0.028,0.0002,0.16
+SKU0022,Panela Antiaderente,Utilidades Domésticas,403.48,26,0.669,0.792,0.298,0.1579,4.42
+SKU0023,Kit de Pintura,Brinquedos,21.0,177,0.06,0.072,0.054,0.0002,0.05
+SKU0024,Boneca Interativa,Brinquedos,93.92,94,0.105,0.2,0.175,0.0037,0.39
+SKU0025,Carrinho Elétrico,Brinquedos,24.1,195,0.074,0.061,0.052,0.0002,0.03
+SKU0026,Porta-Temperos,Utilidades Domésticas,108.76,132,0.129,0.17,0.16,0.0035,0.85
+SKU0027,Faqueiro Colorido,Utilidades Domésticas,39.17,191,0.065,0.098,0.066,0.0004,0.19
+SKU0028,Pelúcia Musical,Brinquedos,16.92,182,0.075,0.093,0.033,0.0002,0.1
+SKU0029,Boneca Interativa,Brinquedos,20.91,212,0.084,0.062,0.03,0.0002,0.09
+SKU0030,Boneca Interativa,Brinquedos,44.09,127,0.142,0.158,0.128,0.0029,0.38
