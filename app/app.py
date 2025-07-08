@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
-st.title("📦 Simulador de Empacotamento 3D")
+st.title("📦 Simulador de Armazenamento 3D")
 
 with st.expander("📉 Dimensões do Estoque (em mm)", expanded=True):
     largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
@@ -14,7 +14,7 @@ with st.expander("🛋️ Dimensões de 1 produto (em mm)", expanded=True):
     altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
     profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
 
-if st.button("Gerar visualização"):
+if st.button("Gerar visualização (Aguarde, pode demorar alguns segundos)"):
 
     n_largura = largura_estoque // largura_produto
     n_altura = altura_estoque // altura_produto
