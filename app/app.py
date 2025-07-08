@@ -81,8 +81,8 @@ if st.button("Gerar visualização"):
     # 3. Layout com câmera melhor posicionada
     fig.update_layout(
         scene=dict(
-            xaxis=dict(title='Largura (mm)', range=[0, largura_estoque]),
-            yaxis=dict(title='Altura (mm)', range=[0, altura_estoque]),
+            xaxis=dict(title='Altura (mm)', range=[0, largura_estoque]),  # era largura
+            yaxis=dict(title='Largura (mm)', range=[0, altura_estoque]),  # era altura
             zaxis=dict(title='Profundidade (mm)', range=[0, profundidade_estoque]),
             aspectmode='data',
             camera=dict(
@@ -92,5 +92,6 @@ if st.button("Gerar visualização"):
         margin=dict(l=0, r=0, t=0, b=0),
         showlegend=False
     )
+
 
     st.plotly_chart(fig, use_container_width=True)
