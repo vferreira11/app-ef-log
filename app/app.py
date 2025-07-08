@@ -66,32 +66,30 @@ if st.button("Gerar visualização"):
                     showlegend=False
                 ))
 
-    # 1. Primeiro desenhamos as caixas (em azul)
+    # Desenhar produtos (largura=X, profundidade=Y, altura=Z)
     for i in range(n_largura):
-        for j in range(n_altura):
-            for k in range(n_profundidade):
+        for j in range(n_profundidade):
+            for k in range(n_altura):
                 x0 = i * largura_produto
-                y0 = j * altura_produto
-                z0 = k * profundidade_produto
-                adicionar_cubo(x0, y0, z0, largura_produto, altura_produto, profundidade_produto, cor='royalblue', opacidade=1, borda=True)
+                y0 = j * profundidade_produto
+                z0 = k * altura_produto
+                adicionar_cubo(x0, y0, z0, largura_produto, profundidade_produto, altura_produto, cor='royalblue', opacidade=1, borda=True)
 
-    # 2. Depois o contêiner, com transparência e sem borda
-    adicionar_cubo(0, 0, 0, largura_estoque, altura_estoque, profundidade_estoque, cor='lightgreen', opacidade=0.1, borda=False)
+    # Volume total da estante (verde claro e transparente)
+    adicionar_cubo(0, 0, 0, largura_estoque, profundidade_estoque, altura_estoque, cor='lightgreen', opacidade=0.1, borda=False)
 
-    # 3. Layout com câmera melhor posicionada
     fig.update_layout(
         scene=dict(
-            xaxis=dict(title='Altura (mm)', range=[0, largura_estoque]),  # era largura
-            yaxis=dict(title='Largura (mm)', range=[0, altura_estoque]),  # era altura
-            zaxis=dict(title='Profundidade (mm)', range=[0, profundidade_estoque]),
+            xaxis=dict(title='Largura (mm)', range=[0, largura_estoque]),          # esquerda ↔ direita
+            yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_estoque]),# frente ↔ fundo
+            zaxis=dict(title='Altura (mm)', range=[0, altura_estoque]),            # baixo ↔ cima
             aspectmode='data',
             camera=dict(
-                eye=dict(x=1.6, y=1.6, z=1.1)
+                eye=dict(x=1.8, y=-2.5, z=1.8)  # visão frontal elevada
             )
         ),
         margin=dict(l=0, r=0, t=0, b=0),
         showlegend=False
     )
-
 
     st.plotly_chart(fig, use_container_width=True)
