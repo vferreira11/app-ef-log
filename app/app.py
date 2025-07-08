@@ -74,9 +74,9 @@ if st.button("GERAR SIMULAÇÃO"):
     max_count = best_n1 + best_n2
 
     st.markdown(
-        f"✅ **Produto A:** {best_n1} unidades  
-           **Produto B:** {best_n2} unidades  
-           **Total:** {max_count}",
+        f"""✅ **Produto A:** {best_n1} unidades  <br>
+✅ **Produto B:** {best_n2} unidades  <br>
+✅ **Total:** {max_count}""",
         unsafe_allow_html=True
     )
 
