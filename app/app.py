@@ -14,15 +14,23 @@ with col_estoque:
             largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
             altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
             profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
-            quantidade_produto = st.number_input("Quantidade de produtos", min_value=1, value=64)
+            quantidade_celulas = st.number_input("Quantidade de células de estoque", min_value=1, value=4)
+
             layout_opcao = st.selectbox(
                 "Layout de empacotamento",
                 ["📏 Lado a lado", "📐 Vertical", "🔢 Definir manualmente"]
             )
 
-            if layout_opcao == "🔢 Definir manualmente":
-                qtd_horizontal = st.number_input("Qtd. horizontal", min_value=1, value=8)
-                qtd_vertical = st.number_input("Qtd. vertical", min_value=1, value=8)
+            if layout_opcao == "📏 Lado a lado":
+                qtd_horizontal = quantidade_celulas
+                qtd_vertical = 1
+            elif layout_opcao == "📐 Vertical":
+                qtd_horizontal = 1
+                qtd_vertical = quantidade_celulas
+            else:
+                qtd_horizontal = st.number_input("Qtd. horizontal", min_value=1, value=2)
+                qtd_vertical = st.number_input("Qtd. vertical", min_value=1, value=2)
+
 
 with col_produto:
     with st.container():
@@ -128,7 +136,7 @@ if st.button("GERAR SIMULAÇÃO"):
     n_altura = altura_estoque // altura_produto
     n_total = n_largura * n_altura
 
-    qtd_plotar = min(quantidade_produto, n_total)
+    qtd_plotar = min(quantidade_celulas, n_total)
 
     for idx in range(qtd_plotar):
         i = idx % n_largura
