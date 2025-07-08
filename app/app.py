@@ -23,7 +23,7 @@ if st.button("GERAR SIMULAÇÃO"):
     n_profundidade = profundidade_estoque // profundidade_produto
     total_caixas = int(n_largura * n_altura * n_profundidade)
 
-    st.markdown(f"✅ <span style='font-size:24px'>**Máximo de produtos que cabem:**</span> <span style='color:lime;font-size:28px'><b>{total_caixas}</b></span>", unsafe_allow_html=True)
+    st.markdown(f"✅ <span style='font-size:24px'>**Máximo de produtos:**</span> <span style='color:lime;font-size:28px'><b>{total_caixas}</b></span>", unsafe_allow_html=True)
 
     fig = go.Figure()
 
