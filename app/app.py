@@ -4,15 +4,19 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide")
 st.title("📦 Simulador de Armazenamento 3D")
 
-with st.expander("📉 Dimensões do Estoque (em mm)", expanded=True):
-    largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
-    altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
-    profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
+col1, col2 = st.columns(2)
 
-with st.expander("🛋️ Dimensões de 1 produto (em mm)", expanded=True):
-    largura_produto = st.number_input("Largura do produto", min_value=1, value=200)
-    altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
-    profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
+with col1:
+    with st.expander("📉 Dimensões do Estoque (em mm)", expanded=True):
+        largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
+        altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
+        profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
+
+with col2:
+    with st.expander("🛋️ Dimensões de 1 produto (em mm)", expanded=True):
+        largura_produto = st.number_input("Largura do produto", min_value=1, value=200)
+        altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
+        profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
 
 if st.button("GERAR SIMULAÇÃO"):
     
