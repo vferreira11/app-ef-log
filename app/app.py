@@ -2,7 +2,6 @@ import streamlit as st
 import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
-
 st.title("📦 Simulador de Empacotamento 3D")
 
 with st.expander("📉 Dimensões do Estoque (em mm)", expanded=True):
@@ -26,62 +25,58 @@ if st.button("Gerar visualização"):
 
     fig = go.Figure()
 
-    # desenhar caixas
+    def adicionar_cubo(x0, y0, z0, dx, dy, dz, cor='blue'):
+        # Mesh preenchido
+        vertices = [
+            [x0, y0, z0], [x0+dx, y0, z0], [x0+dx, y0+dy, z0], [x0, y0+dy, z0],
+            [x0, y0, z0+dz], [x0+dx, y0, z0+dz], [x0+dx, y0+dy, z0+dz], [x0, y0+dy, z0+dz]
+        ]
+        x, y, z = zip(*vertices)
+        faces = [
+            [0, 1, 2], [0, 2, 3],       # base
+            [4, 5, 6], [4, 6, 7],       # topo
+            [0, 1, 5], [0, 5, 4],       # frente
+            [1, 2, 6], [1, 6, 5],       # direita
+            [2, 3, 7], [2, 7, 6],       # fundo
+            [3, 0, 4], [3, 4, 7]        # esquerda
+        ]
+        i, j, k = zip(*faces)
+
+        fig.add_trace(go.Mesh3d(
+            x=x, y=y, z=z,
+            i=i, j=j, k=k,
+            opacity=1,
+            color=cor,
+            showlegend=False
+        ))
+
+        # Arestas destacadas
+        arestas = [
+            (0,1), (1,2), (2,3), (3,0),
+            (4,5), (5,6), (6,7), (7,4),
+            (0,4), (1,5), (2,6), (3,7)
+        ]
+        for a, b in arestas:
+            fig.add_trace(go.Scatter3d(
+                x=[x[a], x[b]],
+                y=[y[a], y[b]],
+                z=[z[a], z[b]],
+                mode='lines',
+                line=dict(color='black', width=6),
+                showlegend=False
+            ))
+
+    # Criar cubos
     for i in range(n_largura):
         for j in range(n_altura):
             for k in range(n_profundidade):
                 x0 = i * largura_produto
                 y0 = j * altura_produto
                 z0 = k * profundidade_produto
-                x1 = x0 + largura_produto
-                y1 = y0 + altura_produto
-                z1 = z0 + profundidade_produto
+                adicionar_cubo(x0, y0, z0, largura_produto, altura_produto, profundidade_produto)
 
-                # faces da caixa (sem Mesh3D)
-                arestas = [
-                    [(x0,y0,z0), (x1,y0,z0)], [(x1,y0,z0), (x1,y1,z0)], [(x1,y1,z0), (x0,y1,z0)], [(x0,y1,z0), (x0,y0,z0)],
-                    [(x0,y0,z1), (x1,y0,z1)], [(x1,y0,z1), (x1,y1,z1)], [(x1,y1,z1), (x0,y1,z1)], [(x0,y1,z1), (x0,y0,z1)],
-                    [(x0,y0,z0), (x0,y0,z1)], [(x1,y0,z0), (x1,y0,z1)],
-                    [(x1,y1,z0), (x1,y1,z1)], [(x0,y1,z0), (x0,y1,z1)]
-                ]
-
-                for edge in arestas:
-                    fig.add_trace(go.Scatter3d(
-                        x=[edge[0][0], edge[1][0]],
-                        y=[edge[0][1], edge[1][1]],
-                        z=[edge[0][2], edge[1][2]],
-                        mode='lines',
-                        line=dict(color='black', width=4),
-                        showlegend=False
-                    ))
-
-    # desenhar o contorno do estoque
-    estoque_bordas = [
-        [(0, 0, 0), (largura_estoque, 0, 0)],
-        [(largura_estoque, 0, 0), (largura_estoque, altura_estoque, 0)],
-        [(largura_estoque, altura_estoque, 0), (0, altura_estoque, 0)],
-        [(0, altura_estoque, 0), (0, 0, 0)],
-
-        [(0, 0, profundidade_estoque), (largura_estoque, 0, profundidade_estoque)],
-        [(largura_estoque, 0, profundidade_estoque), (largura_estoque, altura_estoque, profundidade_estoque)],
-        [(largura_estoque, altura_estoque, profundidade_estoque), (0, altura_estoque, profundidade_estoque)],
-        [(0, altura_estoque, profundidade_estoque), (0, 0, profundidade_estoque)],
-
-        [(0, 0, 0), (0, 0, profundidade_estoque)],
-        [(largura_estoque, 0, 0), (largura_estoque, 0, profundidade_estoque)],
-        [(largura_estoque, altura_estoque, 0), (largura_estoque, altura_estoque, profundidade_estoque)],
-        [(0, altura_estoque, 0), (0, altura_estoque, profundidade_estoque)]
-    ]
-
-    for edge in estoque_bordas:
-        fig.add_trace(go.Scatter3d(
-            x=[edge[0][0], edge[1][0]],
-            y=[edge[0][1], edge[1][1]],
-            z=[edge[0][2], edge[1][2]],
-            mode='lines',
-            line=dict(color='green', width=6),
-            showlegend=False
-        ))
+    # Contorno do volume total (verde claro)
+    adicionar_cubo(0, 0, 0, largura_estoque, altura_estoque, profundidade_estoque, cor='lightgreen')
 
     fig.update_layout(
         scene=dict(
