@@ -66,16 +66,19 @@ if st.button("Gerar visualização"):
                     showlegend=False
                 ))
 
-        # Centralizar os blocos na LARGURA (eixo X)
+    # Centralizar os blocos na LARGURA (X) e PROFUNDIDADE (Y)
     largura_total_usada = n_largura * largura_produto
     offset_x = (largura_estoque - largura_total_usada) / 2
+
+    profundidade_total_usada = n_profundidade * profundidade_produto
+    offset_y = (profundidade_estoque - profundidade_total_usada) / 2
 
     for i in range(n_largura):
         for j in range(n_profundidade):
             for k in range(n_altura):
-                x0 = offset_x + i * largura_produto  # aplica o deslocamento
-                y0 = j * profundidade_produto
-                z0 = k * altura_produto
+                x0 = offset_x + i * largura_produto      # deslocamento lateral
+                y0 = offset_y + j * profundidade_produto # deslocamento para centralizar profundidade
+                z0 = k * altura_produto                  # começa do chão
                 adicionar_cubo(x0, y0, z0, largura_produto, profundidade_produto, altura_produto, cor='royalblue', opacidade=1, borda=True)
 
     # Volume total da estante (verde claro e transparente)
