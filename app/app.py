@@ -21,6 +21,7 @@ with col_produto:
             largura_produto = st.number_input("Largura do produto", min_value=1, value=200)
             altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
             profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
+            quantidade_produto = st.number_input("Quantidade de produtos", min_value=1, value=64)
 
 if st.button("GERAR SIMULAÇÃO"):
     
