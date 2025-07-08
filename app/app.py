@@ -32,7 +32,6 @@ if st.button("GERAR SIMULAÇÃO"):
     V = largura_cel * profundidade_cel * altura_cel
     vA = largura_A * profundidade_A * altura_A
     vB = largura_B * profundidade_B * altura_B
-    # pares A+B e extras
     max_pairs = min(V // (vA + vB), V // vA, V // vB)
     rest = V - max_pairs * (vA + vB)
     extraA = rest // vA
@@ -45,7 +44,7 @@ if st.button("GERAR SIMULAÇÃO"):
         nB = max_pairs + extraB
     st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA+nB}")
 
-    # --- posicionamento A (grid simples) ---
+    # --- posicionamento A ---
     nxA = largura_cel // largura_A
     nyA = profundidade_cel // profundidade_A
     nzA = altura_cel // altura_A
@@ -59,12 +58,9 @@ if st.button("GERAR SIMULAÇÃO"):
                 cnt += 1
             if cnt >= nA: break
         if cnt >= nA: break
-    # largura ocupada por A
-    max_xA = max(x+dx for x,_,_,dx,_,_ in placed_A)
 
-    # --- posicionamento B (zona reservada à direita) ---
-    # calculamos quantos B cabem na largura restante
-    rem_width = largura_cel - max_xA
+    # --- posicionamento B ---
+    rem_width = largura_cel - max(x+dx for x,_,_,dx,_,_ in placed_A)
     nxB = rem_width // largura_B
     nyB = profundidade_cel // profundidade_B
     nzB = altura_cel // altura_B
@@ -74,7 +70,7 @@ if st.button("GERAR SIMULAÇÃO"):
         for y in range(nyB):
             for i in range(nxB):
                 if cnt >= nB: break
-                x0 = max_xA + i * largura_B
+                x0 = max(x+dx for x,_,_,dx,_,_ in placed_A) + i * largura_B
                 y0 = y * profundidade_B
                 z0 = z * altura_B
                 placed_B.append((x0, y0, z0, largura_B, profundidade_B, altura_B))
@@ -82,38 +78,55 @@ if st.button("GERAR SIMULAÇÃO"):
             if cnt >= nB: break
         if cnt >= nB: break
 
-    # --- plotagem ---
-    def draw(fig, box, color, legend=False, name=None):
+    # --- plotagem 3D ---
+    def draw_mesh(fig, box, color, opacity, legend, name):
         x0,y0,z0,dx,dy,dz = box
         verts = [(x0,y0,z0),(x0+dx,y0,z0),(x0+dx,y0+dy,z0),(x0,y0+dy,z0),
                  (x0,y0,z0+dz),(x0+dx,y0,z0+dz),(x0+dx,y0+dy,z0+dz),(x0,y0+dy,z0+dz)]
         x,y,z = zip(*verts)
         faces = [(0,1,2),(0,2,3),(4,5,6),(4,6,7),(0,1,5),(0,5,4),(1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)]
         i,j,k = zip(*faces)
-        fig.add_trace(go.Mesh3d(x=x,y=y,z=z,i=i,j=j,k=k,color=color,opacity=0.6,showlegend=legend,name=name))
+        fig.add_trace(go.Mesh3d(x=x,y=y,z=z,i=i,j=j,k=k,color=color,opacity=opacity,showlegend=legend,name=name))
         for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
             fig.add_trace(go.Scatter3d(x=[x[a],x[b]],y=[y[a],y[b]],z=[z[a],z[b]],mode='lines',line=dict(color='black',width=2),showlegend=False))
 
-    # 3D
     fig3 = go.Figure()
-    for i,box in enumerate(placed_A): draw(fig3, box, cor_A, legend=(i==0), name='A')
-    for i,box in enumerate(placed_B): draw(fig3, box, cor_B, legend=(i==0), name='B')
-    draw(fig3, (0,0,0,largura_cel,profundidade_cel,altura_cel), 'lightgreen')
-    fig3.update_layout(scene=dict(aspectmode='data',xaxis=dict(range=[0,largura_cel]),yaxis=dict(range=[0,profundidade_cel]),zaxis=dict(range=[0,altura_cel])),margin=dict(l=0,r=0,t=20,b=0))
+    # A mais opaco
+    for i,box in enumerate(placed_A): draw_mesh(fig3, box, cor_A, 0.8, i==0, 'A')
+    # B com contraste
+    for i,box in enumerate(placed_B): draw_mesh(fig3, box, cor_B, 0.8, i==0, 'B')
+    # contorno da célula apenas arestas
+    cell = (0,0,0,largura_cel,profundidade_cel,altura_cel)
+    verts = []
+    x0,y0,z0,dx,dy,dz = cell
+    verts = [(x0,y0,z0),(x0+dx,y0,z0),(x0+dx,y0+dy,z0),(x0,y0+dy,z0),(x0,y0,z0+dz),(x0+dx,y0,z0+dz),(x0+dx,y0+dy,z0+dz),(x0,y0+dy,z0+dz)]
+    for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
+        fig3.add_trace(go.Scatter3d(x=[verts[a][0],verts[b][0]],y=[verts[a][1],verts[b][1]],z=[verts[a][2],verts[b][2]],mode='lines',line=dict(color='white',width=4),showlegend=False))
+
+    fig3.update_layout(
+        scene=dict(
+            xaxis=dict(title='Largura (mm)', showgrid=True, gridcolor='gray'),
+            yaxis=dict(title='Profundidade (mm)', showgrid=True, gridcolor='gray'),
+            zaxis=dict(title='Altura (mm)', showgrid=True, gridcolor='gray'),
+            aspectmode='data',
+            camera=dict(eye=dict(x=2, y=-2, z=1))
+        ),
+        margin=dict(l=0,r=0,t=20,b=0),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
     st.plotly_chart(fig3, use_container_width=True)
 
-    # 2D frontal
+    # --- plotagem 2D (sem alterações) ---
     fig2 = go.Figure()
     pad = 40
     for cx in range(cols):
         for cy in range(rows):
             ox = cx*(largura_cel+pad)
             oy = cy*(altura_cel+pad)
-            for box in placed_A:
-                x0,y0,z0,dx,dy,dz = box
+            for x0,y0,z0,dx,dy,dz in placed_A:
                 fig2.add_shape(type='rect', x0=ox+x0, x1=ox+x0+dx, y0=oy+z0, y1=oy+z0+dz, line=dict(color='black',width=1), fillcolor=cor_A)
-            for box in placed_B:
-                x0,y0,z0,dx,dy,dz = box
+            for x0,y0,z0,dx,dy,dz in placed_B:
                 fig2.add_shape(type='rect', x0=ox+x0, x1=ox+x0+dx, y0=oy+z0, y1=oy+z0+dz, line=dict(color='black',width=1), fillcolor=cor_B)
     fig2.add_trace(go.Scatter(x=[None],y=[None],mode='markers',marker=dict(color=cor_A),name='A'))
     fig2.add_trace(go.Scatter(x=[None],y=[None],mode='markers',marker=dict(color=cor_B),name='B'))
