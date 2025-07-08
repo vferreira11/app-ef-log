@@ -4,7 +4,17 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide")
 st.title("📦 Simulador de Armazenamento 3D")
 
-# --- Inputs ---
+# --- Função de detecção de sobreposição ---
+def overlap(b1, b2):
+    x0,y0,z0,dx1,dy1,dz1 = b1
+    x1,y1,z1,dx2,dy2,dz2 = b2
+    return not (
+        x0+dx1 <= x1 or x1+dx2 <= x0 or
+        y0+dy1 <= y1 or y1+dy2 <= y0 or
+        z0+dz1 <= z1 or z1+dz2 <= z0
+    )
+
+# --- Entradas ---
 col1, col2 = st.columns(2)
 with col1:
     largura_cel = st.number_input("Largura célula (mm)", min_value=1, value=1760)
@@ -28,7 +38,7 @@ with col2:
     cor_B = st.color_picker("Cor B", "#EF553B")
 
 if st.button("GERAR SIMULAÇÃO"):
-    # --- cálculo otimização ---
+    # --- Cálculo de quantidades ---
     V = largura_cel * profundidade_cel * altura_cel
     vA = largura_A * profundidade_A * altura_A
     vB = largura_B * profundidade_B * altura_B
@@ -44,7 +54,7 @@ if st.button("GERAR SIMULAÇÃO"):
         nB = max_pairs + extraB
     st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA+nB}")
 
-    # --- posicionamento A ---
+    # --- Posicionamento de A em grid ---
     nxA = largura_cel // largura_A
     nyA = profundidade_cel // profundidade_A
     nzA = altura_cel // altura_A
@@ -59,26 +69,26 @@ if st.button("GERAR SIMULAÇÃO"):
             if cnt >= nA: break
         if cnt >= nA: break
 
-    # --- posicionamento B ---
-    rem_width = largura_cel - max(x+dx for x,_,_,dx,_,_ in placed_A)
-    nxB = rem_width // largura_B
+    # --- Posicionamento de B escaneando todo espaço ---
+    nxB = largura_cel // largura_B
     nyB = profundidade_cel // profundidade_B
     nzB = altura_cel // altura_B
     placed_B = []
     cnt = 0
     for z in range(nzB):
         for y in range(nyB):
-            for i in range(nxB):
+            for x in range(nxB):
                 if cnt >= nB: break
-                x0 = max(x+dx for x,_,_,dx,_,_ in placed_A) + i * largura_B
-                y0 = y * profundidade_B
-                z0 = z * altura_B
-                placed_B.append((x0, y0, z0, largura_B, profundidade_B, altura_B))
+                boxB = (x*largura_B, y*profundidade_B, z*altura_B, largura_B, profundidade_B, altura_B)
+                # não colidir com A ou com B já colocado
+                if any(overlap(boxB, a) for a in placed_A): continue
+                if any(overlap(boxB, b) for b in placed_B): continue
+                placed_B.append(boxB)
                 cnt += 1
             if cnt >= nB: break
         if cnt >= nB: break
 
-    # --- plotagem 3D ---
+    # --- Função para desenhar cubos ---
     def draw_mesh(fig, box, color, opacity, legend, name):
         x0,y0,z0,dx,dy,dz = box
         verts = [(x0,y0,z0),(x0+dx,y0,z0),(x0+dx,y0+dy,z0),(x0,y0+dy,z0),
@@ -90,34 +100,19 @@ if st.button("GERAR SIMULAÇÃO"):
         for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
             fig.add_trace(go.Scatter3d(x=[x[a],x[b]],y=[y[a],y[b]],z=[z[a],z[b]],mode='lines',line=dict(color='black',width=2),showlegend=False))
 
+    # --- Plot 3D ---
     fig3 = go.Figure()
-    # A mais opaco
     for i,box in enumerate(placed_A): draw_mesh(fig3, box, cor_A, 0.8, i==0, 'A')
-    # B com contraste
     for i,box in enumerate(placed_B): draw_mesh(fig3, box, cor_B, 0.8, i==0, 'B')
-    # contorno da célula apenas arestas
+    # contorno da célula
     cell = (0,0,0,largura_cel,profundidade_cel,altura_cel)
-    verts = []
-    x0,y0,z0,dx,dy,dz = cell
-    verts = [(x0,y0,z0),(x0+dx,y0,z0),(x0+dx,y0+dy,z0),(x0,y0+dy,z0),(x0,y0,z0+dz),(x0+dx,y0,z0+dz),(x0+dx,y0+dy,z0+dz),(x0,y0+dy,z0+dz)]
     for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
+        v0=cell; x0,y0,z0,dx,dy,dz = v0; verts = [(x0,y0,z0),(x0+dx,y0,z0),(x0+dx,y0+dy,z0),(x0,y0+dy,z0),(x0,y0,z0+dz),(x0+dx,y0,z0+dz),(x0+dx,y0+dy,z0+dz),(x0,y0+dy,z0+dz)]
         fig3.add_trace(go.Scatter3d(x=[verts[a][0],verts[b][0]],y=[verts[a][1],verts[b][1]],z=[verts[a][2],verts[b][2]],mode='lines',line=dict(color='white',width=4),showlegend=False))
-
-    fig3.update_layout(
-        scene=dict(
-            xaxis=dict(title='Largura (mm)', showgrid=True, gridcolor='gray'),
-            yaxis=dict(title='Profundidade (mm)', showgrid=True, gridcolor='gray'),
-            zaxis=dict(title='Altura (mm)', showgrid=True, gridcolor='gray'),
-            aspectmode='data',
-            camera=dict(eye=dict(x=2, y=-2, z=1))
-        ),
-        margin=dict(l=0,r=0,t=20,b=0),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
+    fig3.update_layout(scene=dict(xaxis=dict(title='Largura (mm)',showgrid=True,gridcolor='gray'),yaxis=dict(title='Profundidade (mm)',showgrid=True,gridcolor='gray'),zaxis=dict(title='Altura (mm)',showgrid=True,gridcolor='gray'),aspectmode='data',camera=dict(eye=dict(x=2,y=-2,z=1))),margin=dict(l=0,r=0,t=20,b=0),paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig3, use_container_width=True)
 
-    # --- plotagem 2D (sem alterações) ---
+    # --- Plot 2D ---
     fig2 = go.Figure()
     pad = 40
     for cx in range(cols):
@@ -132,5 +127,5 @@ if st.button("GERAR SIMULAÇÃO"):
     fig2.add_trace(go.Scatter(x=[None],y=[None],mode='markers',marker=dict(color=cor_B),name='B'))
     total_w = cols*largura_cel + (cols-1)*pad
     total_h = rows*altura_cel + (rows-1)*pad
-    fig2.update_layout(title='Visão Frontal', xaxis=dict(range=[0,total_w]), yaxis=dict(range=[0,total_h],scaleanchor='x'), height=500)
+    fig2.update_layout(title='Visão Frontal',xaxis=dict(range=[0,total_w]),yaxis=dict(range=[0,total_h],scaleanchor='x'),height=500)
     st.plotly_chart(fig2, use_container_width=True)
