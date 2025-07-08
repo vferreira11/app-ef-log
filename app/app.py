@@ -80,6 +80,7 @@ if st.button("GERAR SIMULAÇÃO"):
         if cnt >= nA: break
 
     # --- Posicionamento de B escaneando todo espaço ---
+    # --- Posicionamento de B escaneando todo espaço ---
     nxB = largura_cel // largura_B
     nyB = profundidade_cel // profundidade_B
     nzB = altura_cel // altura_B
@@ -88,15 +89,26 @@ if st.button("GERAR SIMULAÇÃO"):
     for z in range(nzB):
         for y in range(nyB):
             for x in range(nxB):
-                if cnt >= nB: break
-                boxB = (x*largura_B, y*profundidade_B, z*altura_B, largura_B, profundidade_B, altura_B)
-                # não colidir com A ou com B já colocado
-                if any(overlap(boxB, a) for a in placed_A): continue
-                if any(overlap(boxB, b) for b in placed_B): continue
+                if cnt >= nB:
+                    break
+                boxB = (
+                    x * largura_B,
+                    y * profundidade_B,
+                    z * altura_B,
+                    largura_B,
+                    profundidade_B,
+                    altura_B,
+                )
+                if any(overlap(boxB, a) for a in placed_A):
+                    continue
+                if any(overlap(boxB, b) for b in placed_B):
+                    continue
                 placed_B.append(boxB)
                 cnt += 1
-            if cnt >= nB: break
-        if cnt >= nB: break
+            if cnt >= nB:
+                break
+        if cnt >= nB:
+            break
 
     # --- Função para desenhar cubos ---
     def draw_mesh(fig, box, color, opacity, legend, name):
