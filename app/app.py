@@ -10,10 +10,11 @@ col_estoque, col_produto = st.columns(2)
 
 with col_estoque:
     with st.container():
-        with st.expander("📉 Dimensões do Estoque (em mm)", expanded=True):
+        with st.expander("📦 Célula de Estoque", expanded=True):
             largura_estoque = st.number_input("Largura do estoque", min_value=1, value=1760)
             altura_estoque = st.number_input("Altura do estoque", min_value=1, value=850)
             profundidade_estoque = st.number_input("Profundidade do estoque", min_value=1, value=400)
+            quantidade_estoque = st.number_input("Quantidade de produtos", min_value=1, value=1)
 
 with col_produto:
     with st.container():
@@ -21,7 +22,6 @@ with col_produto:
             largura_produto = st.number_input("Largura do produto", min_value=1, value=200)
             altura_produto = st.number_input("Altura do produto", min_value=1, value=200)
             profundidade_produto = st.number_input("Profundidade do produto", min_value=1, value=200)
-            quantidade_produto = st.number_input("Quantidade de produtos", min_value=1, value=64)
 
 if st.button("GERAR SIMULAÇÃO"):
     
