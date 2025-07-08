@@ -42,18 +42,26 @@ with col_produto:
 if st.button("GERAR SIMULAÇÃO"):
     st.caption("⚠️ Aguarde enquanto os gráficos são gerados. Isso pode levar alguns segundos.")
 
-    # --- otimização por volume (knapsack simples) ---
+    # --- otimização por volume (duas fases) ---
     V = largura_estoque * altura_estoque * profundidade_estoque
     v1 = largura_A * altura_A * profundidade_A
     v2 = largura_B * altura_B * profundidade_B
     max1 = V // v1
     max2 = V // v2
 
-    best_n1, best_n2, max_count = 0, 0, 0
-    for n1 in range(int(max1) + 1):
-        for n2 in range(int(max2) + 1):
-            if n1 * v1 + n2 * v2 <= V and (n1 + n2) > max_count:
-                best_n1, best_n2, max_count = n1, n2, n1 + n2
+    # 1) número máximo de pares A+B
+    max_pairs = min(V // (v1 + v2), max1, max2)
+    # 2) volume restante e extra
+    V_rest = V - max_pairs * (v1 + v2)
+    extra_A = V_rest // v1
+    extra_B = V_rest // v2
+    if extra_A > extra_B:
+        best_n1 = max_pairs + extra_A
+        best_n2 = max_pairs
+    else:
+        best_n1 = max_pairs
+        best_n2 = max_pairs + extra_B
+    max_count = best_n1 + best_n2
 
     st.markdown(
         f"✅ <span style='font-size:20px'>**Produto A:** {best_n1} unidades<br>"
@@ -99,7 +107,7 @@ if st.button("GERAR SIMULAÇÃO"):
                     showlegend=False
                 ))
 
-    # produtos A
+    # empacotar Produto A
     nxA = largura_estoque // largura_A
     nyA = profundidade_estoque // profundidade_A
     nzA = altura_estoque // altura_A
@@ -109,16 +117,13 @@ if st.button("GERAR SIMULAÇÃO"):
             for i in range(nxA):
                 if count >= best_n1:
                     break
-                x0 = i * largura_A
-                y0 = j * profundidade_A
-                z0 = k * altura_A
-                adicionar_cubo(x0, y0, z0, largura_A, profundidade_A, altura_A,
+                adicionar_cubo(i*largura_A, j*profundidade_A, k*altura_A, largura_A, profundidade_A, altura_A,
                               cor_A, borda=True, show_legend=(count==0), name="Produto A")
                 count += 1
         if count >= best_n1:
             break
 
-    # produtos B
+    # empacotar Produto B
     nxB = largura_estoque // largura_B
     nyB = profundidade_estoque // profundidade_B
     nzB = altura_estoque // altura_B
@@ -128,10 +133,7 @@ if st.button("GERAR SIMULAÇÃO"):
             for i in range(nxB):
                 if count >= best_n2:
                     break
-                x0 = i * largura_B
-                y0 = j * profundidade_B
-                z0 = k * altura_B
-                adicionar_cubo(x0, y0, z0, largura_B, profundidade_B, altura_B,
+                adicionar_cubo(i*largura_B, j*profundidade_B, k*altura_B, largura_B, profundidade_B, altura_B,
                               cor_B, borda=True, show_legend=(count==0), name="Produto B")
                 count += 1
         if count >= best_n2:
@@ -158,13 +160,12 @@ if st.button("GERAR SIMULAÇÃO"):
     espaco_x = 40
     espaco_y = 40
 
-    # para cada célula no layout
     for cx in range(qtd_horizontal):
         for cy in range(qtd_vertical):
             base_x = cx * (largura_estoque + espaco_x)
             base_y = cy * (altura_estoque + espaco_y)
 
-            # A
+            # Produto A 2D
             count = 0
             for k in range(nzA):
                 for j in range(nyA):
@@ -186,7 +187,7 @@ if st.button("GERAR SIMULAÇÃO"):
                 if count >= best_n1:
                     break
 
-            # B
+            # Produto B 2D
             count = 0
             for k in range(nzB):
                 for j in range(nyB):
@@ -208,18 +209,14 @@ if st.button("GERAR SIMULAÇÃO"):
                 if count >= best_n2:
                     break
 
-    # legendas (marcadores invisíveis)
+    # legendas
     fig2d.add_trace(go.Scatter(
-        x=[None], y=[None],
-        mode="markers",
-        marker=dict(size=10, color=cor_A),
-        name="Produto A"
+        x=[None], y=[None], mode="markers",
+        marker=dict(size=10, color=cor_A), name="Produto A"
     ))
     fig2d.add_trace(go.Scatter(
-        x=[None], y=[None],
-        mode="markers",
-        marker=dict(size=10, color=cor_B),
-        name="Produto B"
+        x=[None], y=[None], mode="markers",
+        marker=dict(size=10, color=cor_B), name="Produto B"
     ))
 
     largura_total = qtd_horizontal * largura_estoque + (qtd_horizontal - 1) * espaco_x
