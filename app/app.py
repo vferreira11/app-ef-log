@@ -38,7 +38,7 @@ with col_produto:
 
 if st.button("GERAR SIMULAÇÃO"):
 
-    st.caption("⚠️ Pode demorar alguns segundos. Aguarde!")
+    st.caption("⚠️ Aguarde enquanto os gráficos são gerados. Isso pode levar alguns segundos.")
 
     n_largura = largura_estoque // largura_produto
     n_altura = altura_estoque // altura_produto
