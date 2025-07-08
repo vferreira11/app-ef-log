@@ -25,15 +25,13 @@ if st.button("Gerar visualização"):
 
     fig = go.Figure()
 
-    def adicionar_cubo(x0, y0, z0, dx, dy, dz, cor='blue', borda=True):
-        # Vértices
+    def adicionar_cubo(x0, y0, z0, dx, dy, dz, cor='blue', opacidade=1, borda=True):
         vertices = [
             [x0, y0, z0], [x0+dx, y0, z0], [x0+dx, y0+dy, z0], [x0, y0+dy, z0],
             [x0, y0, z0+dz], [x0+dx, y0, z0+dz], [x0+dx, y0+dy, z0+dz], [x0, y0+dy, z0+dz]
         ]
         x, y, z = zip(*vertices)
 
-        # Faces
         faces = [
             [0, 1, 2], [0, 2, 3],
             [4, 5, 6], [4, 6, 7],
@@ -47,7 +45,7 @@ if st.button("Gerar visualização"):
         fig.add_trace(go.Mesh3d(
             x=x, y=y, z=z,
             i=i, j=j, k=k,
-            opacity=1,
+            opacity=opacidade,
             color=cor,
             showlegend=False
         ))
@@ -68,26 +66,31 @@ if st.button("Gerar visualização"):
                     showlegend=False
                 ))
 
-    # Produtos (azul escuro com borda)
+    # 1. Primeiro desenhamos as caixas (em azul)
     for i in range(n_largura):
         for j in range(n_altura):
             for k in range(n_profundidade):
                 x0 = i * largura_produto
                 y0 = j * altura_produto
                 z0 = k * profundidade_produto
-                adicionar_cubo(x0, y0, z0, largura_produto, altura_produto, profundidade_produto, cor='royalblue', borda=True)
+                adicionar_cubo(x0, y0, z0, largura_produto, altura_produto, profundidade_produto, cor='royalblue', opacidade=1, borda=True)
 
-    # Contêiner (verde claro sem borda)
-    adicionar_cubo(0, 0, 0, largura_estoque, altura_estoque, profundidade_estoque, cor='lightgreen', borda=False)
+    # 2. Depois o contêiner, com transparência e sem borda
+    adicionar_cubo(0, 0, 0, largura_estoque, altura_estoque, profundidade_estoque, cor='lightgreen', opacidade=0.1, borda=False)
 
+    # 3. Layout com câmera melhor posicionada
     fig.update_layout(
         scene=dict(
             xaxis=dict(title='Largura (mm)', range=[0, largura_estoque]),
             yaxis=dict(title='Altura (mm)', range=[0, altura_estoque]),
             zaxis=dict(title='Profundidade (mm)', range=[0, profundidade_estoque]),
-            aspectmode='data'
+            aspectmode='data',
+            camera=dict(
+                eye=dict(x=1.6, y=1.6, z=1.1)
+            )
         ),
         margin=dict(l=0, r=0, t=0, b=0),
+        showlegend=False
     )
 
     st.plotly_chart(fig, use_container_width=True)
