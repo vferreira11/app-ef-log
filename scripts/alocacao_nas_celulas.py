@@ -5,6 +5,9 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Patch
 from typing import List, Tuple
 from dataclasses import dataclass
+import sqlite3
+import os
+import argparse
 
 @dataclass
 class Produto:
@@ -18,34 +21,14 @@ class Celula:
     profundidade: int
     altura: int
 
-# Configuração das dimensões da célula
+# Dimensões da célula (em mm)
 dimensoes_celula = Celula(largura=1760, profundidade=400, altura=850)
 
-# Definição dos produtos (nome, dimensões, cor)
-produtos_info: List[Tuple[str, Produto, str]] = [
-    ('Caixa Celular', Produto(largura=160, profundidade=90, altura=30), 'tab:blue'),
-    ('Caixa Média',   Produto(largura=200, profundidade=150, altura=50), 'tab:orange'),
-    ('Caixa Chapéu',  Produto(largura=350, profundidade=350, altura=200), 'tab:green'),
-]
-
-# Estimativa de demanda para 30 dias (baseado em 90d de histórico)
-vendas_90 = [171, 172, 168]
-demands_30 = [math.ceil(v/90 * 30) for v in vendas_90]
-
-# Função de alocação agrupada: tenta encaixar cada SKU inteiro numa célula antes de passar adiante
-def allocate_grouped_cells(demands: List[int], n_cells: int = 3) -> List[List[Tuple[str,int,int,int]]]:
-    """
-    Aloca demandas de SKUs em células, agrupando cada SKU em blocos por célula.
-
-    Args:
-        demands (List[int]): demanda total de cada SKU.
-        n_cells (int): número de células disponíveis.
-
-    Returns:
-        List[List[Tuple[str, int, int, int]]]:
-            Para cada célula, lista de tuplas
-            (nome, demanda_total, alocado, faltam).
-    """
+def allocate_grouped_cells(
+    produtos_info: List[Tuple[str, Produto, str]],
+    demands: List[int],
+    n_cells: int
+) -> List[List[Tuple[str, int, int, int]]]:
     cel = dimensoes_celula
     rem_width = [cel.largura] * n_cells
     rem_dem = demands.copy()
@@ -58,33 +41,35 @@ def allocate_grouped_cells(demands: List[int], n_cells: int = 3) -> List[List[Tu
         total = demands[idx]
         for c in range(n_cells):
             demand = rem_dem[idx]
-            if demand <= 0:
+            if demand <= 0 or cap_per_col == 0:
                 alloc = 0
-                cols = 0
             else:
                 max_cols = rem_width[c] // prod.largura
                 needed_cols = min(math.ceil(demand / cap_per_col), max_cols)
                 alloc = min(demand, needed_cols * cap_per_col)
-                cols = needed_cols
-                rem_width[c] -= cols * prod.largura
+                rem_width[c] -= needed_cols * prod.largura
                 rem_dem[idx] -= alloc
             cells_alloc[c][idx] = (label, total, alloc, total - alloc)
+
     return cells_alloc
 
-# Exemplo de uso: alocar em 3 células
-N_CELLS = 3
-allocation = allocate_grouped_cells(demands_30, N_CELLS)
-
-# Plotagem 3D para cada célula
-def plot_allocation_3d(allocation: List[List[Tuple[str,int,int,int]]], n_cells: int = N_CELLS):
+def plot_allocation_3d(
+    allocation: List[List[Tuple[str, int, int, int]]],
+    produtos_info: List[Tuple[str, Produto, str]],
+    n_cells: int
+):
     fig = plt.figure(figsize=(6 * n_cells, 6))
     cel = dimensoes_celula
     for i in range(n_cells):
         ax = fig.add_subplot(1, n_cells, i+1, projection='3d')
         ax.set_box_aspect((cel.largura, cel.profundidade, cel.altura))
-        ax.set_xlim(0, cel.largura); ax.set_ylim(0, cel.profundidade); ax.set_zlim(0, cel.altura)
+        ax.set_xlim(0, cel.largura)
+        ax.set_ylim(0, cel.profundidade)
+        ax.set_zlim(0, cel.altura)
         ax.set_title(f"Célula {i+1}")
-        ax.set_xlabel('X (mm)'); ax.set_ylabel('Y (mm)'); ax.set_zlabel('Z (mm)')
+        ax.set_xlabel('X (mm)')
+        ax.set_ylabel('Y (mm)')
+        ax.set_zlabel('Z (mm)')
         x_offset = 0
         handles = []
         for j, (label, total, alloc, falt) in enumerate(allocation[i]):
@@ -103,20 +88,33 @@ def plot_allocation_3d(allocation: List[List[Tuple[str,int,int,int]]], n_cells: 
                 for col in range(needed_cols):
                     x = x_offset + col * prod.largura
                     for row in range(rows):
-                        if count >= alloc: break
+                        if count >= alloc:
+                            break
                         y = row * prod.profundidade
-                        ax.bar3d(x, y, z, prod.largura, prod.profundidade, prod.altura,
-                                 color=color, edgecolor='black', linewidth=0.5, shade=True)
+                        ax.bar3d(
+                            x, y, z,
+                            prod.largura,
+                            prod.profundidade,
+                            prod.altura,
+                            color=color,
+                            edgecolor='black',
+                            linewidth=0.5,
+                            shade=True
+                        )
                         count += 1
-                    if count >= alloc: break
-                if count >= alloc: break
+                    if count >= alloc:
+                        break
+                if count >= alloc:
+                    break
             x_offset += needed_cols * prod.largura
         ax.legend(handles=handles, loc='upper right')
+
     plt.tight_layout()
     plt.show()
 
-# Exibir tabela de resultados
-def show_allocation_table(allocation: List[List[Tuple[str,int,int,int]]]):
+def show_allocation_table(
+    allocation: List[List[Tuple[str, int, int, int]]]
+):
     rows = []
     for i, cell in enumerate(allocation, start=1):
         for label, total, alloc, falt in cell:
@@ -131,8 +129,50 @@ def show_allocation_table(allocation: List[List[Tuple[str,int,int,int]]]):
     pivot = df.pivot(index='Produto', columns='Célula', values=['Demanda','Alocado','Faltam'])
     print(pivot)
 
-# Execução principal
-if __name__ == '__main__':
-    allocation = allocate_grouped_cells(demands_30, N_CELLS)
-    plot_allocation_3d(allocation, N_CELLS)
+def main():
+    parser = argparse.ArgumentParser(
+        description="Aloca produtos em células usando dados do SQLite."
+    )
+    parser.add_argument(
+        "--db", type=str,
+        default=os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "data", "produtos.db")
+        ),
+        help="Caminho para o arquivo SQLite."
+    )
+    parser.add_argument(
+        "-c", "--cells",
+        type=int, default=3,
+        help="Número de células disponíveis."
+    )
+    args = parser.parse_args()
+
+    conn = sqlite3.connect(args.db)
+    df = pd.read_sql_query("SELECT * FROM produtos", conn)
+    conn.close()
+
+    colors = [
+        'tab:blue','tab:orange','tab:green','tab:red',
+        'tab:purple','tab:brown','tab:pink','tab:gray',
+        'tab:olive','tab:cyan'
+    ]
+    produtos_info: List[Tuple[str, Produto, str]] = []
+    demands: List[int] = []
+    for idx, row in df.iterrows():
+        produtos_info.append((
+            row['nome_produto'],  # agora usa o nome do produto
+            Produto(
+                largura=int(row['largura_mm']),
+                profundidade=int(row['profundidade_mm']),
+                altura=int(row['altura_mm'])
+            ),
+            colors[idx % len(colors)]
+        ))
+        demands.append(int(row['qtd_vendida_30d']))
+
+    allocation = allocate_grouped_cells(produtos_info, demands, args.cells)
+    plot_allocation_3d(allocation, produtos_info, args.cells)
     show_allocation_table(allocation)
+
+if __name__ == '__main__':
+    main()
