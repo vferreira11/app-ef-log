@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+import random
 
 st.set_page_config(layout="wide")
 st.title("📦 Simulador de Armazenamento 3D")
@@ -38,31 +39,21 @@ with col2:
     cor_B = st.color_picker("Cor B", "#EF553B")
 
 if st.button("GERAR SIMULAÇÃO"):
-    # --- Cálculo de quantidades ---
-# --- Cálculo de quantidades (equalizando área de base e maximizando unidades) ---
+    
+    # --- Nova lógica: distribuição aleatória por porcentagem ---
     V   = largura_cel * profundidade_cel * altura_cel
     vA  = largura_A * profundidade_A * altura_A
     vB  = largura_B * profundidade_B * altura_B
-    aA  = largura_A * profundidade_A
-    aB  = largura_B * profundidade_B
 
-    maxA = V // vA
-    maxB = V // vB
+    x      = random.randint(10, 90)        # porcentagem de A entre 10 e 90%
+    shareA = V * (x / 100)
+    shareB = V - shareA
 
-    best = None
-    for iA in range(maxA + 1):
-        for iB in range(maxB + 1):
-            total_vol = iA * vA + iB * vB
-            if total_vol <= V:
-                diff_area   = abs(iA * aA - iB * aB)
-                total_units = iA + iB
-                candidate   = (diff_area, -total_units, iA, iB)
-                if best is None or candidate < best:
-                    best = candidate
+    nA = int(shareA // vA)
+    nB = int(shareB // vB)
 
-    _, _, nA, nB = best
-
-    st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA + nB}")
+    st.markdown(f"**Distribuição:** {x}% A • {100-x}% B")
+    st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA+nB}")
 
     # --- Posicionamento de A em grid ---
     nxA = largura_cel // largura_A
