@@ -155,49 +155,48 @@ if st.button("GERAR SIMULAÇÃO"):
 
     # --- Plot 3D ---
     fig3 = go.Figure()
-    for i, box in enumerate(placed_A):
-        draw_mesh(fig3, box, cor_A, 0.8, i == 0, 'A')
-    for i, box in enumerate(placed_B):
-        draw_mesh(fig3, box, cor_B, 0.8, i == 0, 'B')
-    cell = (0, 0, 0, largura_cel, profundidade_cel, altura_cel)
-    for a, b in [
-        (0,1),(1,2),(2,3),(3,0),
-        (4,5),(5,6),(6,7),(7,4),
-        (0,4),(1,5),(2,6),(3,7)
-    ]:
-        x0, y0, z0, dx, dy, dz = cell
-        verts = [
-            (x0, y0, z0), (x0 + dx, y0, z0),
-            (x0 + dx, y0 + dy, z0), (x0, y0 + dy, z0),
-            (x0, y0, z0 + dz), (x0 + dx, y0, z0 + dz),
-            (x0 + dx, y0 + dy, z0 + dz), (x0, y0 + dy, z0 + dz)
-        ]
-        fig3.add_trace(go.Scatter3d(
-            x=[verts[a][0], verts[b][0]],
-            y=[verts[a][1], verts[b][1]],
-            z=[verts[a][2], verts[b][2]],
-            mode='lines',
-            line=dict(color='white', width=4),
-            showlegend=False
-        ))
+    
+    for i, box in enumerate(placed_A): draw_mesh(fig3, box, cor_A, 0.8, i==0, 'A')
+    for i, box in enumerate(placed_B): draw_mesh(fig3, box, cor_B, 0.8, i==0, 'B')
+    cell = (0,0,0, largura_cel, profundidade_cel, altura_cel)
+    for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
+        x0,y0,z0,dx,dy,dz = cell
+        verts = [(x0,y0,z0),(x0+dx,y0,z0),(x0+dx,y0+dy,z0),(x0,y0+dy,z0),
+                 (x0,y0,z0+dz),(x0+dx,y0,z0+dz),(x0+dx,y0+dy,z0+dz),(x0,y0+dy,z0+dz)]
+        fig3.add_trace(go.Scatter3d(x=[verts[a][0],verts[b][0]],
+                                   y=[verts[a][1],verts[b][1]],
+                                   z=[verts[a][2],verts[b][2]],
+                                   mode='lines', line=dict(color='white',width=4), showlegend=False))
+
+    # --- Cálculo dinâmico da câmera ---
+    xs, ys, zs = [], [], []
+    for tr in fig3.data:
+        xs.extend(list(tr.x))
+        ys.extend(list(tr.y))
+        zs.extend(list(tr.z))
+    x0, x1 = min(xs), max(xs)
+    y0, y1 = min(ys), max(ys)
+    z0, z1 = min(zs), max(zs)
+    center_x, center_y, center_z = (x0+x1)/2, (y0+y1)/2, (z0+z1)/2
+    range_x, range_y, range_z = x1-x0, y1-y0, z1-z0
+    r = max(range_x, range_y, range_z)
+    k = 2.5
+    eye = dict(x=center_x + k*r, y=center_y - k*r, z=center_z + k*r)
+
     fig3.update_layout(
-    scene=dict(
-        # força proporções reais
-        aspectmode='manual',
-        aspectratio=dict(x=largura_cel, y=profundidade_cel, z=altura_cel),
-        # câmera com perspectiva e zoom inicial idêntico ao original
-        camera=dict(
-            projection=dict(type='perspective'),
-            eye=dict(x=12, y=-12, z=12)
+        scene=dict(
+            aspectmode='manual',
+            aspectratio=dict(x=range_x, y=range_y, z=range_z),
+            camera=dict(projection=dict(type='perspective'), eye=eye),
+            xaxis=dict(title='Largura (mm)'),
+            yaxis=dict(title='Profundidade (mm)'),
+            zaxis=dict(title='Altura (mm)')
         ),
-        xaxis=dict(title='Largura (mm)'),
-        yaxis=dict(title='Profundidade (mm)'),
-        zaxis=dict(title='Altura (mm)')
-    ),
-    margin=dict(l=0, r=0, b=0, t=0),
-    paper_bgcolor='rgba(0,0,0,0)',
-    plot_bgcolor='rgba(0,0,0,0)'
-)
+        margin=dict(l=0, r=0, b=0, t=0),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+
 
 
     st.plotly_chart(fig3, use_container_width=True)
