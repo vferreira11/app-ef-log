@@ -20,10 +20,11 @@ def overlap(b1, b2):
     x0, y0, z0, dx1, dy1, dz1 = b1
     x1, y1, z1, dx2, dy2, dz2 = b2
     return not (
-        x0  dx1 <= x1 or x1  dx2 <= x0 or
-        y0  dy1 <= y1 or y1  dy2 <= y0 or
-        z0  dz1 <= z1 or z1  dz2 <= z0
+        x0 + dx1 <= x1 or x1 + dx2 <= x0 or
+        y0 + dy1 <= y1 or y1 + dy2 <= y0 or
+        z0 + dz1 <= z1 or z1 + dz2 <= z0
     )
+
 
 # --- Entradas do usuário ---
 col1, col2 = st.columns(2)
