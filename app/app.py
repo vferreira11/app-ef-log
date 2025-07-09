@@ -182,7 +182,13 @@ if st.button("GERAR SIMULAÇÃO"):
         ))
     fig3.update_layout(
         scene=dict(
-        aspectmode='data',
+        # forçar proporções reais nos eixos
+        aspectmode='manual',
+        aspectratio=dict(
+            x=largura_cel,
+            y=profundidade_cel,
+            z=altura_cel
+        ),
         xaxis=dict(title='Largura (mm)'),
         yaxis=dict(title='Profundidade (mm)'),
         zaxis=dict(title='Altura (mm)')
