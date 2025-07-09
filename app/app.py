@@ -59,7 +59,7 @@ if st.button("GERAR SIMULAÇÃO"):
     shareA, shareB = base_area * x, base_area * (1 - x)
     colsA = int(shareA // aA); colsB = int(shareB // aB)
     layersA = altura_cel // altura_A; layersB = altura_cel // altura_B
-    nA = colsA * layersA; nB = colsB * layersB
+    nA, nB = colsA * layersA, colsB * layersB
 
     st.markdown(f"**Distribuição:** {int(x*100)}% A • {100-int(x*100)}% B")
 
@@ -91,46 +91,47 @@ if st.button("GERAR SIMULAÇÃO"):
             if cnt >= nB: break
         if cnt >= nB: break
 
-    # --- Contagem final ---
+    # --- Ajuste final de contagem ---
     nA, nB = len(placed_A), len(placed_B)
     st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA + nB}")
 
-    # --- Desenho 3D ---
+    # --- Função para desenhar cubos ---
     def draw_mesh(fig, box, color, opacity, legend, name):
         x0, y0, z0, dx, dy, dz = box
-        verts = [(x0, y0, z0),(x0+dx, y0, z0),(x0+dx, y0+dy, z0),(x0, y0+dy, z0),
-                 (x0, y0, z0+dz),(x0+dx, y0, z0+dz),(x0+dx, y0+dy, z0+dz),(x0, y0+dy, z0+dz)]
-        i,j,k = zip(*[(0,1,2),(0,2,3),(4,5,6),(4,6,7),(0,1,5),(0,5,4),
-                      (1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)])
+        verts = [
+            (x0, y0, z0), (x0+dx, y0, z0), (x0+dx, y0+dy, z0), (x0, y0+dy, z0),
+            (x0, y0, z0+dz), (x0+dx, y0, z0+dz), (x0+dx, y0+dy, z0+dz), (x0, y0+dy, z0+dz)
+        ]
+        i,j,k = zip(*[
+            (0,1,2),(0,2,3),(4,5,6),(4,6,7),(0,1,5),(0,5,4),
+            (1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)
+        ])
         x_vert, y_vert, z_vert = zip(*verts)
-        fig.add_trace(go.Mesh3d(x=x_vert,y=y_vert,z=z_vert,i=i,j=j,k=k,
-                                 color=color,opacity=opacity,showlegend=legend,name=name))
+        fig.add_trace(go.Mesh3d(x=x_vert, y=y_vert, z=z_vert, i=i, j=j, k=k,
+                                 color=color, opacity=opacity, showlegend=legend, name=name))
         for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
-            fig.add_trace(go.Scatter3d(x=[verts[a][0],verts[b][0]],
-                                       y=[verts[a][1],verts[b][1]],
-                                       z=[verts[a][2],verts[b][2]],
-                                       mode='lines',line=dict(color='black',width=2),
+            fig.add_trace(go.Scatter3d(x=[verts[a][0], verts[b][0]],
+                                       y=[verts[a][1], verts[b][1]],
+                                       z=[verts[a][2], verts[b][2]],
+                                       mode='lines', line=dict(color='black', width=2),
                                        showlegend=False))
 
+    # --- Plot 3D ---
     fig3 = go.Figure()
     for i, box in enumerate(placed_A): draw_mesh(fig3, box, cor_A, 0.8, i==0, 'A')
     for i, box in enumerate(placed_B): draw_mesh(fig3, box, cor_B, 0.8, i==0, 'B')
-    cell = (0,0,0, largura_cel, profundidade_cel, altura_cel)
+    cell = (0, 0, 0, largura_cel, profundidade_cel, altura_cel)
     for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
         verts = [
-            (cell[0],cell[1],cell[2]),
-            (cell[0]+cell[3],cell[1],cell[2]),
-            (cell[0]+cell[3],cell[1]+cell[4],cell[2]),
-            (cell[0],cell[1]+cell[4],cell[2]),
-            (cell[0],cell[1],cell[2]+cell[5]),
-            (cell[0]+cell[3],cell[1],cell[2]+cell[5]),
-            (cell[0]+cell[3],cell[1]+cell[4],cell[2]+cell[5]),
-            (cell[0],cell[1]+cell[4],cell[2]+cell[5])
+            (cell[0],cell[1],cell[2]), (cell[0]+cell[3],cell[1],cell[2]),
+            (cell[0]+cell[3],cell[1]+cell[4],cell[2]), (cell[0],cell[1]+cell[4],cell[2]),
+            (cell[0],cell[1],cell[2]+cell[5]), (cell[0]+cell[3],cell[1],cell[2]+cell[5]),
+            (cell[0]+cell[3],cell[1]+cell[4],cell[2]+cell[5]), (cell[0],cell[1]+cell[4],cell[2]+cell[5])
         ]
-        fig3.add_trace(go.Scatter3d(x=[verts[a][0],verts[b][0]],
-                                    y=[verts[a][1],verts[b][1]],
-                                    z=[verts[a][2],verts[b][2]],
-                                    mode='lines',line=dict(color='white',width=4),
+        fig3.add_trace(go.Scatter3d(x=[verts[a][0], verts[b][0]],
+                                    y=[verts[a][1], verts[b][1]],
+                                    z=[verts[a][2], verts[b][2]],
+                                    mode='lines', line=dict(color='white', width=4),
                                     showlegend=False))
 
     fig3.update_layout(
@@ -139,16 +140,18 @@ if st.button("GERAR SIMULAÇÃO"):
             yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_cel]),
             zaxis=dict(title='Altura (mm)', range=[0, altura_cel]),
             aspectmode='data',
-            camera=dict(eye=dict(x=-1.5,y=-1.8,z=0.2))
+            camera=dict(eye=dict(x=-1.5, y=-1.8, z=0.2))
         ),
-        margin=dict(l=0,r=0,t=40,b=0),
+        margin=dict(l=0, r=0, t=40, b=0),
         showlegend=False
     )
 
     # título com score
     score = score_ergonomico_altura(altura_cel/2)
-    fig3.update_layout(title_text=f"Score Ergonômico: {score:.2f}",
-                       title_x=0.5,title_y=0.95,title_font_size=16)
+    fig3.update_layout(
+        title_text=f"Score Ergonômico: {score:.2f}",
+        title_x=0.5, title_y=0.95, title_font_size=16
+    )
 
     # —— Curva de Score vs Altura com gradiente —— 
     def score_to_color(s):
@@ -191,23 +194,40 @@ if st.button("GERAR SIMULAÇÃO"):
     pad = 40
     for cx in range(cols):
         for cy in range(rows):
-            ox, oy = cx*(largura_cel+pad), cy*(altura_cel+pad)
-            for x0,y0,z0,dx,dy,dz in placed_A:
-                fig2.add_shape("rect",
-                               x0=ox+x0, y0=oy+z0,
-                               x1=ox+x0+dx, y1=oy+z0+dz,
-                               line=dict(color=cor_A), fillcolor=cor_A)
-            for x0,y0,z0,dx,dy,dz in placed_B:
-                fig2.add_shape("rect",
-                               x0=ox+x0, y0=oy+z0,
-                               x1=ox+x0+dx, y1=oy+z0+dz,
-                               line=dict(color=cor_B), fillcolor=cor_B)
+            ox = cx * (largura_cel + pad)
+            oy = cy * (altura_cel + pad)
+            for x0, y0, z0, dx, dy, dz in placed_A:
+                fig2.add_shape(
+                    type="rect",
+                    x0=ox + x0,
+                    y0=oy + z0,
+                    x1=ox + x0 + dx,
+                    y1=oy + z0 + dz,
+                    line=dict(color=cor_A),
+                    fillcolor=cor_A
+                )
+            for x0, y0, z0, dx, dy, dz in placed_B:
+                fig2.add_shape(
+                    type="rect",
+                    x0=ox + x0,
+                    y0=oy + z0,
+                    x1=ox + x0 + dx,
+                    y1=oy + z0 + dz,
+                    line=dict(color=cor_B),
+                    fillcolor=cor_B
+                )
 
     fig2.update_layout(
-        xaxis=dict(title="Largura (mm)",
-                   range=[0, cols*largura_cel + (cols-1)*pad]),
-        yaxis=dict(title="Altura (mm)",
-                   range=[0, rows*altura_cel + (rows-1)*pad]),
-        showlegend=False, margin=dict(l=0,r=0,t=20,b=0), height=400
+        xaxis=dict(
+            title="Largura (mm)",
+            range=[0, cols * largura_cel + (cols - 1) * pad]
+        ),
+        yaxis=dict(
+            title="Altura (mm)",
+            range=[0, rows * altura_cel + (rows - 1) * pad]
+        ),
+        showlegend=False,
+        margin=dict(l=0, r=0, t=20, b=0),
+        height=400
     )
     st.plotly_chart(fig2, use_container_width=True)
