@@ -182,10 +182,11 @@ if st.button("GERAR SIMULAÇÃO"):
         ))
     fig3.update_layout(
         scene=dict(
-            xaxis=dict(title='Largura (mm)'),
-            yaxis=dict(title='Profundidade (mm)'),
-            zaxis=dict(title='Altura (mm)')
-        ),
+        aspectmode='data',
+        xaxis=dict(title='Largura (mm)'),
+        yaxis=dict(title='Profundidade (mm)'),
+        zaxis=dict(title='Altura (mm)')
+    ),
         margin=dict(l=0, r=0, b=0, t=0),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)'
