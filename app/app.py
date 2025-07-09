@@ -182,7 +182,7 @@ if st.button("GERAR SIMULAÇÃO"):
         ))
     fig3.update_layout(
         scene=dict(
-        # forçar proporções reais nos eixos
+        camera=dict(eye=dict(x=1.5, y=1.5, z=0.8)),
         aspectmode='manual',
         aspectratio=dict(
             x=largura_cel,
