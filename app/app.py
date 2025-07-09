@@ -214,7 +214,15 @@ if st.button("GERAR SIMULAÇÃO"):
     # —— Curva de Score vs Altura —— 
     hs = list(range(0, altura_cel + 1, 10))
     scores = [score_ergonomico_altura(h) for h in hs]
-    fig_curve = go.Figure(go.Scatter(x=hs, y=scores, mode="lines"))
+    fig_curve = go.Figure(go.Scatter(
+        x=hs, y=scores, mode="lines",
+        line=dict(
+            color=scores, 
+            colorscale=[[0, 'red'], [1, 'blue']],
+            showscale=False,
+            width=3
+        )
+    ))
     fig_curve.update_layout(
         title="Score ↔ Altura",
         xaxis_title="Altura (mm)",
