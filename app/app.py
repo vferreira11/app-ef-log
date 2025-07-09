@@ -188,7 +188,7 @@ if st.button("GERAR SIMULAÇÃO"):
             yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_cel]),
             zaxis=dict(title='Altura (mm)', range=[0, altura_cel]),
             aspectmode='data',
-            camera=dict(eye=dict(x=-0.5, y=2, z=1))
+            camera=dict(eye=dict(x=-0.5, y=1.7, z=1))
         ),
         margin=dict(l=0, r=0, t=0, b=0),
         showlegend=False
