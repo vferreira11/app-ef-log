@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import plotly.graph_objects as go
 import random
@@ -72,10 +74,10 @@ if st.button("GERAR SIMULAÇÃO"):
     cnt = 0
     for z in range(nzA):
         for y in range(nyA):
-            for x in range(nxA):
+            for xi in range(nxA):
                 if cnt >= nA:
                     break
-                placed_A.append((x * largura_A,
+                placed_A.append((xi * largura_A,
                                  y * profundidade_A,
                                  z * altura_A,
                                  largura_A,
@@ -156,8 +158,6 @@ if st.button("GERAR SIMULAÇÃO"):
 
     # --- Plot 3D ---
     fig3 = go.Figure()
-
-    
     for i, box in enumerate(placed_A):
         draw_mesh(fig3, box, cor_A, 0.8, i == 0, 'A')
     for i, box in enumerate(placed_B):
@@ -191,20 +191,22 @@ if st.button("GERAR SIMULAÇÃO"):
             aspectmode='data',
             camera=dict(eye=dict(x=-1.5, y=-1.8, z=0.2))
         ),
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(l=0, r=0, t=40, b=0),
         showlegend=False
     )
 
     # calcula o score usando o meio da altura da célula
     score = score_ergonomico_altura(altura_cel / 2)
 
-    # mostra o score em destaque
-    st.metric(label="Score Ergonômico", value=f"{score:.2f}")
+    # embute o score como título centralizado do gráfico 3D
+    fig3.update_layout(
+        title_text=f"Score Ergonômico: {score:.2f}",
+        title_x=0.5,
+        title_y=0.95,
+        title_font_size=16
+    )
 
-    # aí vem o seu gráfico
-    st.plotly_chart(fig3, use_container_width=True)
-
-
+    # renderiza o gráfico 3D
     st.plotly_chart(fig3, use_container_width=True)
 
     # --- Plot 2D ---
@@ -216,39 +218,36 @@ if st.button("GERAR SIMULAÇÃO"):
             oy = cy * (altura_cel + pad)
             for x0, y0, z0, dx, dy, dz in placed_A:
                 fig2.add_shape(
-                    type='rect',
+                    type="rect",
                     x0=ox + x0,
                     y0=oy + z0,
                     x1=ox + x0 + dx,
                     y1=oy + z0 + dz,
-                    line=dict(color='black', width=1),
+                    line=dict(color=cor_A),
                     fillcolor=cor_A
                 )
             for x0, y0, z0, dx, dy, dz in placed_B:
                 fig2.add_shape(
-                    type='rect',
+                    type="rect",
                     x0=ox + x0,
                     y0=oy + z0,
                     x1=ox + x0 + dx,
                     y1=oy + z0 + dz,
-                    line=dict(color='black', width=1),
+                    line=dict(color=cor_B),
                     fillcolor=cor_B
                 )
-    fig2.add_trace(go.Scatter(
-        x=[None], y=[None], mode='markers',
-        marker=dict(color=cor_A), name='A'
-    ))
-    fig2.add_trace(go.Scatter(
-        x=[None], y=[None], mode='markers',
-        marker=dict(color=cor_B), name='B'
-    ))
-    total_w = cols * largura_cel + (cols - 1) * pad
-    total_h = rows * altura_cel + (rows - 1) * pad
+
     fig2.update_layout(
-        title='Visão Frontal',
-        xaxis=dict(range=[0, total_w]),
-        yaxis=dict(range=[0, total_h], scaleanchor='x'),
-        height=500,
-        margin=dict(l=0, r=0, b=0, t=30)
+        xaxis=dict(
+            title="Largura (mm)",
+            range=[0, cols * largura_cel + (cols - 1) * pad]
+        ),
+        yaxis=dict(
+            title="Altura (mm)",
+            range=[0, rows * altura_cel + (rows - 1) * pad]
+        ),
+        showlegend=False,
+        margin=dict(l=0, r=0, t=20, b=0),
+        height=400
     )
     st.plotly_chart(fig2, use_container_width=True)
