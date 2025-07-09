@@ -182,13 +182,13 @@ if st.button("GERAR SIMULAÇÃO"):
         ))
     fig3.update_layout(
     scene=dict(
-        # mantém proporções reais
+        # força proporções reais
         aspectmode='manual',
         aspectratio=dict(x=largura_cel, y=profundidade_cel, z=altura_cel),
-        # usa projeção ortográfica para caber todo o cubo
+        # câmera com perspectiva e zoom inicial idêntico ao original
         camera=dict(
-            projection=dict(type='orthographic'),
-            eye=dict(x=1.5, y=1.5, z=0.8)
+            projection=dict(type='perspective'),
+            eye=dict(x=2.2, y=-2.2, z=1.2)
         ),
         xaxis=dict(title='Largura (mm)'),
         yaxis=dict(title='Profundidade (mm)'),
@@ -198,6 +198,7 @@ if st.button("GERAR SIMULAÇÃO"):
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(0,0,0,0)'
 )
+
 
     st.plotly_chart(fig3, use_container_width=True)
 
