@@ -53,8 +53,7 @@ if st.button("GERAR SIMULAÇÃO"):
     nB = int(shareB // vB)
 
     st.markdown(f"**Distribuição:** {x}% A • {100-x}% B")
-    st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA+nB}")
-
+    
     # --- Posicionamento de A em grid ---
     nxA = largura_cel // largura_A
     nyA = profundidade_cel // profundidade_A
@@ -70,7 +69,6 @@ if st.button("GERAR SIMULAÇÃO"):
             if cnt >= nA: break
         if cnt >= nA: break
 
-    # --- Posicionamento de B escaneando todo espaço ---
     # --- Posicionamento de B escaneando todo espaço ---
     nxB = largura_cel // largura_B
     nyB = profundidade_cel // profundidade_B
@@ -100,6 +98,11 @@ if st.button("GERAR SIMULAÇÃO"):
                 break
         if cnt >= nB:
             break
+
+    # exibe a contagem real de cubos desenhados
+    nA = len(placed_A)
+    nB = len(placed_B)
+    st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA + nB}")
 
     # --- Função para desenhar cubos ---
     def draw_mesh(fig, box, color, opacity, legend, name):
