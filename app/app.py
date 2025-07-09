@@ -1,6 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 import random
+from score_picking import score_ergonomico_altura
 
 st.set_page_config(layout="wide")
 st.title("📦 Simulador de Armazenamento 3D")
@@ -193,6 +194,15 @@ if st.button("GERAR SIMULAÇÃO"):
         margin=dict(l=0, r=0, t=0, b=0),
         showlegend=False
     )
+
+    # calcula o score usando o meio da altura da célula
+    score = score_ergonomico_altura(altura_cel / 2)
+
+    # mostra o score em destaque
+    st.metric(label="Score Ergonômico", value=f"{score:.2f}")
+
+    # aí vem o seu gráfico
+    st.plotly_chart(fig3, use_container_width=True)
 
 
     st.plotly_chart(fig3, use_container_width=True)
