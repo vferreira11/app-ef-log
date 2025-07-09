@@ -181,26 +181,24 @@ if st.button("GERAR SIMULAÇÃO"):
             showlegend=False
         ))
     fig3.update_layout(
-        scene=dict(
-        camera=dict(eye=dict(
-            x=largura_cel * 2,
-            y=profundidade_cel * 2,
-            z=altura_cel * 2
-        )),
+    scene=dict(
+        # mantém proporções reais
         aspectmode='manual',
-        aspectratio=dict(
-            x=largura_cel,
-            y=profundidade_cel,
-            z=altura_cel
+        aspectratio=dict(x=largura_cel, y=profundidade_cel, z=altura_cel),
+        # usa projeção ortográfica para caber todo o cubo
+        camera=dict(
+            projection=dict(type='orthographic'),
+            eye=dict(x=1.5, y=1.5, z=0.8)
         ),
         xaxis=dict(title='Largura (mm)'),
         yaxis=dict(title='Profundidade (mm)'),
         zaxis=dict(title='Altura (mm)')
     ),
-        margin=dict(l=0, r=0, b=0, t=0),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
-    )
+    margin=dict(l=0, r=0, b=0, t=0),
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)'
+)
+
     st.plotly_chart(fig3, use_container_width=True)
 
     # --- Plot 2D ---
