@@ -2,6 +2,8 @@
 
 import streamlit as st
 import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 import random
 import math
 
@@ -13,16 +15,6 @@ def score_ergonomico_altura(altura_mm, ideal_mm=1200.0, min_score_baixo=0.1):
     sigma = ideal_mm / math.sqrt(-2 * math.log(min_score_baixo))
     score = math.exp(-((altura_mm - ideal_mm) ** 2) / (2 * sigma**2))
     return round(score, 4)
-
-# --- (Opcional) Função de detecção de sobreposição não usada ---
-def overlap(b1, b2):
-    x0, y0, z0, dx1, dy1, dz1 = b1
-    x1, y1, z1, dx2, dy2, dz2 = b2
-    return not (
-        x0 + dx1 <= x1 or x1 + dx2 <= x0 or
-        y0 + dy1 <= y1 or y1 + dy2 <= y0 or
-        z0 + dz1 <= z1 or z1 + dz2 <= z0
-    )
 
 # --- Entradas ---
 col1, col2 = st.columns(2)
@@ -51,7 +43,7 @@ with col2:
     cor_B = st.color_picker("Cor B", "#EF553B")
 
 if st.button("GERAR SIMULAÇÃO"):
-    # --- Quantidades ---
+    # --- Cálculo de quantidades ---
     base_area = largura_cel * profundidade_cel
     aA = largura_A * profundidade_A
     aB = largura_B * profundidade_B
@@ -107,16 +99,20 @@ if st.button("GERAR SIMULAÇÃO"):
             (1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)
         ])
         x_vert, y_vert, z_vert = zip(*verts)
-        fig.add_trace(go.Mesh3d(x=x_vert, y=y_vert, z=z_vert, i=i, j=j, k=k,
-                                 color=color, opacity=opacity, showlegend=legend, name=name))
+        fig.add_trace(go.Mesh3d(
+            x=x_vert, y=y_vert, z=z_vert, i=i, j=j, k=k,
+            color=color, opacity=opacity, showlegend=legend, name=name
+        ))
         for a,b in [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]:
-            fig.add_trace(go.Scatter3d(x=[verts[a][0], verts[b][0]],
-                                       y=[verts[a][1], verts[b][1]],
-                                       z=[verts[a][2], verts[b][2]],
-                                       mode='lines', line=dict(color='black', width=2),
-                                       showlegend=False))
+            fig.add_trace(go.Scatter3d(
+                x=[verts[a][0], verts[b][0]],
+                y=[verts[a][1], verts[b][1]],
+                z=[verts[a][2], verts[b][2]],
+                mode='lines', line=dict(color='black', width=2),
+                showlegend=False
+            ))
 
-    # --- Plot 3D ---
+    # --- Plot 3D (título removido) ---
     fig3 = go.Figure()
     for i, box in enumerate(placed_A): draw_mesh(fig3, box, cor_A, 0.8, i==0, 'A')
     for i, box in enumerate(placed_B): draw_mesh(fig3, box, cor_B, 0.8, i==0, 'B')
@@ -128,61 +124,51 @@ if st.button("GERAR SIMULAÇÃO"):
             (cell[0],cell[1],cell[2]+cell[5]), (cell[0]+cell[3],cell[1],cell[2]+cell[5]),
             (cell[0]+cell[3],cell[1]+cell[4],cell[2]+cell[5]), (cell[0],cell[1]+cell[4],cell[2]+cell[5])
         ]
-        fig3.add_trace(go.Scatter3d(x=[verts[a][0], verts[b][0]],
-                                    y=[verts[a][1], verts[b][1]],
-                                    z=[verts[a][2], verts[b][2]],
-                                    mode='lines', line=dict(color='white', width=4),
-                                    showlegend=False))
+        fig3.add_trace(go.Scatter3d(
+            x=[verts[a][0], verts[b][0]],
+            y=[verts[a][1], verts[b][1]],
+            z=[verts[a][2], verts[b][2]],
+            mode='lines', line=dict(color='white', width=4),
+            showlegend=False
+        ))
 
     fig3.update_layout(
         scene=dict(
             xaxis=dict(title='Largura (mm)', range=[0, largura_cel]),
             yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_cel]),
             zaxis=dict(title='Altura (mm)', range=[0, altura_cel]),
-            aspectmode='data',
-            camera=dict(eye=dict(x=-1.5, y=-1.8, z=0.2))
+            aspectmode='data', camera=dict(eye=dict(x=-1.5, y=-1.8, z=0.2))
         ),
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=0, r=0, t=0, b=0),  # remove espaço do título
         showlegend=False
     )
 
-    # título com score
-    score = score_ergonomico_altura(altura_cel/2)
-    fig3.update_layout(
-        title_text=f"Score Ergonômico: {score:.2f}",
-        title_x=0.5, title_y=0.95, title_font_size=16
-    )
-
-    # —— Curva de Score vs Altura com gradiente —— 
-    def score_to_color(s):
-        r = int(255 * (1 - s))
-        b = int(255 * s)
-        return f'#{r:02x}00{b:02x}'
-
+    # —— Curva de Score vs Altura com legenda contínua ——
+    # prepara dataframe
     hs = list(range(0, altura_cel + 1, 10))
     scores = [score_ergonomico_altura(h) for h in hs]
+    df = pd.DataFrame({'Altura (mm)': hs, 'Score': scores})
 
-    fig_curve = go.Figure()
-    for i in range(len(hs) - 1):
-        c = score_to_color(scores[i])
-        fig_curve.add_trace(go.Scatter(
-            x=[hs[i], hs[i+1]],
-            y=[scores[i], scores[i+1]],
-            mode='lines',
-            line=dict(color=c, width=3),
-            showlegend=False,
-            hoverinfo='none'
-        ))
-
+    # cria linha com cor contínua e colorbar horizontal
+    fig_curve = px.line(
+        df, x='Altura (mm)', y='Score', color='Score',
+        color_continuous_scale=[(0, 'red'), (1, 'blue')],
+        range_y=[0, 1]
+    )
+    fig_curve.update_traces(showlegend=False)
+    fig_curve.update_coloraxes(
+        colorbar_title='Score',
+        colorbar_orientation='h',
+        colorbar_y=1.02,
+        colorbar_x=0.5,
+        colorbar_len=0.8
+    )
     fig_curve.update_layout(
-        title="Score Ergonômico ↔ Altura",
-        xaxis_title="Altura (mm)",
-        yaxis_title="Score",
         margin=dict(l=0, r=0, t=30, b=0),
         height=300
     )
 
-    # —— Exibe 3D e Curva lado a lado —— 
+    # exibe lado a lado
     col3, col4 = st.columns([3, 1])
     with col3:
         st.plotly_chart(fig3, use_container_width=True)
@@ -197,37 +183,19 @@ if st.button("GERAR SIMULAÇÃO"):
             ox = cx * (largura_cel + pad)
             oy = cy * (altura_cel + pad)
             for x0, y0, z0, dx, dy, dz in placed_A:
-                fig2.add_shape(
-                    type="rect",
-                    x0=ox + x0,
-                    y0=oy + z0,
-                    x1=ox + x0 + dx,
-                    y1=oy + z0 + dz,
-                    line=dict(color=cor_A),
-                    fillcolor=cor_A
-                )
+                fig2.add_shape(type="rect",
+                               x0=ox + x0, y0=oy + z0,
+                               x1=ox + x0 + dx, y1=oy + z0 + dz,
+                               line=dict(color=cor_A), fillcolor=cor_A)
             for x0, y0, z0, dx, dy, dz in placed_B:
-                fig2.add_shape(
-                    type="rect",
-                    x0=ox + x0,
-                    y0=oy + z0,
-                    x1=ox + x0 + dx,
-                    y1=oy + z0 + dz,
-                    line=dict(color=cor_B),
-                    fillcolor=cor_B
-                )
+                fig2.add_shape(type="rect",
+                               x0=ox + x0, y0=oy + z0,
+                               x1=ox + x0 + dx, y1=oy + z0 + dz,
+                               line=dict(color=cor_B), fillcolor=cor_B)
 
     fig2.update_layout(
-        xaxis=dict(
-            title="Largura (mm)",
-            range=[0, cols * largura_cel + (cols - 1) * pad]
-        ),
-        yaxis=dict(
-            title="Altura (mm)",
-            range=[0, rows * altura_cel + (rows - 1) * pad]
-        ),
-        showlegend=False,
-        margin=dict(l=0, r=0, t=20, b=0),
-        height=400
+        xaxis=dict(title="Largura (mm)", range=[0, cols * largura_cel + (cols - 1) * pad]),
+        yaxis=dict(title="Altura (mm)", range=[0, rows * altura_cel + (rows - 1) * pad]),
+        showlegend=False, margin=dict(l=0, r=0, t=20, b=0), height=400
     )
     st.plotly_chart(fig2, use_container_width=True)
