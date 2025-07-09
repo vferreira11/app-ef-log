@@ -128,7 +128,7 @@ if st.button("GERAR SIMULAÇÃO"):
     for i in range(len(hs)-1):
         fig_curve.add_trace(go.Scatter(x=[hs[i], hs[i+1]], y=[scores[i], scores[i+1]], mode='lines', line=dict(color=score_to_color(scores[i]), width=3), showlegend=False))
     # dummy trace para colorbar
-    fig_curve.add_trace(go.Scatter(x=[None], y=[None], mode='markers', marker=dict(colors=[0,1], colorscale=[[0,'red'],[1,'blue']], showscale=True, cmin=0, cmax=1, colorbar=dict(title='Score', orientation='h', x=0.5, xanchor='center', y=1.05, yanchor='bottom', len=0.8)), showlegend=False, hoverinfo='none'))
+    fig_curve.add_trace(go.Scatter(x=[None], y=[None], mode='markers', marker=dict(color=[0,1], colorscale=[[0,'red'],[1,'blue']], showscale=True, cmin=0, cmax=1, colorbar=dict(title='Score', orientation='h', x=0.5, xanchor='center', y=1.05, yanchor='bottom', len=0.8)), showlegend=False, hoverinfo='none'))
     fig_curve.update_layout(margin=dict(l=0, r=0, t=30, b=0), height=300)
     fig_curve.update_yaxes(range=[0,1])
 
