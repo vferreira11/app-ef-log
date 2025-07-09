@@ -184,9 +184,9 @@ if st.button("GERAR SIMULAÇÃO"):
         ))
     fig3.update_layout(
         scene=dict(
-            xaxis=dict(title='Largura (mm)', range=[0, largura_estoque]),
-            yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_estoque]),
-            zaxis=dict(title='Altura (mm)', range=[0, altura_estoque]),
+            xaxis=dict(title='Largura (mm)', range=[0, largura_cel]),
+            yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_cel]),
+            zaxis=dict(title='Altura (mm)', range=[0, altura_cel]),
             aspectmode='data',
             camera=dict(eye=dict(x=1.8, y=-2.5, z=1.8))
         ),
