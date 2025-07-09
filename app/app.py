@@ -183,20 +183,19 @@ if st.button("GERAR SIMULAÇÃO"):
     k = 2.5
     eye = dict(x=center_x + k*r, y=center_y - k*r, z=center_z + k*r)
 
-    fig3.update_layout(
+    fig.update_layout(
         scene=dict(
-            aspectmode='manual',
-            aspectratio=dict(x=range_x, y=range_y, z=range_z),
-            camera=dict(projection=dict(type='perspective'), eye=eye),
-            xaxis=dict(title='Largura (mm)'),
-            yaxis=dict(title='Profundidade (mm)'),
-            zaxis=dict(title='Altura (mm)')
+            xaxis=dict(title='Largura (mm)', range=[0, largura_estoque]),          # esquerda ↔ direita
+            yaxis=dict(title='Profundidade (mm)', range=[0, profundidade_estoque]),# frente ↔ fundo
+            zaxis=dict(title='Altura (mm)', range=[0, altura_estoque]),            # baixo ↔ cima
+            aspectmode='data',
+            camera=dict(
+                eye=dict(x=1.8, y=-2.5, z=1.8)  # visão frontal elevada
+            )
         ),
-        margin=dict(l=0, r=0, b=0, t=0),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)'
+        margin=dict(l=0, r=0, t=0, b=0),
+        showlegend=False
     )
-
 
 
     st.plotly_chart(fig3, use_container_width=True)
