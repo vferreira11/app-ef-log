@@ -20,9 +20,9 @@ def overlap(b1, b2):
     x0, y0, z0, dx1, dy1, dz1 = b1
     x1, y1, z1, dx2, dy2, dz2 = b2
     return not (
-        x0 + dx1 <= x1 or x1 + dx2 <= x0 or
-        y0 + dy1 <= y1 or y1 + dy2 <= y0 or
-        z0 + dz1 <= z1 or z1 + dz2 <= z0
+        x0  dx1 <= x1 or x1  dx2 <= x0 or
+        y0  dy1 <= y1 or y1  dy2 <= y0 or
+        z0  dz1 <= z1 or z1  dz2 <= z0
     )
 
 # --- Entradas do usuário ---
@@ -87,14 +87,14 @@ if st.button("GERAR SIMULAÇÃO"):
                     profundidade_A,
                     altura_A
                 ))
-                cnt += 1
+                cnt = 1
             if cnt >= nA:
                 break
         if cnt >= nA:
             break
 
     # --- Posicionamento de B ---
-    x_end_A = max((b[0] + b[3] for b in placed_A), default=0)
+    x_end_A = max((b[0]  b[3] for b in placed_A), default=0)
     largura_rest = largura_cel - x_end_A
     nxB = largura_rest // largura_B
     nyB = profundidade_cel // profundidade_B
@@ -107,14 +107,14 @@ if st.button("GERAR SIMULAÇÃO"):
                 if cnt >= nB:
                     break
                 placed_B.append((
-                    x_end_A + i * largura_B,
+                    x_end_A  i * largura_B,
                     y * profundidade_B,
                     z * altura_B,
                     largura_B,
                     profundidade_B,
                     altura_B
                 ))
-                cnt += 1
+                cnt = 1
             if cnt >= nB:
                 break
         if cnt >= nB:
@@ -123,16 +123,16 @@ if st.button("GERAR SIMULAÇÃO"):
     # --- Ajuste final de contagem ---
     nA = len(placed_A)
     nB = len(placed_B)
-    st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA + nB}")
+    st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA  nB}")
 
     # --- Função para desenhar cubos ---
     def draw_mesh(fig, box, color, opacity, legend, name):
         x0, y0, z0, dx, dy, dz = box
         verts = [
-            (x0, y0, z0), (x0+dx, y0, z0),
-            (x0+dx, y0+dy, z0), (x0, y0+dy, z0),
-            (x0, y0, z0+dz), (x0+dx, y0, z0+dz),
-            (x0+dx, y0+dy, z0+dz), (x0, y0+dy, z0+dz)
+            (x0, y0, z0), (x0dx, y0, z0),
+            (x0dx, y0dy, z0), (x0, y0dy, z0),
+            (x0, y0, z0dz), (x0dx, y0, z0dz),
+            (x0dx, y0dy, z0dz), (x0, y0dy, z0dz)
         ]
         i, j, k = zip(*[
             (0,1,2),(0,2,3),(4,5,6),(4,6,7),
@@ -176,13 +176,13 @@ if st.button("GERAR SIMULAÇÃO"):
     ]:
         verts = [
             (cell[0], cell[1], cell[2]),
-            (cell[0]+cell[3], cell[1], cell[2]),
-            (cell[0]+cell[3], cell[1]+cell[4], cell[2]),
-            (cell[0], cell[1]+cell[4], cell[2]),
-            (cell[0], cell[1], cell[2]+cell[5]),
-            (cell[0]+cell[3], cell[1], cell[2]+cell[5]),
-            (cell[0]+cell[3], cell[1]+cell[4], cell[2]+cell[5]),
-            (cell[0], cell[1]+cell[4], cell[2]+cell[5])
+            (cell[0]cell[3], cell[1], cell[2]),
+            (cell[0]cell[3], cell[1]cell[4], cell[2]),
+            (cell[0], cell[1]cell[4], cell[2]),
+            (cell[0], cell[1], cell[2]cell[5]),
+            (cell[0]cell[3], cell[1], cell[2]cell[5]),
+            (cell[0]cell[3], cell[1]cell[4], cell[2]cell[5]),
+            (cell[0], cell[1]cell[4], cell[2]cell[5])
         ]
         fig3.add_trace(go.Scatter3d(
             x=[verts[a][0], verts[b][0]],
@@ -216,30 +216,49 @@ if st.button("GERAR SIMULAÇÃO"):
 
     st.plotly_chart(fig3, use_container_width=True)
 
+    # —— Curva de Score vs Altura ——
+    hs = list(range(0, altura_cel  1, 10))
+    scores = [score_ergonomico_altura(h) for h in hs]
+    fig_curve = go.Figure(go.Scatter(x=hs, y=scores, mode="lines"))
+    fig_curve.update_layout(
+        title="Score Ergonômico ↔ Altura",
+        xaxis_title="Altura (mm)",
+        yaxis_title="Score",
+        margin=dict(l=0, r=0, t=30, b=0),
+        height=300
+    )
+
+    # —— Exibe 3D e Curva lado a lado ——
+    col3, col4 = st.columns([3, 1])
+    with col3:
+        st.plotly_chart(fig3, use_container_width=True)
+    with col4:
+        st.plotly_chart(fig_curve, use_container_width=True)
+
     # --- Plot 2D Frontal ---
     fig2 = go.Figure()
     pad = 40
     for cx in range(cols):
         for cy in range(rows):
-            ox = cx * (largura_cel + pad)
-            oy = cy * (altura_cel + pad)
+            ox = cx * (largura_cel  pad)
+            oy = cy * (altura_cel  pad)
             for x0, y0, z0, dx, dy, dz in placed_A:
                 fig2.add_shape(
                     type="rect",
-                    x0=ox + x0,
-                    y0=oy + z0,
-                    x1=ox + x0 + dx,
-                    y1=oy + z0 + dz,
+                    x0=ox  x0,
+                    y0=oy  z0,
+                    x1=ox  x0  dx,
+                    y1=oy  z0  dz,
                     line=dict(color=cor_A),
                     fillcolor=cor_A
                 )
             for x0, y0, z0, dx, dy, dz in placed_B:
                 fig2.add_shape(
                     type="rect",
-                    x0=ox + x0,
-                    y0=oy + z0,
-                    x1=ox + x0 + dx,
-                    y1=oy + z0 + dz,
+                    x0=ox  x0,
+                    y0=oy  z0,
+                    x1=ox  x0  dx,
+                    y1=oy  z0  dz,
                     line=dict(color=cor_B),
                     fillcolor=cor_B
                 )
@@ -247,11 +266,11 @@ if st.button("GERAR SIMULAÇÃO"):
     fig2.update_layout(
         xaxis=dict(
             title="Largura (mm)",
-            range=[0, cols * largura_cel + (cols - 1) * pad]
+            range=[0, cols * largura_cel  (cols - 1) * pad]
         ),
         yaxis=dict(
             title="Altura (mm)",
-            range=[0, rows * altura_cel + (rows - 1) * pad]
+            range=[0, rows * altura_cel  (rows - 1) * pad]
         ),
         showlegend=False,
         margin=dict(l=0, r=0, t=20, b=0),
