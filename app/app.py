@@ -1,6 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 import random
+import math
 
 st.set_page_config(layout="wide")
 st.title("📦 Simulador de Armazenamento 3D")
@@ -180,15 +181,17 @@ if st.button("GERAR SIMULAÇÃO"):
             line=dict(color='white', width=4),
             showlegend=False
         ))
+
+    diag = math.sqrt(largura_cel**2 + profundidade_cel**2 + altura_cel**2)
+
     fig3.update_layout(
     scene=dict(
-        # mantém proporções reais
         aspectmode='manual',
         aspectratio=dict(x=largura_cel, y=profundidade_cel, z=altura_cel),
-        # usa projeção ortográfica para caber todo o cubo
         camera=dict(
             projection=dict(type='orthographic'),
-            eye=dict(x=1.5, y=1.5, z=0.8)
+            # posiciona a câmera automaticamente baseado na diagonal
+            eye=dict(x=diag*1.2, y=diag*1.2, z=diag*1.2)
         ),
         xaxis=dict(title='Largura (mm)'),
         yaxis=dict(title='Profundidade (mm)'),
