@@ -40,19 +40,24 @@ with col2:
 
 if st.button("GERAR SIMULAÇÃO"):
     
-    # --- Nova lógica: distribuição aleatória por porcentagem ---
-    V   = largura_cel * profundidade_cel * altura_cel
-    vA  = largura_A * profundidade_A * altura_A
-    vB  = largura_B * profundidade_B * altura_B
+    base_area    = largura_cel * profundidade_cel
+    aA           = largura_A * profundidade_A
+    aB           = largura_B * profundidade_B
 
-    x      = random.randint(10, 90)        # porcentagem de A entre 10 e 90%
-    shareA = V * (x / 100)
-    shareB = V - shareA
+    x            = random.uniform(0.1, 0.9)       # % de área para A
+    shareA_area  = base_area * x
+    shareB_area  = base_area * (1 - x)
 
-    nA = int(shareA // vA)
-    nB = int(shareB // vB)
+    colsA        = int(shareA_area // aA)
+    colsB        = int(shareB_area // aB)
+    layersA      = altura_cel // altura_A
+    layersB      = altura_cel // altura_B
 
-    st.markdown(f"**Distribuição:** {x}% A • {100-x}% B")
+    nA           = colsA * layersA
+    nB           = colsB * layersB
+
+st.markdown(f"**Distribuição:** {int(x*100)}% A • {100-int(x*100)}% B")
+st.markdown(f"**A:** {nA} un. • **B:** {nB} un. • **Total:** {nA+nB}")
     
     # --- Posicionamento de A em grid ---
     nxA = largura_cel // largura_A
