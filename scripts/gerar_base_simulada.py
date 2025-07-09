@@ -6,7 +6,7 @@ import os
 import plotly.graph_objects as go
 from plotly.graph_objects import Figure, Mesh3d, Layout
 
-def gerar_produtos_simulados(n_produtos=30, seed=42):
+def gerar_produtos_simulados(n_produtos=2, seed=42):
     random.seed(seed)
     np.random.seed(seed)
 
