@@ -188,7 +188,7 @@ if st.button("GERAR SIMULAÇÃO"):
         # câmera com perspectiva e zoom inicial idêntico ao original
         camera=dict(
             projection=dict(type='perspective'),
-            eye=dict(x=4, y=4, z=2)
+            eye=dict(x=0, y=9, z=0)
         ),
         xaxis=dict(title='Largura (mm)'),
         yaxis=dict(title='Profundidade (mm)'),
