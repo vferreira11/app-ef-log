@@ -76,6 +76,13 @@ nxB_reg   = largura_rest // largura_B
 nyB       = profundidade_cel // profundidade_B
 nzB       = altura_cel // altura_B
 
+# --- Posicionamento de B sem lacunas: encaixa B logo após o “fim” de A no eixo X ---
+x_end_A     = max(box[0] + box[3] for box in placed_A) if placed_A else 0
+largura_rest = largura_cel - x_end_A
+nxB_reg     = largura_rest // largura_B
+nyB         = profundidade_cel // profundidade_B
+nzB         = altura_cel // altura_B
+
 placed_B = []
 cnt = 0
 for z in range(nzB):
@@ -98,6 +105,7 @@ for z in range(nzB):
             break
     if cnt >= nB:
         break
+
 
 
     # exibe a contagem real de cubos desenhados
