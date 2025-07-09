@@ -69,35 +69,36 @@ if st.button("GERAR SIMULAÇÃO"):
             if cnt >= nA: break
         if cnt >= nA: break
 
-    # --- Posicionamento de B escaneando todo espaço ---
-    nxB = largura_cel // largura_B
-    nyB = profundidade_cel // profundidade_B
-    nzB = altura_cel // altura_B
-    placed_B = []
-    cnt = 0
-    for z in range(nzB):
-        for y in range(nyB):
-            for x in range(nxB):
-                if cnt >= nB:
-                    break
-                boxB = (
-                    x * largura_B,
-                    y * profundidade_B,
-                    z * altura_B,
-                    largura_B,
-                    profundidade_B,
-                    altura_B,
-                )
-                if any(overlap(boxB, a) for a in placed_A):
-                    continue
-                if any(overlap(boxB, b) for b in placed_B):
-                    continue
-                placed_B.append(boxB)
-                cnt += 1
+# --- Posicionamento de B sem lacunas: encaixa B logo após o “fim” de A no eixo X ---
+x_end_A   = max(box[0] + box[3] for box in placed_A) if placed_A else 0
+largura_rest = largura_cel - x_end_A
+nxB_reg   = largura_rest // largura_B
+nyB       = profundidade_cel // profundidade_B
+nzB       = altura_cel // altura_B
+
+placed_B = []
+cnt = 0
+for z in range(nzB):
+    for y in range(nyB):
+        for i in range(nxB_reg):
             if cnt >= nB:
                 break
+            x0 = x_end_A + i * largura_B
+            boxB = (
+                x0,
+                y * profundidade_B,
+                z * altura_B,
+                largura_B,
+                profundidade_B,
+                altura_B,
+            )
+            placed_B.append(boxB)
+            cnt += 1
         if cnt >= nB:
             break
+    if cnt >= nB:
+        break
+
 
     # exibe a contagem real de cubos desenhados
     nA = len(placed_A)
