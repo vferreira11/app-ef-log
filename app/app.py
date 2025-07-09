@@ -182,7 +182,11 @@ if st.button("GERAR SIMULAÇÃO"):
         ))
     fig3.update_layout(
         scene=dict(
-        camera=dict(eye=dict(x=2.5, y=2.5, z=1.2)),
+        camera=dict(eye=dict(
+            x=largura_cel * 2,
+            y=profundidade_cel * 2,
+            z=altura_cel * 2
+        )),
         aspectmode='manual',
         aspectratio=dict(
             x=largura_cel,
