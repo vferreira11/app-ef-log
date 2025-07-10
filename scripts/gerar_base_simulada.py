@@ -15,10 +15,8 @@ def calcular_volume_disponivel(altura_mm, largura_mm, profundidade_mm):
         "volume_m3": volume_m3
     }
 
-def gerar_produtos_simulados(n_produtos=30, seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-
+def gerar_produtos_simulados(n_produtos=30):
+    
     categorias = ['Brinquedos', 'Utilidades Domésticas']
     nomes_brinquedos = [
         'Carrinho de Controle', 'Boneca Interativa', 'Jogo Educativo',
@@ -88,15 +86,9 @@ def main():
         default=30,
         help="Número de produtos distintos a gerar"
     )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Semente para aleatoriedade"
-    )
     args = parser.parse_args()
 
-    df = gerar_produtos_simulados(n_produtos=args.n_produtos, seed=args.seed)
+    df = gerar_produtos_simulados(n_produtos=args.n_produtos)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
     os.makedirs(base_dir, exist_ok=True)
     caminho_arquivo = os.path.join(base_dir, "produtos_simulados.csv")

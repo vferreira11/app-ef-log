@@ -53,15 +53,24 @@ def allocate_grouped_cells(
 
     return cells_alloc
 
+
 def plot_allocation_3d(
     allocation: List[List[Tuple[str, int, int, int]]],
     produtos_info: List[Tuple[str, Produto, str]],
     n_cells: int
 ):
-    fig = plt.figure(figsize=(6 * n_cells, 6))
+    # Definir grid de subplots (linhas x colunas)
+    n_cols = int(math.ceil(math.sqrt(n_cells)))
+    n_rows = int(math.ceil(n_cells / n_cols))
+    fig = plt.figure(figsize=(6 * n_cols + 3, 6 * n_rows))  # +3 para legenda lateral
     cel = dimensoes_celula
+
+    # coletar handles/labels globais de produtos
+    global_handles = []
+    global_labels = []
+
     for i in range(n_cells):
-        ax = fig.add_subplot(1, n_cells, i+1, projection='3d')
+        ax = fig.add_subplot(n_rows, n_cols, i+1, projection='3d')
         ax.set_box_aspect((cel.largura, cel.profundidade, cel.altura))
         ax.set_xlim(0, cel.largura)
         ax.set_ylim(0, cel.profundidade)
@@ -70,27 +79,47 @@ def plot_allocation_3d(
         ax.set_xlabel('X (mm)')
         ax.set_ylabel('Y (mm)')
         ax.set_zlabel('Z (mm)')
-        x_offset = 0
-        handles = []
-        for j, (label, total, alloc, falt) in enumerate(allocation[i]):
+
+        needed_cols_list = []
+        total_width = 0
+        for j, (_, total, alloc, _) in enumerate(allocation[i]):
             prod = produtos_info[j][1]
-            color = produtos_info[j][2]
-            if alloc <= 0:
-                continue
             rows = cel.profundidade // prod.profundidade
             layers = cel.altura // prod.altura
             cap_per_col = rows * layers
-            needed_cols = math.ceil(alloc / cap_per_col) if cap_per_col else 0
+            cols = math.ceil(alloc / cap_per_col) if cap_per_col else 0
+            needed_cols_list.append(cols)
+            total_width += cols * prod.largura
+
+        # Centralizar horizontalmente
+        x_offset = (cel.largura - total_width) / 2
+
+        for j, (label, total, alloc, falt) in enumerate(allocation[i]):
+            prod = produtos_info[j][1]
+            color = produtos_info[j][2]
+            cols = needed_cols_list[j]
+
+            # registrar para legenda global, apenas primeira ocorrência
+            if label not in global_labels:
+                global_handles.append(Patch(facecolor=color, edgecolor='black'))
+                global_labels.append(label)
+
+            if alloc <= 0 or cols == 0:
+                continue
+
+            rows = cel.profundidade // prod.profundidade
+            layers = cel.altura // prod.altura
             count = 0
-            handles.append(Patch(facecolor=color, edgecolor='black', label=label))
+            y_offset = 0
+
             for layer in range(layers):
                 z = layer * prod.altura
-                for col in range(needed_cols):
+                for col in range(cols):
                     x = x_offset + col * prod.largura
                     for row in range(rows):
                         if count >= alloc:
                             break
-                        y = row * prod.profundidade
+                        y = y_offset + row * prod.profundidade
                         ax.bar3d(
                             x, y, z,
                             prod.largura,
@@ -106,32 +135,19 @@ def plot_allocation_3d(
                         break
                 if count >= alloc:
                     break
-            x_offset += needed_cols * prod.largura
-        ax.legend(handles=handles, loc='upper right')
 
-    plt.tight_layout()
-    plt.show()
+            x_offset += cols * prod.largura
 
-def show_allocation_table(
-    allocation: List[List[Tuple[str, int, int, int]]]
-):
-    rows = []
-    for i, cell in enumerate(allocation, start=1):
-        for label, total, alloc, falt in cell:
-            rows.append({
-                'Célula': f'Célula {i}',
-                'Produto': label,
-                'Demanda': total,
-                'Alocado': alloc,
-                'Faltam': falt
-            })
-    df = pd.DataFrame(rows)
-    pivot = df.pivot(index='Produto', columns='Célula', values=['Demanda','Alocado','Faltam'])
-    print(pivot)
+    # legenda global à direita
+    fig.legend(global_handles, global_labels, title='Produtos',
+               loc='upper right', bbox_to_anchor=(1.02, 0.98))
+
+    plt.tight_layout(rect=[0, 0, 0.85, 1])  # reservar espaço à direita para legenda
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Aloca produtos em células usando dados do SQLite."
+        description="Aloca produtos em célula usando dados do SQLite."
     )
     parser.add_argument(
         "--db", type=str,
@@ -151,6 +167,7 @@ def main():
     df = pd.read_sql_query("SELECT * FROM produtos", conn)
     conn.close()
 
+    # Preparar informações de produtos e demandas
     colors = [
         'tab:blue','tab:orange','tab:green','tab:red',
         'tab:purple','tab:brown','tab:pink','tab:gray',
@@ -159,8 +176,9 @@ def main():
     produtos_info: List[Tuple[str, Produto, str]] = []
     demands: List[int] = []
     for idx, row in df.iterrows():
+        label = f"{row['sku']} - {row['nome_produto']}"
         produtos_info.append((
-            row['nome_produto'],  # agora usa o nome do produto
+            label,
             Produto(
                 largura=int(row['largura_mm']),
                 profundidade=int(row['profundidade_mm']),
@@ -170,9 +188,55 @@ def main():
         ))
         demands.append(int(row['qtd_vendida_30d']))
 
+    # Executar alocação
     allocation = allocate_grouped_cells(produtos_info, demands, args.cells)
     plot_allocation_3d(allocation, produtos_info, args.cells)
-    show_allocation_table(allocation)
+
+    # Montar tabela detalhada
+    skus   = [info[0].split(' - ')[0] for info in produtos_info]
+    nomes  = [info[0].split(' - ')[1] for info in produtos_info]
+    total_dem = [allocation[0][j][1] for j in range(len(skus))]
+    total_alloc = [sum(allocation[i][j][2] for i in range(len(allocation))) for j in range(len(skus))]
+
+    detail_rows = []
+    n_cells = len(allocation)
+    for j, (sku, nome) in enumerate(zip(skus, nomes)):
+        falt = total_dem[j] - total_alloc[j]
+        row = {
+            'sku': sku,
+            'nome_produto': nome,
+            'total_necessario': total_dem[j],
+            'total_alocado': total_alloc[j],
+            'total_que_nao_coube': falt
+        }
+        for i in range(n_cells):
+            row[f'celula_{i+1}'] = allocation[i][j][2]
+        detail_rows.append(row)
+
+    detail_df = pd.DataFrame(detail_rows)
+
+    # Determinar pasta de produtos_simulados.csv e salvar lá
+    # partimos do DB para determinar pasta data
+    data_dir = os.path.dirname(args.db)
+    output_path = os.path.join(data_dir, "resumo_alocacao_detalhada.csv")
+    detail_df.to_csv(output_path, index=False)
+
+    # Exibir tabela em nova janela como figura matplotlib
+    fig2, ax2 = plt.subplots(figsize=(12, max(2, len(detail_df)*0.5)))
+    ax2.axis('off')
+    tbl = ax2.table(
+        cellText=detail_df.values,
+        colLabels=detail_df.columns,
+        loc='center'
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(10)
+    tbl.scale(1, 1.5)
+    plt.tight_layout()
+
+    print(f"Tabela detalhada salva em: {output_path}")
+
+    plt.show()
 
 if __name__ == '__main__':
     main()
