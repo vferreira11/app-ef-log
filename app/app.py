@@ -20,9 +20,9 @@ if 'num_blocks' not in st.session_state:
     st.session_state.num_blocks = 2
 
 with st.expander("Célula de Estoque", expanded=True):
-    dx = st.number_input("X | Largura", min_value=1, value=3, step=1)
-    dy = st.number_input("Y | Altura", min_value=1, value=4, step=1)
-    dz = st.number_input("Z | Profundidade", min_value=1, value=5, step=1)
+    dx = st.number_input("X | Largura em mm", min_value=1, value=3, step=1)
+    dy = st.number_input("Y | Altura em mm", min_value=1, value=4, step=1)
+    dz = st.number_input("Z | Profundidade em mm", min_value=1, value=5, step=1)
 
 # controles de blocos sempre visíveis
 st.subheader("Parâmetros das embalagens")
@@ -38,11 +38,11 @@ for i in range(1, st.session_state.num_blocks + 1):
     st.markdown(f"---\n**Embalagem {i}**")
     c1, c2, c3 = st.columns(3)
     with c1:
-        sdx = st.number_input(f"X | Largura", min_value=1, value=1, step=1, key=f"sdx_{i}")
+        sdx = st.number_input(f"X | Largura em mm", min_value=1, value=1, step=1, key=f"sdx_{i}")
     with c2:
-        sdy = st.number_input(f"Y | Altura", min_value=1, value=1, step=1, key=f"sdy_{i}")
+        sdy = st.number_input(f"Y | Altura em mm", min_value=1, value=1, step=1, key=f"sdy_{i}")
     with c3:
-        sdz = st.number_input(f"Z | Profundidade", min_value=1, value=1, step=1, key=f"sdz_{i}")
+        sdz = st.number_input(f"Z | Profundidade em mm", min_value=1, value=1, step=1, key=f"sdz_{i}")
     block_dims.append((sdx, sdy, sdz))
 
 st.markdown("---")
