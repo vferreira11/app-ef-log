@@ -5,7 +5,7 @@ import os
 scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts'))
 sys.path.append(scripts_path)
 
-from distribuir_milp dimport solve_packing, Cuboid  # importa do scripts/distribuir_milp.py
+from distribuir_milp import solve_packing, Cuboid  # importa do scripts/distribuir_milp.py
 import matplotlib.pyplot as pltd
 
 st.set_page_config(page_title="Empacotamento MILP", layout="wide")
