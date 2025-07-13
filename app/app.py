@@ -10,6 +10,7 @@ sys.path.append(scripts_path)
 
 from distribuir_milp import solve_packing, Cuboid
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 st.set_page_config(page_title="Empacotamento MILP", layout="wide")
@@ -69,29 +70,42 @@ if st.button("Distribuir"):
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
         ax.grid(False)
-        ax.set_axis_off()
+        # Mantém a grade invisível mas eixos visíveis para legendas
+
+        # Desenha contêiner
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
         verts_main = Cuboid(dx, dy, dz)._get_vertices((0,0,0), dx, dy, dz)
         for fi in faces_idx:
             pts = [verts_main[i] for i in fi] + [verts_main[fi[0]]]
             xs, ys, zs = zip(*pts)
             ax.plot(xs, ys, zs, color='black', linewidth=1)
-        face_colors = ['cyan', 'magenta', 'yellow', 'green', 'orange', 'purple']
-        edge_colors = ['blue', 'red', 'black', 'darkgreen', 'darkorange', 'indigo']
+
+        # Configura a paleta viridis para embalagens
+        cmap = cm.get_cmap('viridis', len(block_ranges))
+
+        # Plota cada bloco com cores da paleta e borda preta
         for (i, j, k, o) in placements:
             lx, ly, lz = orientations[o]
             verts = Cuboid(dx, dy, dz)._get_vertices((i, j, k), lx, ly, lz)
             faces = [[verts[idx] for idx in fi] for fi in faces_idx]
+            # identifica índice da embalagem
             for bi, (start, end) in enumerate(block_ranges):
                 if start <= o < end:
-                    face_color = face_colors[bi % len(face_colors)]
-                    edge_color = edge_colors[bi % len(edge_colors)]
+                    color = cmap(bi)
                     break
-            ax.add_collection3d(Poly3DCollection(faces, facecolor=face_color, edgecolor=edge_color, alpha=0.6))
+            ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor='black', alpha=0.8))
+
+        # Ajusta limites e aspecto
         xsm, ysm, zsm = zip(*verts_main)
         ax.set_xlim(min(xsm), max(xsm))
         ax.set_ylim(min(ysm), max(ysm))
         ax.set_zlim(min(zsm), max(zsm))
         ax.set_box_aspect([1,1,1])
+
+        # Insere rótulos nos eixos
+        ax.set_xlabel("Largura (X)")
+        ax.set_ylabel("Altura (Y)")
+        ax.set_zlabel("Profundidade (Z)")
+
         st.pyplot(fig)
         plt.close(fig)
