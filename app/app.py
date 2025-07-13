@@ -51,9 +51,7 @@ st.markdown("---")
 if st.button("Distribuir"):
     with st.spinner("Fazendo bruxaria, aguarde..."):
         # gera orientações e índices
-        orientations = []
-        block_ranges = []
-        idx = 0
+        orientations, block_ranges, idx = [], [], 0
         for dims in block_dims:
             ori = list({o for o in permutations(dims)})
             orientations.extend(ori)
@@ -61,8 +59,7 @@ if st.button("Distribuir"):
             idx += len(ori)
 
         placements = solve_packing(dx, dy, dz, orientations)
-        # contabiliza
-        totals = [sum(1 for (_, _, _, o) in placements if start <= o < end)
+        totals = [sum(1 for *_, o in placements if start <= o < end)
                   for start, end in block_ranges]
         st.success("  ".join([f"Bloco{i+1}: {totals[i]}" for i in range(len(totals))]))
 
@@ -72,54 +69,41 @@ if st.button("Distribuir"):
         ax.view_init(elev=20, azim=30)
         ax.grid(False)
 
-                # limites e ticks (sem o zero padrão)
+        # limites, ticks inteiros incluindo zero
         ax.set_xlim(0, dx)
         ax.set_ylim(0, dy)
         ax.set_zlim(0, dz)
-        ax.set_xticks(np.arange(1, dx+1, 1))
-        ax.set_yticks(np.arange(1, dy+1, 1))
-        ax.set_zticks(np.arange(1, dz+1, 1))
+        ax.set_xticks(np.arange(0, dx+1, 1))
+        ax.set_yticks(np.arange(0, dy+1, 1))
+        ax.set_zticks(np.arange(0, dz+1, 1))
         ax.set_box_aspect([1,1,1])
 
-        # dimensões ajustadas para as setas (10% além)
-        x_max = dx * 1.1
-        y_max = dy * 1.1
-        z_max = dz * 1.1
-
-        # eixos com setas, todos a partir de origem (0,0,0)
-        ax.quiver(0, 0, 0, x_max, 0, 0, arrow_length_ratio=0.02, linewidth=1)
-        ax.quiver(0, 0, 0, 0, y_max, 0, arrow_length_ratio=0.02, linewidth=1)
-        ax.quiver(0, 0, 0, 0, 0, z_max, arrow_length_ratio=0.02, linewidth=1)
-
-        # anotações manuais para zero no ponto de origem
-        ax.text(0, 0, 0, '0', fontsize=10, ha='right', va='bottom')
-
-        # Desenha contêiner, todos a partir de origem (0,0,0)
-        ax.quiver(0, 0, 0, x_max, 0, 0, arrow_length_ratio=0.02, linewidth=1)
-        ax.quiver(0, 0, 0, 0, y_max, 0, arrow_length_ratio=0.02, linewidth=1)
-        ax.quiver(0, 0, 0, 0, 0, z_max, arrow_length_ratio=0.02, linewidth=1)
+        # desenha eixos com setas a partir da mesma origem
+        x_end, y_end, z_end = dx*1.05, dy*1.05, dz*1.05
+        ax.quiver(0,0,0, x_end,0,0, arrow_length_ratio=0.03, linewidth=1)
+        ax.quiver(0,0,0, 0,y_end,0, arrow_length_ratio=0.03, linewidth=1)
+        ax.quiver(0,0,0, 0,0,z_end, arrow_length_ratio=0.03, linewidth=1)
+        # rótulo zero na origem
+        ax.text(0,0,0, '0', fontsize=10, ha='right', va='bottom')
 
         # Desenha contêiner
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
         verts_main = Cuboid(dx, dy, dz)._get_vertices((0,0,0), dx, dy, dz)
         for fi in faces_idx:
             pts = [verts_main[i] for i in fi] + [verts_main[fi[0]]]
-            xs, ys, zs = zip(*pts)
-            ax.plot(xs, ys, zs, color='black', linewidth=1)
+            ax.plot(*zip(*pts), color='black', linewidth=1)
 
-        # cores viridis
+        # cores viridis e blocos
         cmap = cm.get_cmap('viridis', len(block_ranges))
-        for (i, j, k, o) in placements:
-            lx, ly, lz = orientations[o]
-            verts = Cuboid(dx, dy, dz)._get_vertices((i, j, k), lx, ly, lz)
-            faces = [[verts[idx] for idx in fi] for fi in faces_idx]
-            for bi, (start, end) in enumerate(block_ranges):
-                if start <= o < end:
-                    color = cmap(bi)
-                    break
-            ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor='black', alpha=0.8))
+        for (i,j,k,o) in placements:
+            lx,ly,lz = orientations[o]
+            verts = Cuboid(dx, dy, dz)._get_vertices((i,j,k), lx,ly,lz)
+            faces = [[verts[idx] for idx in face] for face in faces_idx]
+            bi = next(bi for bi,(s,e) in enumerate(block_ranges) if s<=o<e)
+            poly = Poly3DCollection(faces, facecolor=cmap(bi), edgecolor='black', alpha=0.8)
+            ax.add_collection3d(poly)
 
-        # rótulos
+        # rótulos de eixos
         ax.set_xlabel("Largura (X)")
         ax.set_ylabel("Altura (Y)")
         ax.set_zlabel("Profundidade (Z)")
