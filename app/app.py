@@ -13,24 +13,24 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 st.set_page_config(page_title="Empacotamento MILP", layout="wide")
-st.title("Empacotamento de Blocos Variáveis em Volume 3D")
+st.title("EF Tetris")
 
 # inicializa estado
 if 'num_blocks' not in st.session_state:
     st.session_state.num_blocks = 2
 
-with st.expander("Parâmetros do Contêiner", expanded=True):
-    dx = st.number_input("Aresta X do contêiner (dx)", min_value=1, value=3, step=1)
-    dy = st.number_input("Aresta Y do contêiner (dy)", min_value=1, value=4, step=1)
-    dz = st.number_input("Aresta Z do contêiner (dz)", min_value=1, value=5, step=1)
+with st.expander("Célula de Estoque", expanded=True):
+    dx = st.number_input("X | Largura", min_value=1, value=3, step=1)
+    dy = st.number_input("Y | Altura", min_value=1, value=4, step=1)
+    dz = st.number_input("Z | Profundidade", min_value=1, value=5, step=1)
 
 # controles de blocos sempre visíveis
-st.subheader("Parâmetros dos Blocos")
+st.subheader("Parâmetros das embalagens")
 cols = st.columns([1,1,1,0.5])
 with cols[0]:
-    st.write(f"**Número de blocos:** {st.session_state.num_blocks}")
+    st.write(f"**Embalagens distintas:** {st.session_state.num_blocks}")
 with cols[3]:
-    if st.button("+ Adicionar bloco"):
+    if st.button("+ Adicionar +1 embalagem"):
         st.session_state.num_blocks += 1
 
 block_dims = []
@@ -38,16 +38,16 @@ for i in range(1, st.session_state.num_blocks + 1):
     st.markdown(f"---\n**Bloco {i}**")
     c1, c2, c3 = st.columns(3)
     with c1:
-        sdx = st.number_input(f"X (sdx{i})", min_value=1, value=1, step=1, key=f"sdx_{i}")
+        sdx = st.number_input(f"X | Largura", min_value=1, value=1, step=1, key=f"sdx_{i}")
     with c2:
-        sdy = st.number_input(f"Y (sdy{i})", min_value=1, value=1, step=1, key=f"sdy_{i}")
+        sdy = st.number_input(f"Y | Altura", min_value=1, value=1, step=1, key=f"sdy_{i}")
     with c3:
-        sdz = st.number_input(f"Z (sdz{i})", min_value=1, value=1, step=1, key=f"sdz_{i}")
+        sdz = st.number_input(f"Z | Profundidade", min_value=1, value=1, step=1, key=f"sdz_{i}")
     block_dims.append((sdx, sdy, sdz))
 
 st.markdown("---")
-if st.button("Calcular e Visualizar"):
-    with st.spinner("Resolvendo MILP e gerando visualização..."):
+if st.button("Distribuir"):
+    with st.spinner("Fazendo bruxaria, aguarde..."):
         # gera orientações e índices
         orientations = []
         block_ranges = []
