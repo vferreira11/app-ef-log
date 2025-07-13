@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from distribute_milp import solve_packing, Cuboid  # assume distribuir_milp.py defines these
+from distribuîr_milp import solve_packing, Cuboid
 import matplotlib.pyplot as plt
 from io import BytesIO
 
