@@ -2,6 +2,7 @@ import streamlit as st
 import sys
 import os
 from itertools import permutations
+import numpy as np
 
 # adiciona pasta scripts (um nível acima de app) ao path
 dir_app = os.path.dirname(__file__)
@@ -69,8 +70,8 @@ if st.button("Distribuir"):
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
-        ax.grid(False)
-        # Mantém a grade invisível mas eixos visíveis para legendas
+        # Desenha linhas dos eixos e grade leve
+        ax.grid(True, linestyle='--', linewidth=0.5, color='gray')
 
         # Desenha contêiner
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
@@ -95,11 +96,17 @@ if st.button("Distribuir"):
                     break
             ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor='black', alpha=0.8))
 
-        # Ajusta limites e aspecto
-        xsm, ysm, zsm = zip(*verts_main)
-        ax.set_xlim(min(xsm), max(xsm))
-        ax.set_ylim(min(ysm), max(ysm))
-        ax.set_zlim(min(zsm), max(zsm))
+        # Ajusta limites e aspecto, e define ticks inteiros
+        x_vals, y_vals, z_vals = zip(*verts_main)
+        x_min, x_max = int(min(x_vals)), int(max(x_vals))
+        y_min, y_max = int(min(y_vals)), int(max(y_vals))
+        z_min, z_max = int(min(z_vals)), int(max(z_vals))
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_zlim(z_min, z_max)
+        ax.set_xticks(np.arange(x_min, x_max+1, 1))
+        ax.set_yticks(np.arange(y_min, y_max+1, 1))
+        ax.set_zticks(np.arange(z_min, z_max+1, 1))
         ax.set_box_aspect([1,1,1])
 
         # Insere rótulos nos eixos
