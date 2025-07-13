@@ -57,7 +57,7 @@ if st.button("Distribuir"):
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
-                ax.set_xlim(0, x_dim)
+        ax.set_xlim(0, x_dim)
         ax.set_ylim(0, y_dim)
         ax.set_zlim(0, z_dim)
         # garante que Z vá do 0 até z_dim sem inverter
