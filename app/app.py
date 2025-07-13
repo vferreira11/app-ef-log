@@ -19,9 +19,9 @@ if 'num_blocks' not in st.session_state:
     st.session_state.num_blocks = 2
 
 with st.expander("Célula de Estoque", expanded=True):
-    dx = st.number_input("X | Largura em mm", min_value=1, value=3, step=1)
-    dy = st.number_input("Y | Altura em mm", min_value=1, value=4, step=1)
-    dz = st.number_input("Z | Profundidade em mm", min_value=1, value=5, step=1)
+    dx = st.number_input("X | Largura em mm", min_value=1, value=30, step=1)
+    dy = st.number_input("Y | Altura em mm", min_value=1, value=40, step=1)
+    dz = st.number_input("Z | Profundidade em mm", min_value=1, value=50, step=1)
 
 st.subheader("Parâmetros das embalagens")
 cols = st.columns([1, 1, 1, 0.5])
