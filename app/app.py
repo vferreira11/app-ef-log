@@ -42,7 +42,7 @@ if st.sidebar.button("Calcular e Visualizar"):
         # resolve a alocação ótima para ambos blocos
         placements = solve_packing(dx, dy, dz, orientations)
 
-        # mostra resultado
+        # contabiliza resultados
         total1 = sum(1 for (_, _, _, o) in placements if o < len(ori1))
         total2 = len(placements) - total1
         st.success(f"Total: bloco1={total1}, bloco2={total2} (em {dx}×{dy}×{dz})")
@@ -67,19 +67,24 @@ if st.sidebar.button("Calcular e Visualizar"):
             lx, ly, lz = orientations[o]
             verts = Cuboid(dx, dy, dz)._get_vertices((i, j, k), lx, ly, lz)
             faces = [[verts[idx] for idx in fi] for fi in faces_idx]
-            color = 'cyan' if o < len(ori1) else 'magenta'
-            edge = 'blue' if o < len(ori1) else 'red'
-            ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor=edge, alpha=0.6))
+            # define cor por bloco
+            if o < len(ori1):
+                face_color, edge_color = 'cyan', 'blue'
+            else:
+                face_color, edge_color = 'magenta', 'red'
+            ax.add_collection3d(Poly3DCollection(faces, facecolor=face_color, edgecolor=edge_color, alpha=0.6))
 
         # anotação total
-        ax.text2D(0.05, 0.95, f"Blocks1: {total1} | Blocks2: {total2}", transform=ax.transAxes,
+        ax.text2D(0.05, 0.95, f"Bloco1: {total1} | Bloco2: {total2}", transform=ax.transAxes,
                   fontsize=12, verticalalignment='top')
 
         # limites do eixo conforme contêiner
-        xs, ys, zs = zip(*verts_main)
-        ax.set_xlim(min(xs), max(xs))
-        ax.set_ylim(min(ys), max(ys))
-        ax.set_zlim(min(zs), max(zs))
+        xs_main, ys_main, zs_main = zip(*verts_main)
+        ax.set_xlim(min(xs_main), max(xs_main))
+        ax.set_ylim(min(ys_main), max(ys_main))
+        ax.set_zlim(min(zs_main), max(zs_main))
         ax.set_box_aspect([1,1,1])
 
         # exibe o plot
+        st.pyplot(fig)
+        plt.close(fig)
