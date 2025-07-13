@@ -19,9 +19,9 @@ if 'num_blocks' not in st.session_state:
     st.session_state.num_blocks = 2
 
 with st.expander("Célula de Estoque", expanded=True):
-    dx = st.number_input("X | Largura em mm", min_value=1, value=30, step=1)
-    dy = st.number_input("Y | Altura em mm", min_value=1, value=40, step=1)
-    dz = st.number_input("Z | Profundidade em mm", min_value=1, value=50, step=1)
+    dx = st.number_input("X | Largura em mm", min_value=1, value=3, step=1)
+    dy = st.number_input("Y | Altura em mm", min_value=1, value=4, step=1)
+    dz = st.number_input("Z | Profundidade em mm", min_value=1, value=5, step=1)
 
 st.subheader("Parâmetros das embalagens")
 cols = st.columns([1, 1, 1, 0.5])
@@ -57,9 +57,11 @@ if st.button("Distribuir"):
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
-        ax.set_xlim(0, x_dim)
+                ax.set_xlim(0, x_dim)
         ax.set_ylim(0, y_dim)
         ax.set_zlim(0, z_dim)
+        # garante que Z vá do 0 até z_dim sem inverter
+        ax.invert_zaxis()  # ajusta a orientação do eixo Z
         # ticks dinâmicos: até 10 rótulos por eixo
         step_x = max(1, int(np.ceil(x_dim / 10)))
         step_y = max(1, int(np.ceil(y_dim / 10)))
@@ -88,7 +90,7 @@ if st.button("Distribuir"):
             verts = Cuboid(x_dim, y_dim, z_dim)._get_vertices((k, i, j), lz, lx, ly)
             faces = [[verts[idx] for idx in face] for face in faces_idx]
             bi = next(b for b,(s,e) in enumerate(block_ranges) if s<=o<e)
-            ax.add_collection3d(Poly3DCollection(faces, facecolor=cmap(bi), edgecolor='black', alpha=0.5))
+            ax.add_collection3d(Poly3DCollection(faces, facecolor=cmap(bi), edgecolor='black', alpha=0.8))
 
         ax.set_xlabel("Profundidade (Z)")
         ax.set_ylabel("Largura (X)")
