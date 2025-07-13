@@ -7,7 +7,6 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-# adiciona scripts ao path
 dir_app = os.path.dirname(__file__)
 scripts_path = os.path.abspath(os.path.join(dir_app, '..', 'scripts'))
 sys.path.append(scripts_path)
@@ -49,49 +48,46 @@ if st.button("Distribuir"):
             orientations.extend(ori)
             block_ranges.append((idx, idx + len(ori)))
             idx += len(ori)
-
         placements = solve_packing(dx, dy, dz, orientations)
-        totals = [sum(1 for *_, o in placements if s <= o < e) for s, e in block_ranges]
+        totals = [sum(1 for *_, o in placements if start <= o < end) for start, end in block_ranges]
         st.success("  ".join([f"Bloco{i+1}: {totals[i]}" for i in range(len(totals))]))
 
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
 
-        ax.set_xlim(0, dx)
-        ax.set_ylim(0, dy)
-        ax.set_zlim(0, dz)
-        ax.set_xticks(np.arange(0, dx+1, 1))
-        ax.set_yticks(np.arange(0, dy+1, 1))
-        ax.set_zticks(np.arange(0, dz+1, 1))
+        x_dim, y_dim, z_dim = dz, dx, dy
+        ax.set_xlim(0, x_dim)
+        ax.set_ylim(0, y_dim)
+        ax.set_zlim(0, z_dim)
+        ax.set_xticks(np.arange(0, x_dim+1, 1))
+        ax.set_yticks(np.arange(0, y_dim+1, 1))
+        ax.set_zticks(np.arange(0, z_dim+1, 1))
         ax.set_box_aspect([1,1,1])
 
-        # invertendo eixo X para corresponder à legenda
-        ax.invert_xaxis()
-
-        x_end, y_end, z_end = dx*1.05, dy*1.05, dz*1.05
-        ax.quiver(0,0,0, x_end,0,0, arrow_length_ratio=0.03, linewidth=1)
-        ax.quiver(0,0,0, 0,y_end,0, arrow_length_ratio=0.03, linewidth=1)
-        ax.quiver(0,0,0, 0,0,z_end, arrow_length_ratio=0.03, linewidth=1)
-        ax.text(0,0,0, '0', fontsize=10, ha='right', va='bottom')
+        x_end, y_end, z_end = x_dim * 1.05, y_dim * 1.05, z_dim * 1.05
+        ax.quiver(0, 0, 0, x_end, 0, 0, arrow_length_ratio=0.03, linewidth=1)
+        ax.quiver(0, 0, 0, 0, y_end, 0, arrow_length_ratio=0.03, linewidth=1)
+        ax.quiver(0, 0, 0, 0, 0, z_end, arrow_length_ratio=0.03, linewidth=1)
+        ax.text(0, 0, 0, '0', fontsize=10, ha='right', va='bottom')
 
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
-        verts_main = Cuboid(dx, dy, dz)._get_vertices((0,0,0), dx, dy, dz)
+        verts_main = Cuboid(x_dim, y_dim, z_dim)._get_vertices((0,0,0), x_dim, y_dim, z_dim)
         for fi in faces_idx:
             pts = [verts_main[i] for i in fi] + [verts_main[fi[0]]]
             ax.plot(*zip(*pts), color='black', linewidth=1)
 
         cmap = cm.get_cmap('viridis', len(block_ranges))
-        for (i,j,k,o) in placements:
+        for i,j,k,o in placements:
             lx, ly, lz = orientations[o]
-            verts = Cuboid(dx, dy, dz)._get_vertices((i,j,k), lx, ly, lz)
+            verts = Cuboid(x_dim, y_dim, z_dim)._get_vertices((j, k, i), ly, lz, lx)
             faces = [[verts[idx] for idx in face] for face in faces_idx]
-            bi = next(bi for bi,(s,e) in enumerate(block_ranges) if s<=o<e)
+            bi = next(b for b,(s,e) in enumerate(block_ranges) if s<=o<e)
             ax.add_collection3d(Poly3DCollection(faces, facecolor=cmap(bi), edgecolor='black', alpha=0.8))
 
-        ax.set_xlabel("Largura (X)")
-        ax.set_ylabel("Altura (Y)")
-        ax.set_zlabel("Profundidade (Z)")
+        ax.set_xlabel("Profundidade (Z)")
+        ax.set_ylabel("Largura (X)")
+        ax.set_zlabel("Altura (Y)")
 
         st.pyplot(fig)
         plt.close(fig)
