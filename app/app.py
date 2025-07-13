@@ -1,8 +1,8 @@
 import streamlit as st
 import sys
 sys.path.append("../scripts")  # adiciona pasta de scripts ao path
-from distribuir_milp import solve_packing, Cuboid  # importa do scripts/distribuir_milp.py
-import matplotlib.pyplot as plt
+from distribuir_milp dimport solve_packing, Cuboid  # importa do scripts/distribuir_milp.py
+import matplotlib.pyplot as pltd
 
 st.set_page_config(page_title="Empacotamento MILP", layout="wide")
 
