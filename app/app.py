@@ -35,7 +35,7 @@ with cols[3]:
 
 block_dims = []
 for i in range(1, st.session_state.num_blocks + 1):
-    st.markdown(f"---\n**Bloco {i}**")
+    st.markdown(f"---\n**Embalagem {i}**")
     c1, c2, c3 = st.columns(3)
     with c1:
         sdx = st.number_input(f"X | Largura", min_value=1, value=1, step=1, key=f"sdx_{i}")
