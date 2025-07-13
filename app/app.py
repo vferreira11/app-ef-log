@@ -1,8 +1,8 @@
 import streamlit as st
-import os
-from distribuîr_milp import solve_packing, Cuboid
+import sys
+sys.path.append("../scripts")  # adiciona pasta de scripts ao path
+from distribuir_milp import solve_packing, Cuboid  # importa do scripts/distribuir_milp.py
 import matplotlib.pyplot as plt
-from io import BytesIO
 
 st.set_page_config(page_title="Empacotamento MILP", layout="wide")
 
@@ -22,9 +22,10 @@ if st.sidebar.button("Calcular e Visualizar"):
         # mensagem de resumo
         st.success(f"Máximo de blocos 1×1×2 em {dx}×{dy}×{dz}: {len(placements)}")
 
-        # gera plot em memória
+        # gera plot estático
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
+        # ângulo fixo
         ax.view_init(elev=20, azim=30)
         ax.grid(False)
         ax.set_axis_off()
@@ -40,8 +41,8 @@ if st.sidebar.button("Calcular e Visualizar"):
             lx, ly, lz = orientations[o]
             verts = Cuboid(dx, dy, dz)._get_vertices((i,j,k), lx, ly, lz)
             faces = [[verts[idx] for idx in fi] for fi in faces_idx]
-            ax.add_collection3d(plt.Poly3DCollection(faces, facecolor='cyan', edgecolor='blue', alpha=0.6))
-        # anotação
+            ax.add_collection3d(Poly3DCollection(faces, facecolor='cyan', edgecolor='blue', alpha=0.6))
+        # anotação total
         ax.text2D(0.05, 0.95, f"Total blocks: {len(placements)}", transform=ax.transAxes,
                   fontsize=12, verticalalignment='top')
         # limites
