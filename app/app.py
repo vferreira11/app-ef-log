@@ -70,8 +70,19 @@ if st.button("Distribuir"):
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
-        # Desenha linhas dos eixos e grade leve
-        ax.grid(True, linestyle='--', linewidth=0.5, color='gray')
+        # sem grid padrão
+        ax.grid(False)
+
+        # Desenha eixos com setas
+        x_max = dx * 1.1
+        y_max = dy * 1.1
+        z_max = dz * 1.1
+        # eixo X
+        ax.quiver(0, 0, 0, dx, 0, 0, arrow_length_ratio=0.02, linewidth=1)
+        # eixo Y
+        ax.quiver(0, 0, 0, 0, dy, 0, arrow_length_ratio=0.02, linewidth=1)
+        # eixo Z
+        ax.quiver(0, 0, 0, 0, 0, dz, arrow_length_ratio=0.02, linewidth=1)
 
         # Desenha contêiner
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
@@ -97,16 +108,12 @@ if st.button("Distribuir"):
             ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor='black', alpha=0.8))
 
         # Ajusta limites e aspecto, e define ticks inteiros
-        x_vals, y_vals, z_vals = zip(*verts_main)
-        x_min, x_max = int(min(x_vals)), int(max(x_vals))
-        y_min, y_max = int(min(y_vals)), int(max(y_vals))
-        z_min, z_max = int(min(z_vals)), int(max(z_vals))
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(y_min, y_max)
-        ax.set_zlim(z_min, z_max)
-        ax.set_xticks(np.arange(x_min, x_max+1, 1))
-        ax.set_yticks(np.arange(y_min, y_max+1, 1))
-        ax.set_zticks(np.arange(z_min, z_max+1, 1))
+        ax.set_xlim(0, dx)
+        ax.set_ylim(0, dy)
+        ax.set_zlim(0, dz)
+        ax.set_xticks(np.arange(0, dx+1, 1))
+        ax.set_yticks(np.arange(0, dy+1, 1))
+        ax.set_zticks(np.arange(0, dz+1, 1))
         ax.set_box_aspect([1,1,1])
 
         # Insere rótulos nos eixos
