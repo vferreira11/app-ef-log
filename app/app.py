@@ -1,6 +1,10 @@
 import streamlit as st
 import sys
-sys.path.append("../scripts")  # adiciona pasta de scripts ao path
+import os
+# adiciona pasta scripts (um nível acima de app) ao path
+scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts'))
+sys.path.append(scripts_path)
+
 from distribuir_milp dimport solve_packing, Cuboid  # importa do scripts/distribuir_milp.py
 import matplotlib.pyplot as pltd
 
