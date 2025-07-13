@@ -64,25 +64,32 @@ if st.button("Distribuir"):
         # contabiliza
         totals = [sum(1 for (_, _, _, o) in placements if start <= o < end)
                   for start, end in block_ranges]
-        # exibe
         st.success("  ".join([f"Bloco{i+1}: {totals[i]}" for i in range(len(totals))]))
+
         # plot
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
-        # sem grid padrão
         ax.grid(False)
 
-        # Desenha eixos com setas
+        # limites e ticks
+        ax.set_xlim(0, dx)
+        ax.set_ylim(0, dy)
+        ax.set_zlim(0, dz)
+        ax.set_xticks(np.arange(0, dx+1, 1))
+        ax.set_yticks(np.arange(0, dy+1, 1))
+        ax.set_zticks(np.arange(0, dz+1, 1))
+        ax.set_box_aspect([1,1,1])
+
+        # dimensões ajustadas para as setas (10% além)
         x_max = dx * 1.1
         y_max = dy * 1.1
         z_max = dz * 1.1
-        # eixo X
-        ax.quiver(0, 0, 0, dx, 0, 0, arrow_length_ratio=0.02, linewidth=1)
-        # eixo Y
-        ax.quiver(0, 0, 0, 0, dy, 0, arrow_length_ratio=0.02, linewidth=1)
-        # eixo Z
-        ax.quiver(0, 0, 0, 0, 0, dz, arrow_length_ratio=0.02, linewidth=1)
+        
+        # eixos com setas, todos a partir de origem (0,0,0)
+        ax.quiver(0, 0, 0, x_max, 0, 0, arrow_length_ratio=0.02, linewidth=1)
+        ax.quiver(0, 0, 0, 0, y_max, 0, arrow_length_ratio=0.02, linewidth=1)
+        ax.quiver(0, 0, 0, 0, 0, z_max, arrow_length_ratio=0.02, linewidth=1)
 
         # Desenha contêiner
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
@@ -92,31 +99,19 @@ if st.button("Distribuir"):
             xs, ys, zs = zip(*pts)
             ax.plot(xs, ys, zs, color='black', linewidth=1)
 
-        # Configura a paleta viridis para embalagens
+        # cores viridis
         cmap = cm.get_cmap('viridis', len(block_ranges))
-
-        # Plota cada bloco com cores da paleta e borda preta
         for (i, j, k, o) in placements:
             lx, ly, lz = orientations[o]
             verts = Cuboid(dx, dy, dz)._get_vertices((i, j, k), lx, ly, lz)
             faces = [[verts[idx] for idx in fi] for fi in faces_idx]
-            # identifica índice da embalagem
             for bi, (start, end) in enumerate(block_ranges):
                 if start <= o < end:
                     color = cmap(bi)
                     break
             ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor='black', alpha=0.8))
 
-        # Ajusta limites e aspecto, e define ticks inteiros
-        ax.set_xlim(0, dx)
-        ax.set_ylim(0, dy)
-        ax.set_zlim(0, dz)
-        ax.set_xticks(np.arange(0, dx+1, 1))
-        ax.set_yticks(np.arange(0, dy+1, 1))
-        ax.set_zticks(np.arange(0, dz+1, 1))
-        ax.set_box_aspect([1,1,1])
-
-        # Insere rótulos nos eixos
+        # rótulos
         ax.set_xlabel("Largura (X)")
         ax.set_ylabel("Altura (Y)")
         ax.set_zlabel("Profundidade (Z)")
