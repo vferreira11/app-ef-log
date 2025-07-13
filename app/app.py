@@ -89,3 +89,4 @@ if st.button("Distribuir"):
         ax.set_zlabel("Altura (Y)")
         st.pyplot(fig)
         plt.close(fig)
+#
