@@ -4,7 +4,6 @@ import os
 from itertools import permutations
 
 # adiciona pasta scripts (um nível acima de app) ao path
-
 dir_app = os.path.dirname(__file__)
 scripts_path = os.path.abspath(os.path.join(dir_app, '..', 'scripts'))
 sys.path.append(scripts_path)
@@ -22,21 +21,31 @@ dx = st.sidebar.number_input("Aresta X do contêiner (dx)", min_value=1, value=3
 dy = st.sidebar.number_input("Aresta Y do contêiner (dy)", min_value=1, value=4, step=1)
 dz = st.sidebar.number_input("Aresta Z do contêiner (dz)", min_value=1, value=5, step=1)
 
-# Controls para o bloco
-st.sidebar.header("Parâmetros do Bloco")
-sdx = st.sidebar.number_input("Aresta X do bloco (sdx)", min_value=1, value=1, step=1)
-sdy = st.sidebar.number_input("Aresta Y do bloco (sdy)", min_value=1, value=1, step=1)
-sdz = st.sidebar.number_input("Aresta Z do bloco (sdz)", min_value=1, value=2, step=1)
+# Controls para blocos
+st.sidebar.header("Parâmetros do Bloco 1")
+sdx1 = st.sidebar.number_input("Aresta X do bloco 1 (sdx1)", min_value=1, value=1, step=1)
+sdy1 = st.sidebar.number_input("Aresta Y do bloco 1 (sdy1)", min_value=1, value=1, step=1)
+sdz1 = st.sidebar.number_input("Aresta Z do bloco 1 (sdz1)", min_value=1, value=2, step=1)
+
+st.sidebar.header("Parâmetros do Bloco 2")
+sdx2 = st.sidebar.number_input("Aresta X do bloco 2 (sdx2)", min_value=1, value=1, step=1)
+sdy2 = st.sidebar.number_input("Aresta Y do bloco 2 (sdy2)", min_value=1, value=2, step=1)
+sdz2 = st.sidebar.number_input("Aresta Z do bloco 2 (sdz2)", min_value=1, value=1, step=1)
 
 if st.sidebar.button("Calcular e Visualizar"):
     with st.spinner("Resolvendo MILP e gerando visualização..."):
-        # gera todas as orientações únicas do bloco
-        orientations = list({o for o in permutations((sdx, sdy, sdz))})
-        # resolve a alocação ótima
+        # gera todas as orientações únicas para cada bloco
+        ori1 = list({o for o in permutations((sdx1, sdy1, sdz1))})
+        ori2 = list({o for o in permutations((sdx2, sdy2, sdz2))})
+        orientations = ori1 + ori2
+
+        # resolve a alocação ótima para ambos blocos
         placements = solve_packing(dx, dy, dz, orientations)
 
         # mostra resultado
-        st.success(f"Máximo de blocos {sdx}×{sdy}×{sdz} em {dx}×{dy}×{dz}: {len(placements)}")
+        total1 = sum(1 for (_, _, _, o) in placements if o < len(ori1))
+        total2 = len(placements) - total1
+        st.success(f"Total: bloco1={total1}, bloco2={total2} (em {dx}×{dy}×{dz})")
 
         # plota estático 3D
         fig = plt.figure(figsize=(8, 6))
@@ -44,36 +53,33 @@ if st.sidebar.button("Calcular e Visualizar"):
         ax.view_init(elev=20, azim=30)
         ax.grid(False)
         ax.set_axis_off()
-    
-        faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
 
         # contêiner wireframe
+        faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
         verts_main = Cuboid(dx, dy, dz)._get_vertices((0,0,0), dx, dy, dz)
         for fi in faces_idx:
             pts = [verts_main[i] for i in fi] + [verts_main[fi[0]]]
             xs, ys, zs = zip(*pts)
             ax.plot(xs, ys, zs, color='black', linewidth=1)
 
-        # blocos aplicados
+        # blocos aplicados com cores distintas
         for (i, j, k, o) in placements:
             lx, ly, lz = orientations[o]
             verts = Cuboid(dx, dy, dz)._get_vertices((i, j, k), lx, ly, lz)
             faces = [[verts[idx] for idx in fi] for fi in faces_idx]
-            ax.add_collection3d(Poly3DCollection(faces, facecolor='cyan', edgecolor='blue', alpha=0.6))
+            color = 'cyan' if o < len(ori1) else 'magenta'
+            edge = 'blue' if o < len(ori1) else 'red'
+            ax.add_collection3d(Poly3DCollection(faces, facecolor=color, edgecolor=edge, alpha=0.6))
 
         # anotação total
-        ax.text2D(0.05, 0.95, f"Total blocks: {len(placements)}", transform=ax.transAxes,
+        ax.text2D(0.05, 0.95, f"Blocks1: {total1} | Blocks2: {total2}", transform=ax.transAxes,
                   fontsize=12, verticalalignment='top')
 
-        # limites do eixo
-        xs = [v[0] for v in verts_main]
-        ys = [v[1] for v in verts_main]
-        zs = [v[2] for v in verts_main]
+        # limites do eixo conforme contêiner
+        xs, ys, zs = zip(*verts_main)
         ax.set_xlim(min(xs), max(xs))
         ax.set_ylim(min(ys), max(ys))
         ax.set_zlim(min(zs), max(zs))
         ax.set_box_aspect([1,1,1])
 
-        # exibe o plot no Streamlit
-        st.pyplot(fig)
-        plt.close(fig)
+        # exibe o plot
