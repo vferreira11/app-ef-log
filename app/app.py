@@ -1,7 +1,10 @@
 import streamlit as st
 import sys
 import os
+from itertools import permutations
+
 # adiciona pasta scripts (um nível acima de app) ao path
+
 dir_app = os.path.dirname(__file__)
 scripts_path = os.path.abspath(os.path.join(dir_app, '..', 'scripts'))
 sys.path.append(scripts_path)
@@ -11,28 +14,37 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 st.set_page_config(page_title="Empacotamento MILP", layout="wide")
-st.title("Empacotamento de Blocos 1×1×2 em Volume 3D")
+st.title("Empacotamento de Blocos Variáveis em Volume 3D")
 
+# Controls para o contêiner
 st.sidebar.header("Parâmetros do Contêiner")
-dx = st.sidebar.number_input("Aresta X (dx)", min_value=1, value=3, step=1)
-dy = st.sidebar.number_input("Aresta Y (dy)", min_value=1, value=4, step=1)
-dz = st.sidebar.number_input("Aresta Z (dz)", min_value=1, value=5, step=1)
+dx = st.sidebar.number_input("Aresta X do contêiner (dx)", min_value=1, value=3, step=1)
+dy = st.sidebar.number_input("Aresta Y do contêiner (dy)", min_value=1, value=4, step=1)
+dz = st.sidebar.number_input("Aresta Z do contêiner (dz)", min_value=1, value=5, step=1)
+
+# Controls para o bloco
+st.sidebar.header("Parâmetros do Bloco")
+sdx = st.sidebar.number_input("Aresta X do bloco (sdx)", min_value=1, value=1, step=1)
+sdy = st.sidebar.number_input("Aresta Y do bloco (sdy)", min_value=1, value=1, step=1)
+sdz = st.sidebar.number_input("Aresta Z do bloco (sdz)", min_value=1, value=2, step=1)
 
 if st.sidebar.button("Calcular e Visualizar"):
     with st.spinner("Resolvendo MILP e gerando visualização..."):
+        # gera todas as orientações únicas do bloco
+        orientations = list({o for o in permutations((sdx, sdy, sdz))})
         # resolve a alocação ótima
-        orientations = [(1,1,2), (2,1,1), (1,2,1)]
         placements = solve_packing(dx, dy, dz, orientations)
 
         # mostra resultado
-        st.success(f"Máximo de blocos 1×1×2 em {dx}×{dy}×{dz}: {len(placements)}")
+        st.success(f"Máximo de blocos {sdx}×{sdy}×{sdz} em {dx}×{dy}×{dz}: {len(placements)}")
 
-        # plota estático
+        # plota estático 3D
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(elev=20, azim=30)
         ax.grid(False)
         ax.set_axis_off()
+    
         faces_idx = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[4,7,3,0]]
 
         # contêiner wireframe
@@ -42,10 +54,10 @@ if st.sidebar.button("Calcular e Visualizar"):
             xs, ys, zs = zip(*pts)
             ax.plot(xs, ys, zs, color='black', linewidth=1)
 
-        # blocos
-        for (i,j,k,o) in placements:
+        # blocos aplicados
+        for (i, j, k, o) in placements:
             lx, ly, lz = orientations[o]
-            verts = Cuboid(dx, dy, dz)._get_vertices((i,j,k), lx, ly, lz)
+            verts = Cuboid(dx, dy, dz)._get_vertices((i, j, k), lx, ly, lz)
             faces = [[verts[idx] for idx in fi] for fi in faces_idx]
             ax.add_collection3d(Poly3DCollection(faces, facecolor='cyan', edgecolor='blue', alpha=0.6))
 
@@ -53,7 +65,7 @@ if st.sidebar.button("Calcular e Visualizar"):
         ax.text2D(0.05, 0.95, f"Total blocks: {len(placements)}", transform=ax.transAxes,
                   fontsize=12, verticalalignment='top')
 
-        # limites
+        # limites do eixo
         xs = [v[0] for v in verts_main]
         ys = [v[1] for v in verts_main]
         zs = [v[2] for v in verts_main]
@@ -62,6 +74,6 @@ if st.sidebar.button("Calcular e Visualizar"):
         ax.set_zlim(min(zs), max(zs))
         ax.set_box_aspect([1,1,1])
 
-        # exibe
+        # exibe o plot no Streamlit
         st.pyplot(fig)
         plt.close(fig)
