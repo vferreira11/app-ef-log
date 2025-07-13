@@ -72,21 +72,29 @@ if st.button("Distribuir"):
         ax.view_init(elev=20, azim=30)
         ax.grid(False)
 
-        # limites e ticks
+                # limites e ticks (sem o zero padrão)
         ax.set_xlim(0, dx)
         ax.set_ylim(0, dy)
         ax.set_zlim(0, dz)
-        ax.set_xticks(np.arange(0, dx+1, 1))
-        ax.set_yticks(np.arange(0, dy+1, 1))
-        ax.set_zticks(np.arange(0, dz+1, 1))
+        ax.set_xticks(np.arange(1, dx+1, 1))
+        ax.set_yticks(np.arange(1, dy+1, 1))
+        ax.set_zticks(np.arange(1, dz+1, 1))
         ax.set_box_aspect([1,1,1])
 
         # dimensões ajustadas para as setas (10% além)
         x_max = dx * 1.1
         y_max = dy * 1.1
         z_max = dz * 1.1
-        
+
         # eixos com setas, todos a partir de origem (0,0,0)
+        ax.quiver(0, 0, 0, x_max, 0, 0, arrow_length_ratio=0.02, linewidth=1)
+        ax.quiver(0, 0, 0, 0, y_max, 0, arrow_length_ratio=0.02, linewidth=1)
+        ax.quiver(0, 0, 0, 0, 0, z_max, arrow_length_ratio=0.02, linewidth=1)
+
+        # anotações manuais para zero no ponto de origem
+        ax.text(0, 0, 0, '0', fontsize=10, ha='right', va='bottom')
+
+        # Desenha contêiner, todos a partir de origem (0,0,0)
         ax.quiver(0, 0, 0, x_max, 0, 0, arrow_length_ratio=0.02, linewidth=1)
         ax.quiver(0, 0, 0, 0, y_max, 0, arrow_length_ratio=0.02, linewidth=1)
         ax.quiver(0, 0, 0, 0, 0, z_max, arrow_length_ratio=0.02, linewidth=1)
