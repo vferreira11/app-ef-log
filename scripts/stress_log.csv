@@ -1,0 +1,4 @@
+método,fitness,tempo_s
+gpu,200,2.91
+milp,500,2.48
+hybrid,500,5.44
