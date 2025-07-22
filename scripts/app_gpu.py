@@ -220,9 +220,11 @@ if st.button("Executar GPU Heurística"):
         faltam = len(block_dims) - count
         st.warning(f"⚠️ Atenção: {faltam} blocos ficaram de fora por falta de espaço no container.")
 
-    # Gera o dicionário de cores para cada tipo de bloco único
-    tipos_unicos = set(block_dims)
-    tipo_cores = {dims: cor_aleatoria() for dims in tipos_unicos}
+    # Gera o dicionário de cores para cada tipo de bloco único usando paleta viridis
+    tipos_unicos = list(set(block_dims))
+    import matplotlib
+    viridis = matplotlib.cm.get_cmap('viridis', len(tipos_unicos))
+    tipo_cores = {dims: matplotlib.colors.to_hex(viridis(i)) for i, dims in enumerate(tipos_unicos)}
 
     # Salve placements e tipo_cores em session_state para uso no gráfico
     st.session_state["placements"] = placements
@@ -261,9 +263,8 @@ try:
             showlegend=False
         ))
     
-    # Visualização: suporta n tipos de bloco
+    # Visualização: Mesh3d para preenchimento sólido, Scatter3d para bordas pretas
     for idx, placement in enumerate(placements):
-        # Suporte para rotação
         if len(placement) == 5:
             x0, y0, z0, o, orientation = placement
             lx, ly, lz = orientation
@@ -273,43 +274,79 @@ try:
             x0, y0, z0, o = placement
             lx, ly, lz = block_dims[o]
             cor = tipo_cores[(lx, ly, lz)]
-        
-        # Vértices do cubo com dimensões corretas
-        vx = [x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0]
-        vy = [y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly]
-        vz = [z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz]
-        
-        fig.add_trace(go.Mesh3d(
-            x=vx, y=vy, z=vz,
-            i=[0, 0, 0, 1, 4, 4, 4, 5, 2, 2, 2, 3],
-            j=[1, 2, 4, 5, 5, 6, 1, 2, 3, 7, 6, 7],
-            k=[2, 3, 5, 6, 6, 7, 2, 3, 7, 6, 5, 4],
-            opacity=0.85,
-            color=cor,
+
+        # Face inferior (z = z0)
+        fig.add_trace(go.Surface(
+            x=[[x0, x0+lx], [x0, x0+lx]],
+            y=[[y0, y0], [y0+ly, y0+ly]],
+            z=[[z0, z0], [z0, z0]],
+            colorscale=[[0, cor], [1, cor]],
             showscale=False,
-            hoverinfo='none'
+            opacity=1.0
         ))
-        
-        # Adiciona borda ao bloco
-        arestas = [
-            (0,1), (1,2), (2,3), (3,0),
-            (4,5), (5,6), (6,7), (7,4),
-            (0,4), (1,5), (2,6), (3,7)
+        # Face superior (z = z0+lz)
+        fig.add_trace(go.Surface(
+            x=[[x0, x0+lx], [x0, x0+lx]],
+            y=[[y0, y0], [y0+ly, y0+ly]],
+            z=[[z0+lz, z0+lz], [z0+lz, z0+lz]],
+            colorscale=[[0, cor], [1, cor]],
+            showscale=False,
+            opacity=1.0
+        ))
+        # Face frontal (y = y0)
+        fig.add_trace(go.Surface(
+            x=[[x0, x0+lx], [x0, x0+lx]],
+            y=[[y0, y0], [y0, y0]],
+            z=[[z0, z0], [z0+lz, z0+lz]],
+            colorscale=[[0, cor], [1, cor]],
+            showscale=False,
+            opacity=1.0
+        ))
+        # Face traseira (y = y0+ly)
+        fig.add_trace(go.Surface(
+            x=[[x0, x0+lx], [x0, x0+lx]],
+            y=[[y0+ly, y0+ly], [y0+ly, y0+ly]],
+            z=[[z0, z0], [z0+lz, z0+lz]],
+            colorscale=[[0, cor], [1, cor]],
+            showscale=False,
+            opacity=1.0
+        ))
+        # Face esquerda (x = x0)
+        fig.add_trace(go.Surface(
+            x=[[x0, x0], [x0, x0]],
+            y=[[y0, y0+ly], [y0, y0+ly]],
+            z=[[z0, z0], [z0+lz, z0+lz]],
+            colorscale=[[0, cor], [1, cor]],
+            showscale=False,
+            opacity=1.0
+        ))
+        # Face direita (x = x0+lx)
+        fig.add_trace(go.Surface(
+            x=[[x0+lx, x0+lx], [x0+lx, x0+lx]],
+            y=[[y0, y0+ly], [y0, y0+ly]],
+            z=[[z0, z0], [z0+lz, z0+lz]],
+            colorscale=[[0, cor], [1, cor]],
+            showscale=False,
+            opacity=1.0
+        ))
+        # Bordas pretas
+        edges = [
+            [(x0,y0,z0), (x0+lx,y0,z0)], [(x0+lx,y0,z0), (x0+lx,y0+ly,z0)],
+            [(x0+lx,y0+ly,z0), (x0,y0+ly,z0)], [(x0,y0+ly,z0), (x0,y0,z0)],
+            [(x0,y0,z0+lz), (x0+lx,y0,z0+lz)], [(x0+lx,y0,z0+lz), (x0+lx,y0+ly,z0+lz)],
+            [(x0+lx,y0+ly,z0+lz), (x0,y0+ly,z0+lz)], [(x0,y0+ly,z0+lz), (x0,y0,z0+lz)],
+            [(x0,y0,z0), (x0,y0,z0+lz)], [(x0+lx,y0,z0), (x0+lx,y0,z0+lz)],
+            [(x0+lx,y0+ly,z0), (x0+lx,y0+ly,z0+lz)], [(x0,y0+ly,z0), (x0,y0+ly,z0+lz)]
         ]
-        for a in arestas:
+        for p1, p2 in edges:
             fig.add_trace(go.Scatter3d(
-                x=[vx[a[0]], vx[a[1]]],
-                y=[vy[a[0]], vy[a[1]]],
-                z=[vz[a[0]], vz[a[1]]],
+                x=[p1[0], p2[0]],
+                y=[p1[1], p2[1]],
+                z=[p1[2], p2[2]],
                 mode='lines',
-                line=dict(color='black', width=2),
+                line=dict(color='black', width=4),
                 showlegend=False
             ))
-        else:
-            # Bloco fora do container (não desenha)
-            continue
-    
-    # Após adicionar todos os blocos ao fig, corrija a proporção do gráfico:
     fig.update_layout(
         scene=dict(
             xaxis_title="X",
