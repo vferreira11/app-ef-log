@@ -36,48 +36,79 @@ else:
 # GPU Heuristic parameters
 st.sidebar.subheader("Parâmetros da heurística GPU")
 pop_size = st.sidebar.slider("Tamanho da população", min_value=64, max_value=16384, value=2048, step=64)
-num_blocks = st.sidebar.slider("Blocos por indivíduo (N)", min_value=10, max_value=1000, value=300, step=10)
 
 if st.button("Executar GPU Heurística"):
-    # Prepara dimenões de blocos (ignora quantidades)
-    block_dims = [(int(row.dx), int(row.dy), int(row.dz)) for _, row in types_df.iterrows()]
+    # Prepara dimensões e quantidades dos blocos
+    total_blocks = sum(int(row.quantidade) for _, row in types_df.iterrows())
+    block_dims = []
+    for _, row in types_df.iterrows():
+        dims = (int(row.dx), int(row.dy), int(row.dz))
+        qtd = int(row.quantidade)
+        block_dims.extend([dims] * qtd)
+    
     # Executa heurística GPU
-    placements = gpu_heuristic_pack(dx, dy, dz, block_dims, pop_size=pop_size, N=num_blocks)
+    placements = gpu_heuristic_pack(dx, dy, dz, block_dims, pop_size=pop_size, N=total_blocks)
     count = len(placements)
-    st.success(f"Solução encontrou {count} blocos!")
-
-    # Monta resultado JSON
-    result = {
-        'method': 'gpu_numba',
-        'container': {'dx': dx, 'dy': dy, 'dz': dz, 'block_orientations': block_dims},
-        'count': count,
-        'placements': [{'x': x, 'y': y, 'z': z, 'orientation': o} for x, y, z, o in placements]
-    }
-    st.json(result)
+    st.success(f"Solução encontrou {count} blocos de {total_blocks} solicitados!")
 
     # Plot 3D interativo com Plotly
     try:
         import plotly.graph_objects as go
+        from matplotlib import cm
+        import numpy as np
+        
+        # Cria paleta de cores viridis
+        viridis = cm.get_cmap('viridis')
+        
         cd = Cuboid(dx, dy, dz)
         fig = go.Figure()
+        
         # Container
         verts = cd._get_vertices((0,0,0), dx, dy, dz)
         x, y, z = zip(*verts)
         fig.add_trace(go.Mesh3d(x=x, y=y, z=z, opacity=0.1, color='lightgrey', name='Container'))
-        # Blocos
-        for x0, y0, z0, o in placements:
+        
+        # Blocos com cores diferentes e formato 3D correto
+        for idx, (x0, y0, z0, o) in enumerate(placements):
             lx, ly, lz = block_dims[o]
-            bverts = cd._get_vertices((x0, y0, z0), lx, ly, lz)
-            bx, by, bz = zip(*bverts)
-            fig.add_trace(go.Mesh3d(x=bx, y=by, z=bz, opacity=0.8, color='blue', showscale=False))
+            
+            # Pegar cor da paleta viridis baseado na posição do bloco
+            color_idx = idx / len(placements) if len(placements) > 1 else 0
+            rgb_color = viridis(color_idx)
+            hex_color = f'rgb({int(rgb_color[0]*255)},{int(rgb_color[1]*255)},{int(rgb_color[2]*255)})'
+            
+            # Criar cubo 3D sólido
+            fig.add_trace(go.Mesh3d(
+                # Define os 8 vértices do cubo
+                x=[x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0],
+                y=[y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly],
+                z=[z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz],
+                # Define os triângulos que formam cada face
+                i=[0, 0, 0, 1, 4, 4, 4, 5, 2, 2, 2, 3],
+                j=[1, 2, 4, 5, 5, 6, 1, 2, 3, 7, 6, 7],
+                k=[2, 3, 5, 6, 6, 7, 2, 3, 7, 6, 5, 4],
+                opacity=0.7,
+                color=hex_color,
+                flatshading=True,
+                showscale=False,
+                hoverinfo='none'
+            ))
+        
         fig.update_layout(
             scene=dict(
-                xaxis=dict(range=[0,dx]),
-                yaxis=dict(range=[0,dy]),
-                zaxis=dict(range=[0,dz]),
-                aspectmode='data'
+                xaxis=dict(range=[-5, dx+5], title="X"),
+                yaxis=dict(range=[-5, dy+5], title="Y (Altura)"),
+                zaxis=dict(range=[-5, dz+5], title="Z"),
+                camera=dict(
+                    eye=dict(x=1.2, y=1.2, z=1.2),
+                    up=dict(x=0, y=1, z=0)
+                ),
+                aspectmode='cube'
             ),
-            margin=dict(l=0, r=0, t=0, b=0)
+            width=800,
+            height=800,
+            margin=dict(l=0, r=0, t=0, b=0),
+            showlegend=False
         )
         st.plotly_chart(fig, use_container_width=True)
     except ImportError:
