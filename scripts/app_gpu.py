@@ -164,7 +164,7 @@ def greedy_pack_with_rotation(dx, dy, dz, block_dims):
                             # Salva com a orientação usada
                             placements.append((x, y, z, bloco_idx, orientation))
                             colocado = True
-                            st.write(f"🔄 Bloco {bloco_idx+1}: {original_dims} → {orientation} em ({x},{y},{z})")
+                            # st.write(f"🔄 Bloco {bloco_idx+1}: {original_dims} → {orientation} em ({x},{y},{z})")  # Removido
                             break
         
         if not colocado:
@@ -202,7 +202,10 @@ if st.button("Executar GPU Heurística"):
     
     # DEBUG: Mostra os primeiros placements
     st.write(f"DEBUG: Primeiros 5 placements: {placements[:5]}")
-    st.write(f"✅ RESULTADO FINAL: {count} blocos empacotados de {max_capacity} possíveis!")
+    st.write(f"✅ RESULTADO FINAL: {count} blocos empacotados de {total_blocks} solicitados!")
+    if count < total_blocks:
+        faltam = total_blocks - count
+        st.warning(f"⚠️ Atenção: {faltam} blocos ficaram de fora por falta de espaço no container.")
 
     # Plot 3D interativo com Plotly
     try:
@@ -241,6 +244,7 @@ if st.button("Executar GPU Heurística"):
             tipo_cores[dims] = f'rgb({int(rgb[0]*255)},{int(rgb[1]*255)},{int(rgb[2]*255)})'
 
         # Garante que cada bloco desenhado corresponde a um placement válido
+        # Remova ou comente este bloco para não plotar cada bloco individual
         for idx, placement in enumerate(placements):
             # Verifica se placement tem orientação (novo formato) ou não (antigo)
             if len(placement) == 5:  # Novo formato com rotação
