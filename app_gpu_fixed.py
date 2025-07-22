@@ -162,7 +162,6 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     Retorna:
         Lista de tuplas de dimensões dos blocos
     """
-<<<<<<< HEAD
     # Força conversão para DataFrame se necessário
     if isinstance(types_df, dict):
         types_df = pd.DataFrame(types_df)
@@ -185,7 +184,6 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     if valid_df.empty:
         return []
     
-<<<<<<< HEAD
     # Debug: mostra os dados processados
     st.write(f"🔍 Dados processados: {len(valid_df)} tipos de bloco válidos")
     for idx, row in valid_df.iterrows():
@@ -193,7 +191,6 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     
 =======
 >>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
-    # Expande blocos
     block_dims = []
     for _, row in valid_df.iterrows():
         dims = (int(row.dx), int(row.dy), int(row.dz))
@@ -203,7 +200,6 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     # Ordena por volume (maior primeiro)
     block_dims.sort(key=lambda d: d[0]*d[1]*d[2], reverse=True)
     
-<<<<<<< HEAD
     st.write(f"📊 Total de blocos individuais gerados: {len(block_dims)}")
     
 =======
@@ -217,7 +213,6 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
     
     Args:
         container: Configuração do container
-        block_dims: Lista de dimensões dos blocos
         placements: Lista de alocações bem-sucedidas
     """
     st.subheader("📊 Análise do Empacotamento")
@@ -235,7 +230,6 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
     
 =======
 >>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
-    # Cria colunas de métricas
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -275,7 +269,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
             f"{efficiency:.1f}%",
             help="Percentual de eficiência do empacotamento"
         )
-    
+    # Removido marcador de conflito git
     # Mensagens de status
     if placed_count == total_count:
         st.success(f"🎉 Empacotamento perfeito! Todos os {total_count} blocos foram alocados.")
