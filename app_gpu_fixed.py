@@ -26,13 +26,15 @@ from scripts.core.utils import (
     calculate_max_capacity, 
     map_block_colors, 
     calculate_efficiency,
-    format_dimensions
+    format_dimensions,
+    validate_block_data
 )
 from scripts.config.settings import (
     DEFAULT_CONTAINER_DIMS,
     DEFAULT_BLOCK_TYPES, 
     GPU_POPULATION_RANGE,
-    MAX_BLOCKS_WARNING
+    MAX_BLOCKS_WARNING,
+    UI_MESSAGES
 )
 
 # Configura Streamlit
@@ -152,57 +154,36 @@ def render_blocks_section() -> pd.DataFrame:
     return pd.DataFrame(types_raw) if isinstance(types_raw, dict) else types_raw
 
 
-def process_block_data(types_df: pd.DataFrame) -> list:
+def process_block_data(types_data) -> list:
     """
     Processa e valida os dados dos tipos de bloco.
     
     Args:
-        types_df: DataFrame com tipos de bloco
+        types_data: DataFrame ou lista com tipos de bloco
         
     Retorna:
         Lista de tuplas de dimensões dos blocos
     """
-    # Força conversão para DataFrame se necessário
-    if isinstance(types_df, dict):
-        types_df = pd.DataFrame(types_df)
+    # Converte para DataFrame se necessário
+    if isinstance(types_data, list):
+        types_df = pd.DataFrame(types_data)
+    else:
+        types_df = types_data
     
-    # Remove linhas completamente vazias
-    types_df = types_df.dropna(how='all')
+    # Usa função utilitária para validação
+    block_dims = validate_block_data(types_df)
     
-    # Filtra linhas válidas (todas as colunas preenchidas e quantidade > 0)
-    valid_df = types_df.dropna(subset=["dx", "dy", "dz", "quantidade"])
-    valid_df = valid_df[(valid_df["quantidade"] > 0) & 
-                       (valid_df["dx"] > 0) & 
-                       (valid_df["dy"] > 0) & 
-                       (valid_df["dz"] > 0)]
-=======
-    # Filtra linhas válidas
-    valid_df = types_df.dropna(subset=["dx", "dy", "dz", "quantidade"])
-    valid_df = valid_df[valid_df["quantidade"] > 0]
-    
-    if valid_df.empty:
+    if not block_dims:
         return []
     
     # Debug: mostra os dados processados
-    st.write(f"🔍 Dados processados: {len(valid_df)} tipos de bloco válidos")
-    for idx, row in valid_df.iterrows():
-        st.write(f"   • Bloco {idx+1}: {int(row.dx)}×{int(row.dy)}×{int(row.dz)} (Qty: {int(row.quantidade)})")
+    unique_types = list(set(block_dims))
+    st.write(f"🔍 Dados processados: {len(unique_types)} tipos únicos, {len(block_dims)} blocos totais")
     
-=======
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
-    block_dims = []
-    for _, row in valid_df.iterrows():
-        dims = (int(row.dx), int(row.dy), int(row.dz))
-        qty = int(row.quantidade)
-        block_dims.extend([dims] * qty)
+    for i, block_type in enumerate(unique_types, 1):
+        count_this_type = block_dims.count(block_type)
+        st.write(f"   • Tipo {i}: {block_type[0]}×{block_type[1]}×{block_type[2]} ({count_this_type} unidades)")
     
-    # Ordena por volume (maior primeiro)
-    block_dims.sort(key=lambda d: d[0]*d[1]*d[2], reverse=True)
-    
-    st.write(f"📊 Total de blocos individuais gerados: {len(block_dims)}")
-    
-=======
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
     return block_dims
 
 
@@ -212,11 +193,11 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
     
     Args:
         container: Configuração do container
+        block_dims: Lista de dimensões dos blocos
         placements: Lista de alocações bem-sucedidas
     """
     st.subheader("📊 Análise do Empacotamento")
     
-<<<<<<< HEAD
     # Calcula tipos únicos corretamente
     unique_block_types = list(set(block_dims))
     unique_count = len(unique_block_types)
@@ -227,8 +208,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         count_this_type = block_dims.count(block_type)
         st.write(f"   • Tipo {i}: {block_type[0]}×{block_type[1]}×{block_type[2]} ({count_this_type} unidades)")
     
-=======
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
+    # Cria colunas de métricas
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -239,16 +219,9 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         )
     
     with col2:
-<<<<<<< HEAD
         st.metric(
             "Tipos de Bloco", 
             unique_count,
-=======
-        unique_types = len(set(block_dims))
-        st.metric(
-            "Tipos de Bloco", 
-            unique_types,
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
             help="Número de tipos diferentes de bloco"
         )
     
@@ -268,15 +241,18 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
             f"{efficiency:.1f}%",
             help="Percentual de eficiência do empacotamento"
         )
-    # Removido marcador de conflito git
+    
     # Mensagens de status
+    placed_count = len(placements)
+    total_count = len(block_dims)
+    
     if placed_count == total_count:
-        st.success(f"🎉 Empacotamento perfeito! Todos os {total_count} blocos foram alocados.")
+        st.success(UI_MESSAGES['success_perfect'].format(total_count))
     elif placed_count > 0:
         missing = total_count - placed_count
-        st.warning(f"⚠️ {missing} blocos não puderam ser alocados por falta de espaço.")
+        st.warning(UI_MESSAGES['warning_partial'].format(missing))
     else:
-        st.error("❌ Nenhum bloco foi alocado. Verifique as dimensões do container e dos blocos.")
+        st.error(UI_MESSAGES['error_no_blocks'])
 
 
 def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size: int) -> list:
@@ -297,11 +273,11 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
     
     # Aviso de performance
     if len(block_dims) > MAX_BLOCKS_WARNING:
-        st.warning(f"⚠️ Grande quantidade de blocos ({len(block_dims)}) pode afetar a performance.")
+        st.warning(UI_MESSAGES['warning_performance'].format(len(block_dims)))
     
     # Calcula capacidade
     max_capacity = calculate_max_capacity(container.volume, block_dims)
-    st.info(f"🎯 Capacidade máxima teórica: {max_capacity} blocos")
+    st.info(UI_MESSAGES['info_capacity'].format(max_capacity))
     
     # Executa algoritmo com progresso
     with st.spinner("🚀 Executando algoritmo de otimização GPU..."):
@@ -326,7 +302,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     st.subheader("🎨 Visualização 3D Interativa")
     
     try:
-        # Gera cores
+        # Gera cores usando paleta Viridis
         block_colors = map_block_colors(block_dims)
         
         # Cria e exibe gráfico
@@ -361,8 +337,7 @@ def main():
 
     # Botão de execução
     show_graph = False
-    if st.button("🚀 Executar CPU Heurística", type="primary", use_container_width=True):
-<<<<<<< HEAD
+    if st.button("🚀 Executar GPU Heurística", type="primary", use_container_width=True):
         # FORÇA limpeza completa do estado da sessão
         for key in list(st.session_state.keys()):
             if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores')):
@@ -374,7 +349,7 @@ def main():
         st.session_state['last_run'] = False
 
         # Processa dados de entrada com validação completa
-        st.write("🔄 Processando dados dos blocos...")
+        st.write(UI_MESSAGES['info_processing'])
         block_dims = process_block_data(types_df)
         
         # Remove possíveis valores None ou inválidos
@@ -387,15 +362,6 @@ def main():
         # Executa algoritmo de empacotamento
         placements = run_packing_algorithm(container, block_dims, pop_size)
         
-=======
-        # Processa dados de entrada
-        block_dims = process_block_data(types_df)
-        if not block_dims:
-            st.error("❌ Configure pelo menos um tipo de bloco válido.")
-            return
-        # Executa algoritmo de empacotamento
-        placements = run_packing_algorithm(container, block_dims, pop_size)
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
         # Armazena resultados no estado da sessão
         st.session_state.update({
             'placements': placements,
@@ -403,20 +369,13 @@ def main():
             'block_dims': block_dims,
             'last_run': True
         })
-<<<<<<< HEAD
         
-=======
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
         # Exibe resultados
         display_analysis_metrics(container, block_dims, placements)
         show_graph = True
 
     # Seção de visualização (apenas se botão foi pressionado)
-<<<<<<< HEAD
     if show_graph and st.session_state.get('last_run', False):
-=======
-    if show_graph:
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
         render_visualization(
             st.session_state['container'],
             st.session_state['placements'],

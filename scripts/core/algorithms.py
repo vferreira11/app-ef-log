@@ -1,185 +1,133 @@
 """
-3D packing algorithms
-
-This module contains the core algorithms for 3D block packing optimization.
+Algoritmos de empacotamento 3D otimizados.
 """
 
 import numpy as np
-import streamlit as st
+import itertools
 from typing import List, Tuple
-from .models import ContainerConfig, Placement
-from .utils import get_orientations, validate_placement
+from .models import ContainerConfig
 
 
-def greedy_pack_sequential(container: ContainerConfig, 
-                         block_dims: List[Tuple[int, int, int]]) -> List[Placement]:
+def get_orientations(lx: int, ly: int, lz: int) -> List[Tuple[int, int, int]]:
+    """Retorna todas as orientações possíveis de um bloco."""
+    dims = [lx, ly, lz]
+    return list(set(itertools.permutations(dims)))
+
+
+def greedy_pack_with_rotation(container: ContainerConfig, block_dims: List[Tuple[int, int, int]]) -> List[tuple]:
     """
-    Sequential greedy packing algorithm without rotation.
-    
-    Fills the container sequentially (x -> y -> z) without leaving gaps.
+    Empacotamento sequencial com ROTAÇÃO: maximiza preenchimento.
     
     Args:
-        container: Container configuration
-        block_dims: List of block dimensions
+        container: Configuração do container
+        block_dims: Lista de dimensões dos blocos
         
     Returns:
-        List of block placements
+        Lista de alocações (x, y, z, block_index, orientation)
     """
     placements = []
-    occupied = np.zeros((container.dx, container.dy, container.dz), dtype=bool)
+    ocupado = np.zeros((container.dx, container.dy, container.dz), dtype=bool)
     
-    for block_idx, (lx, ly, lz) in enumerate(block_dims):
-        placed = False
-        
-        # Search sequentially through container space
-        for x in range(container.dx - lx + 1):
-            if placed:
-                break
-            for y in range(container.dy - ly + 1):
-                if placed:
-                    break
-                for z in range(container.dz - lz + 1):
-                    # Check if space is completely free
-                    if not occupied[x:x+lx, y:y+ly, z:z+lz].any():
-                        # Mark space as occupied
-                        occupied[x:x+lx, y:y+ly, z:z+lz] = True
-                        # Add placement
-                        placements.append(Placement(x, y, z, block_idx))
-                        placed = True
-                        break
-        
-        if not placed:
-            st.warning(f"⚠️ Could not place block {block_idx+1}. Stopping at {len(placements)} blocks.")
-            break
-    
-    return placements
-
-
-def greedy_pack_with_rotation(container: ContainerConfig, 
-                            block_dims: List[Tuple[int, int, int]]) -> List[Placement]:
-    """
-    Sequential greedy packing algorithm with rotation support.
-    
-    Tries all possible orientations for each block to maximize packing.
-    
-    Args:
-        container: Container configuration
-        block_dims: List of block dimensions
-        
-    Returns:
-        List of block placements with orientation info
-    """
-    placements = []
-    occupied = np.zeros((container.dx, container.dy, container.dz), dtype=bool)
-    
-    for block_idx, original_dims in enumerate(block_dims):
-        placed = False
+    for bloco_idx, original_dims in enumerate(block_dims):
+        colocado = False
         orientations = get_orientations(*original_dims)
         
-        # Try each possible orientation
+        # Tenta cada orientação
         for orientation in orientations:
-            if placed:
+            if colocado:
                 break
             lx, ly, lz = orientation
             
-            # Search sequentially through container space
+            # Percorre o container sequencialmente
             for x in range(container.dx - lx + 1):
-                if placed:
+                if colocado:
                     break
                 for y in range(container.dy - ly + 1):
-                    if placed:
+                    if colocado:
                         break
                     for z in range(container.dz - lz + 1):
-                        # Check if space is free
-                        if not occupied[x:x+lx, y:y+ly, z:z+lz].any():
-                            # Mark as occupied
-                            occupied[x:x+lx, y:y+ly, z:z+lz] = True
-                            # Add placement with orientation
-                            placements.append(Placement(x, y, z, block_idx, orientation))
-                            placed = True
+                        # Verifica se o espaço está livre
+                        if not ocupado[x:x+lx, y:y+ly, z:z+lz].any():
+                            # Marca como ocupado
+                            ocupado[x:x+lx, y:y+ly, z:z+lz] = True
+                            # Salva com a orientação usada
+                            placements.append((x, y, z, bloco_idx, orientation))
+                            colocado = True
                             break
         
-        if not placed:
-            st.warning(f"⚠️ Block {block_idx+1} could not fit in any orientation. Stopping.")
+        if not colocado:
             break
     
     return placements
 
 
-def hybrid_pack(container: ContainerConfig, 
-               block_dims: List[Tuple[int, int, int]], 
-               gpu_placements: List[Placement]) -> List[Placement]:
+def gpu_optimize_packing(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], max_capacity: int) -> List[tuple]:
     """
-    Hybrid algorithm: uses GPU results and fills gaps with greedy approach.
+    Otimização de empacotamento com algoritmo GPU simulado.
     
     Args:
-        container: Container configuration
-        block_dims: List of block dimensions
-        gpu_placements: Initial placements from GPU algorithm
+        container: Configuração do container
+        block_dims: Lista de dimensões dos blocos
+        max_capacity: Capacidade máxima de blocos
         
     Returns:
-        Enhanced list of placements
+        Lista de alocações otimizadas
     """
-    occupied = np.zeros((container.dx, container.dy, container.dz), dtype=bool)
-    final_placements = []
+    # Limita aos blocos que cabem teoricamente
+    target_blocks = min(max_capacity, len(block_dims))
+    target_dims = block_dims[:target_blocks]
     
-    # Mark spaces occupied by GPU placements
-    for placement in gpu_placements:
-        if placement.orientation:
-            lx, ly, lz = placement.orientation
-        else:
-            lx, ly, lz = block_dims[placement.block_index]
+    # Executa empacotamento com rotação
+    placements = greedy_pack_with_rotation(container, target_dims)
+    
+    return placements
+
+
+def hybrid_pack(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], gpu_placements: List[tuple]) -> List[tuple]:
+    """
+    Algoritmo híbrido: usa resultado GPU e preenche buracos com Greedy.
+    
+    Args:
+        container: Configuração do container
+        block_dims: Lista de dimensões dos blocos
+        gpu_placements: Alocações do algoritmo GPU
         
-        if validate_placement(placement.x, placement.y, placement.z, lx, ly, lz,
-                            container.dx, container.dy, container.dz):
-            occupied[placement.x:placement.x+lx, 
-                    placement.y:placement.y+ly, 
-                    placement.z:placement.z+lz] = True
-            final_placements.append(placement)
+    Returns:
+        Lista de alocações híbridas
+    """
+    ocupado = np.zeros((container.dx, container.dy, container.dz), dtype=bool)
+    placements = []
     
-    # Try to fit remaining blocks in gaps
-    used_blocks = len(final_placements)
-    for block_idx in range(used_blocks, len(block_dims)):
-        lx, ly, lz = block_dims[block_idx]
-        placed = False
+    # Marca posições ocupadas pelo GPU
+    for placement in gpu_placements:
+        if len(placement) == 5:
+            x0, y0, z0, o, orientation = placement
+            lx, ly, lz = orientation
+        else:
+            x0, y0, z0, o = placement
+            lx, ly, lz = block_dims[o]
+            
+        if x0 + lx <= container.dx and y0 + ly <= container.dy and z0 + lz <= container.dz:
+            ocupado[x0:x0+lx, y0:y0+ly, z0:z0+lz] = True
+            placements.append(placement)
+    
+    # Tenta encaixar blocos restantes nos buracos
+    used_blocks = len(placements)
+    for bloco_idx in range(used_blocks, len(block_dims)):
+        lx, ly, lz = block_dims[bloco_idx]
+        colocado = False
         
         for x in range(container.dx - lx + 1):
-            if placed:
+            if colocado: 
                 break
             for y in range(container.dy - ly + 1):
-                if placed:
+                if colocado: 
                     break
                 for z in range(container.dz - lz + 1):
-                    if not occupied[x:x+lx, y:y+ly, z:z+lz].any():
-                        occupied[x:x+lx, y:y+ly, z:z+lz] = True
-                        final_placements.append(Placement(x, y, z, block_idx))
-                        placed = True
+                    if not ocupado[x:x+lx, y:y+ly, z:z+lz].any():
+                        ocupado[x:x+lx, y:y+ly, z:z+lz] = True
+                        placements.append((x, y, z, bloco_idx))
+                        colocado = True
                         break
-    
-    return final_placements
-
-
-def gpu_optimize_packing(container: ContainerConfig, 
-                        block_dims: List[Tuple[int, int, int]], 
-                        target_blocks: int) -> List[Placement]:
-    """
-    GPU-optimized packing with rotation support.
-    
-    Args:
-        container: Container configuration
-        block_dims: List of block dimensions
-        target_blocks: Target number of blocks to pack
-        
-    Returns:
-        Optimized list of placements
-    """
-    st.write(f"🎯 TARGET: Attempting to pack {target_blocks} blocks with ROTATION")
-    
-    # Use rotation-enabled greedy algorithm
-    placements = greedy_pack_with_rotation(container, block_dims[:target_blocks])
-    count = len(placements)
-    
-    st.write(f"📊 Greedy with rotation achieved: {count} blocks")
-    st.success(f"🏆 Result: Packing WITH ROTATION: {count} blocks!")
     
     return placements

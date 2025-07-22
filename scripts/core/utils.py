@@ -1,81 +1,33 @@
 """
-Utility functions for 3D packing system
-
-This module contains helper functions used throughout the application.
+Funções utilitárias para o sistema de empacotamento.
 """
 
-import itertools
-import matplotlib
-import matplotlib.colors
+import random
 from typing import List, Tuple, Dict
-
-
-def get_orientations(lx: int, ly: int, lz: int) -> List[Tuple[int, int, int]]:
-    """
-    Generate all possible orientations (rotations) of a block.
-    
-    Args:
-        lx: Block width
-        ly: Block depth
-        lz: Block height
-        
-    Returns:
-        List of tuples representing all unique orientations
-    """
-    dims = [lx, ly, lz]
-    return list(set(itertools.permutations(dims)))
-
-
-def generate_viridis_colors(n_types: int) -> Dict[int, str]:
-    """
-    Generate colors from the viridis palette for different block types.
-    
-    Args:
-        n_types: Number of different block types
-        
-    Returns:
-        Dictionary mapping type index to hex color
-    """
-    if n_types == 0:
-        return {}
-    
-    viridis = matplotlib.cm.get_cmap('viridis', n_types)
-    return {i: matplotlib.colors.to_hex(viridis(i)) for i in range(n_types)}
-
-
-def map_block_colors(block_dims: List[Tuple[int, int, int]]) -> Dict[Tuple[int, int, int], str]:
-    """
-    Map unique block dimensions to viridis colors.
-    
-    Args:
-        block_dims: List of block dimensions
-        
-    Returns:
-        Dictionary mapping block dimensions to hex colors
-    """
-    unique_dims = list(set(block_dims))
-    colors = generate_viridis_colors(len(unique_dims))
-    return {dims: colors[i] for i, dims in enumerate(unique_dims)}
+from matplotlib import cm
+import numpy as np
 
 
 def calculate_max_capacity(container_volume: int, block_dims: List[Tuple[int, int, int]]) -> int:
     """
-    Calculate theoretical maximum capacity of container.
+    Calcula a capacidade máxima teórica do container.
     
     Args:
-        container_volume: Total volume of the container
-        block_dims: List of block dimensions
+        container_volume: Volume total do container
+        block_dims: Lista de dimensões dos blocos
         
     Returns:
-        Maximum number of blocks that fit theoretically
+        Número máximo de blocos que cabem teoricamente
     """
     if not block_dims:
         return 0
-    
+        
     block_volumes = [lx * ly * lz for lx, ly, lz in block_dims]
-    used_volume = 0
-    max_blocks = 0
+    total_block_volume = sum(block_volumes)
     
+    # Capacidade baseada no volume
+    max_blocks = 0
+    used_volume = 0
     for vol in block_volumes:
         if used_volume + vol <= container_volume:
             used_volume += vol
@@ -83,52 +35,99 @@ def calculate_max_capacity(container_volume: int, block_dims: List[Tuple[int, in
         else:
             break
     
-    return max_blocks
+    return min(max_blocks, len(block_dims))
 
 
-def validate_placement(x: int, y: int, z: int, lx: int, ly: int, lz: int,
-                      container_dx: int, container_dy: int, container_dz: int) -> bool:
+def map_block_colors(block_dims: List[Tuple[int, int, int]]) -> Dict[Tuple[int, int, int], str]:
     """
-    Validate if a block placement fits within container bounds.
+    Mapeia cores da paleta Viridis para tipos únicos de bloco.
     
     Args:
-        x, y, z: Block position
-        lx, ly, lz: Block dimensions
-        container_dx, container_dy, container_dz: Container dimensions
+        block_dims: Lista de dimensões dos blocos
         
     Returns:
-        True if placement is valid, False otherwise
+        Dicionário mapeando dimensões para cores hexadecimais
     """
-    return (x + lx <= container_dx and 
-            y + ly <= container_dy and 
-            z + lz <= container_dz and
-            x >= 0 and y >= 0 and z >= 0)
+    unique_types = list(set(block_dims))
+    viridis = cm.get_cmap('viridis')
+    
+    colors = {}
+    for i, block_type in enumerate(unique_types):
+        # Mapeia índice para valor entre 0 e 1
+        color_value = i / max(1, len(unique_types) - 1) if len(unique_types) > 1 else 0
+        rgba = viridis(color_value)
+        # Converte RGBA para hex
+        hex_color = f"#{int(rgba[0]*255):02x}{int(rgba[1]*255):02x}{int(rgba[2]*255):02x}"
+        colors[block_type] = hex_color
+    
+    return colors
+
+
+def calculate_efficiency(placed_count: int, total_count: int) -> float:
+    """
+    Calcula a eficiência do empacotamento.
+    
+    Args:
+        placed_count: Número de blocos alocados
+        total_count: Número total de blocos
+        
+    Returns:
+        Percentual de eficiência (0-100)
+    """
+    if total_count == 0:
+        return 0.0
+    return (placed_count / total_count) * 100
 
 
 def format_dimensions(dims: Tuple[int, int, int]) -> str:
     """
-    Format dimensions tuple as readable string.
+    Formata dimensões para exibição.
     
     Args:
-        dims: Dimensions tuple (x, y, z)
+        dims: Tupla com dimensões (x, y, z)
         
     Returns:
-        Formatted string like "10x20x30"
+        String formatada das dimensões
     """
-    return f"{dims[0]}x{dims[1]}x{dims[2]}"
+    return f"{dims[0]}×{dims[1]}×{dims[2]}"
 
 
-def calculate_efficiency(placed_blocks: int, total_blocks: int) -> float:
+def generate_random_color() -> str:
+    """Gera uma cor hexadecimal aleatória."""
+    return f"#{random.randint(0, 0xFFFFFF):06x}"
+
+
+def validate_block_data(types_df) -> List[Tuple[int, int, int]]:
     """
-    Calculate packing efficiency as percentage.
+    Valida e processa dados dos tipos de bloco.
     
     Args:
-        placed_blocks: Number of successfully placed blocks
-        total_blocks: Total number of blocks requested
+        types_df: DataFrame com tipos de bloco
         
     Returns:
-        Efficiency percentage (0-100)
+        Lista de tuplas de dimensões dos blocos válidos
     """
-    if total_blocks == 0:
-        return 0.0
-    return (placed_blocks / total_blocks) * 100.0
+    # Remove linhas completamente vazias
+    valid_df = types_df.dropna(how='all')
+    
+    # Filtra linhas válidas
+    valid_df = valid_df.dropna(subset=["dx", "dy", "dz", "quantidade"])
+    valid_df = valid_df[(valid_df["quantidade"] > 0) & 
+                       (valid_df["dx"] > 0) & 
+                       (valid_df["dy"] > 0) & 
+                       (valid_df["dz"] > 0)]
+    
+    if valid_df.empty:
+        return []
+    
+    # Expande blocos
+    block_dims = []
+    for _, row in valid_df.iterrows():
+        dims = (int(row.dx), int(row.dy), int(row.dz))
+        qty = int(row.quantidade)
+        block_dims.extend([dims] * qty)
+    
+    # Ordena por volume (maior primeiro)
+    block_dims.sort(key=lambda d: d[0]*d[1]*d[2], reverse=True)
+    
+    return block_dims
