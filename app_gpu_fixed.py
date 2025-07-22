@@ -179,7 +179,6 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     # Filtra linhas válidas
     valid_df = types_df.dropna(subset=["dx", "dy", "dz", "quantidade"])
     valid_df = valid_df[valid_df["quantidade"] > 0]
->>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
     
     if valid_df.empty:
         return []
