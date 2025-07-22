@@ -1,4 +1,5 @@
 Sempre executar o app após fazer uma alteração.
+Nunca suponha. Se tiver dúvidas, PERGUNTE.
 Visualização 3D: Sempre utilizar Plotly para gráficos 3D interativos. Para blocos, desenhar faces sólidas com Surface (sem triangulação ou sombras) e bordas pretas com Scatter3d.
 Paleta de cores: Usar a paleta viridis (matplotlib) para distinguir tipos de blocos, garantindo harmonia visual e fácil identificação.
 Opacidade: Faces dos blocos devem ser totalmente opacas (opacity=1.0).
