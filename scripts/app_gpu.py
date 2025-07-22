@@ -45,7 +45,18 @@ if st.button("Executar GPU Heurística"):
         dims = (int(row.dx), int(row.dy), int(row.dz))
         qtd = int(row.quantidade)
         block_dims.extend([dims] * qtd)
-    
+
+    # Limita pelo volume do container
+    container_volume = dx * dy * dz
+    block_volumes = [lx * ly * lz for lx, ly, lz in block_dims]
+    min_block_volume = min(block_volumes) if block_volumes else 1
+    max_blocks = container_volume // min_block_volume if min_block_volume else 0
+
+    if total_blocks * min_block_volume > container_volume:
+        st.warning(f"O container só comporta {max_blocks} blocos de {min_block_volume} unidades cada. Limitando a quantidade.")
+        block_dims = block_dims[:max_blocks]
+        total_blocks = max_blocks
+
     # Executa heurística GPU
     placements = gpu_heuristic_pack(dx, dy, dz, block_dims, pop_size=pop_size, N=total_blocks)
     count = len(placements)
@@ -63,42 +74,52 @@ if st.button("Executar GPU Heurística"):
         cd = Cuboid(dx, dy, dz)
         fig = go.Figure()
         
-        # Container
+        # Container como wireframe (arestas)
         verts = cd._get_vertices((0,0,0), dx, dy, dz)
-        x, y, z = zip(*verts)
-        fig.add_trace(go.Mesh3d(x=x, y=y, z=z, opacity=0.1, color='lightgrey', name='Container'))
+        edges = [
+            (0,1), (1,2), (2,3), (3,0), # base inferior
+            (4,5), (5,6), (6,7), (7,4), # topo
+            (0,4), (1,5), (2,6), (3,7)  # laterais
+        ]
+        for e in edges:
+            x0, y0, z0 = verts[e[0]]
+            x1, y1, z1 = verts[e[1]]
+            fig.add_trace(go.Scatter3d(
+                x=[x0, x1], y=[y0, y1], z=[z0, z1],
+                mode='lines',
+                line=dict(color='gray', width=4),
+                showlegend=False
+            ))
         
-        # Blocos com cores diferentes e formato 3D correto
+        # Blocos com cores por tipo e preenchimento sólido
+        # Gera uma cor para cada tipo de bloco
+        tipo_cores = {}
+        tipos_unicos = list({(lx, ly, lz) for lx, ly, lz in block_dims})
+        for i, dims in enumerate(tipos_unicos):
+            rgb = viridis(i / max(1, len(tipos_unicos)-1))
+            tipo_cores[dims] = f'rgba({int(rgb[0]*255)},{int(rgb[1]*255)},{int(rgb[2]*255)},0.2)'
+
         for idx, (x0, y0, z0, o) in enumerate(placements):
             lx, ly, lz = block_dims[o]
-            
-            # Pegar cor da paleta viridis baseado na posição do bloco
-            color_idx = idx / len(placements) if len(placements) > 1 else 0
-            rgb_color = viridis(color_idx)
-            hex_color = f'rgb({int(rgb_color[0]*255)},{int(rgb_color[1]*255)},{int(rgb_color[2]*255)})'
-            
-            # Criar cubo 3D sólido
+            cor = tipo_cores[(lx, ly, lz)]
             fig.add_trace(go.Mesh3d(
-                # Define os 8 vértices do cubo
                 x=[x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0],
                 y=[y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly],
                 z=[z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz],
-                # Define os triângulos que formam cada face
-                i=[0, 0, 0, 1, 4, 4, 4, 5, 2, 2, 2, 3],
-                j=[1, 2, 4, 5, 5, 6, 1, 2, 3, 7, 6, 7],
-                k=[2, 3, 5, 6, 6, 7, 2, 3, 7, 6, 5, 4],
-                opacity=0.7,
-                color=hex_color,
-                flatshading=True,
+                i=[0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 5, 4],
+                j=[1, 2, 3, 0, 5, 6, 7, 4, 4, 5, 6, 7],
+                k=[2, 3, 0, 1, 6, 7, 4, 5, 7, 6, 2, 3],
+                opacity=0.2,
+                color=cor,
                 showscale=False,
                 hoverinfo='none'
             ))
         
         fig.update_layout(
             scene=dict(
-                xaxis=dict(range=[-5, dx+5], title="X"),
-                yaxis=dict(range=[-5, dy+5], title="Y (Altura)"),
-                zaxis=dict(range=[-5, dz+5], title="Z"),
+                xaxis=dict(range=[0, dx], title="X"),
+                yaxis=dict(range=[0, dy], title="Y (Altura)"),
+                zaxis=dict(range=[0, dz], title="Z"),
                 camera=dict(
                     eye=dict(x=1.2, y=1.2, z=1.2),
                     up=dict(x=0, y=1, z=0)
