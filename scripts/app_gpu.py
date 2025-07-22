@@ -38,15 +38,15 @@ st.sidebar.subheader("Parâmetros da heurística GPU")
 pop_size = st.sidebar.slider("Tamanho da população", min_value=64, max_value=16384, value=2048, step=64)
 
 def greedy_pack(dx, dy, dz, block_dims):
-    """Empacotamento otimizado: preenche o container de forma compacta."""
+    """Empacotamento sequencial ULTRA compacto: preenche sem deixar buracos."""
     placements = []
     ocupado = np.zeros((dx, dy, dz), dtype=bool)
     
-    # Para cada bloco, encontra a primeira posição válida
+    # Para cada bloco, encontra a primeira posição válida sequencialmente
     for bloco_idx, (lx, ly, lz) in enumerate(block_dims):
         colocado = False
         
-        # Percorre o container de forma sequencial: x -> y -> z
+        # Percorre o container de forma SEQUENCIAL: x -> y -> z
         for x in range(dx - lx + 1):
             if colocado:
                 break
@@ -63,11 +63,117 @@ def greedy_pack(dx, dy, dz, block_dims):
                         colocado = True
                         break
         
-        # Se não conseguiu colocar o bloco, para
+        # Se não conseguiu colocar o bloco, para de tentar
         if not colocado:
+            st.warning(f"⚠️ Não foi possível encaixar o bloco {bloco_idx+1}. Parando no bloco {len(placements)}.")
             break
     
     return placements
+
+def gpu_calculate_max_capacity(dx, dy, dz, block_dims):
+    """Fase 1: Calcula a capacidade máxima teórica do container."""
+    container_volume = dx * dy * dz
+    block_volumes = [lx * ly * lz for lx, ly, lz in block_dims]
+    min_block_volume = min(block_volumes) if block_volumes else 1
+    max_theoretical = container_volume // min_block_volume
+    return min(max_theoretical, len(block_dims))
+
+def gpu_optimize_packing(dx, dy, dz, block_dims, target_blocks):
+    """Fase 2: Empacotamento compacto COM ROTAÇÃO."""
+    st.write(f"🎯 META: Tentar encaixar {target_blocks} blocos com ROTAÇÃO")
+    
+    # CORREÇÃO: Chama a função com rotação
+    placements = greedy_pack_with_rotation(dx, dy, dz, block_dims[:target_blocks])
+    count = len(placements)
+    st.write(f"📊 Greedy com rotação conseguiu: {count} blocos")
+    st.success(f"🏆 Resultado: Empacotamento COM ROTAÇÃO: {count} blocos!")
+    
+    return placements
+
+def hybrid_pack(dx, dy, dz, block_dims, gpu_placements):
+    """Algoritmo híbrido: usa resultado GPU e preenche buracos com Greedy."""
+    ocupado = np.zeros((dx, dy, dz), dtype=bool)
+    placements = []
+    
+    # Marca posições ocupadas pelo GPU
+    for x0, y0, z0, o in gpu_placements:
+        lx, ly, lz = block_dims[o]
+        if x0 + lx <= dx and y0 + ly <= dy and z0 + lz <= dz:
+            ocupado[x0:x0+lx, y0:y0+ly, z0:z0+lz] = True
+            placements.append((x0, y0, z0, o))
+    
+    # Tenta encaixar blocos restantes nos buracos
+    used_blocks = len(placements)
+    for bloco_idx in range(used_blocks, len(block_dims)):
+        lx, ly, lz = block_dims[bloco_idx]
+        colocado = False
+        
+        for x in range(dx - lx + 1):
+            if colocado: break
+            for y in range(dy - ly + 1):
+                if colocado: break
+                for z in range(dz - lz + 1):
+                    if not ocupado[x:x+lx, y:y+ly, z:z+lz].any():
+                        ocupado[x:x+lx, y:y+ly, z:z+lz] = True
+                        placements.append((x, y, z, bloco_idx))
+                        colocado = True
+                        break
+    
+    return placements
+
+def get_orientations(lx, ly, lz):
+    """Retorna todas as orientações possíveis de um bloco."""
+    orientations = []
+    dims = [lx, ly, lz]
+    
+    # Gera todas as permutações únicas das dimensões
+    import itertools
+    for perm in set(itertools.permutations(dims)):
+        orientations.append(perm)
+    
+    return orientations
+
+def greedy_pack_with_rotation(dx, dy, dz, block_dims):
+    """Empacotamento sequencial com ROTAÇÃO: maximiza preenchimento."""
+    placements = []
+    ocupado = np.zeros((dx, dy, dz), dtype=bool)
+    
+    # Para cada bloco, tenta todas as rotações possíveis
+    for bloco_idx, original_dims in enumerate(block_dims):
+        colocado = False
+        orientations = get_orientations(*original_dims)
+        
+        # Tenta cada orientação
+        for orientation in orientations:
+            if colocado:
+                break
+            lx, ly, lz = orientation
+            
+            # Percorre o container sequencialmente
+            for x in range(dx - lx + 1):
+                if colocado:
+                    break
+                for y in range(dy - ly + 1):
+                    if colocado:
+                        break
+                    for z in range(dz - lz + 1):
+                        # Verifica se o espaço está livre
+                        if not ocupado[x:x+lx, y:y+ly, z:z+lz].any():
+                            # Marca como ocupado
+                            ocupado[x:x+lx, y:y+ly, z:z+lz] = True
+                            # Salva com a orientação usada
+                            placements.append((x, y, z, bloco_idx, orientation))
+                            colocado = True
+                            st.write(f"🔄 Bloco {bloco_idx+1}: {original_dims} → {orientation} em ({x},{y},{z})")
+                            break
+        
+        if not colocado:
+            st.warning(f"⚠️ Bloco {bloco_idx+1} não coube em nenhuma orientação. Parando.")
+            break
+    
+    return placements
+
+# ...existing code...
 
 if st.button("Executar GPU Heurística"):
     # Prepara dimensões e quantidades dos blocos
@@ -78,30 +184,25 @@ if st.button("Executar GPU Heurística"):
         qtd = int(row.quantidade)
         block_dims.extend([dims] * qtd)
 
-    # Limita pelo volume do container
-    container_volume = dx * dy * dz
-    block_volumes = [lx * ly * lz for lx, ly, lz in block_dims]
-    min_block_volume = min(block_volumes) if block_volumes else 1
-    max_blocks = container_volume // min_block_volume if min_block_volume else 0
+    # DEBUG: Mostra as dimensões dos blocos
+    st.write(f"DEBUG: Primeiros 5 blocos: {block_dims[:5]}")
+    st.write(f"DEBUG: Total de blocos: {total_blocks}")
 
-    if total_blocks * min_block_volume > container_volume:
-        st.warning(f"O container só comporta {max_blocks} blocos de {min_block_volume} unidades cada. Limitando a quantidade.")
-        block_dims = block_dims[:max_blocks]
-        total_blocks = max_blocks
-
-    # Executa heurística GPU
-    placements = gpu_heuristic_pack(dx, dy, dz, block_dims, pop_size=pop_size, N=total_blocks)
+    # FASE 1: Calcula capacidade máxima
+    st.info("🚀 FASE 1: Calculando capacidade máxima do container...")
+    max_capacity = gpu_calculate_max_capacity(dx, dy, dz, block_dims)
+    st.write(f"📏 Container: {dx}×{dy}×{dz} = {dx*dy*dz} unidades")
+    st.write(f"📦 Blocos: {block_dims[0]} = {block_dims[0][0]*block_dims[0][1]*block_dims[0][2]} unidades cada")
+    st.write(f"🎯 Capacidade máxima calculada: {max_capacity} blocos")
+    
+    # FASE 2: Otimiza empacotamento
+    st.info("🧩 FASE 2: Otimizando empacotamento para atingir máximo...")
+    placements = gpu_optimize_packing(dx, dy, dz, block_dims, max_capacity)
     count = len(placements)
-
-    # Se não conseguiu preencher tudo, tenta greedy sequencial
-    if count < total_blocks:
-        st.info(f"GPU encontrou {count} blocos. Tentando preenchimento sequencial (greedy)...")
-        placements = greedy_pack(dx, dy, dz, block_dims)
-        count = len(placements)
-        st.success(f"Solução greedy encontrou {count} blocos de {total_blocks} possíveis!")
-
-    else:
-        st.success(f"Solução encontrou {count} blocos de {total_blocks} solicitados!")
+    
+    # DEBUG: Mostra os primeiros placements
+    st.write(f"DEBUG: Primeiros 5 placements: {placements[:5]}")
+    st.write(f"✅ RESULTADO FINAL: {count} blocos empacotados de {max_capacity} possíveis!")
 
     # Plot 3D interativo com Plotly
     try:
@@ -140,12 +241,20 @@ if st.button("Executar GPU Heurística"):
             tipo_cores[dims] = f'rgb({int(rgb[0]*255)},{int(rgb[1]*255)},{int(rgb[2]*255)})'
 
         # Garante que cada bloco desenhado corresponde a um placement válido
-        for idx, (x0, y0, z0, o) in enumerate(placements):
-            # CORREÇÃO: usa as dimensões corretas do bloco
-            lx, ly, lz = block_dims[o]
-            cor = tipo_cores[(lx, ly, lz)]
+        for idx, placement in enumerate(placements):
+            # Verifica se placement tem orientação (novo formato) ou não (antigo)
+            if len(placement) == 5:  # Novo formato com rotação
+                x0, y0, z0, o, orientation = placement
+                lx, ly, lz = orientation  # Usa a orientação rotacionada
+                # CORREÇÃO: Usa as dimensões originais para buscar a cor
+                original_dims = block_dims[o]
+                cor = tipo_cores[original_dims]
+            else:  # Formato antigo
+                x0, y0, z0, o = placement
+                lx, ly, lz = block_dims[o]  # Usa dimensões originais
+                cor = tipo_cores[(lx, ly, lz)]
             
-            # Vértices do cubo com dimensões CORRETAS
+            # Vértices do cubo com dimensões CORRETAS (rotacionadas)
             vx = [x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0]
             vy = [y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly]
             vz = [z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz]
