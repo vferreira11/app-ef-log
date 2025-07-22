@@ -1,0 +1,10 @@
+Visualização 3D: Sempre utilizar Plotly para gráficos 3D interativos. Para blocos, desenhar faces sólidas com Surface (sem triangulação ou sombras) e bordas pretas com Scatter3d.
+Paleta de cores: Usar a paleta viridis (matplotlib) para distinguir tipos de blocos, garantindo harmonia visual e fácil identificação.
+Opacidade: Faces dos blocos devem ser totalmente opacas (opacity=1.0).
+Interface: Utilizar Streamlit para a interface web do app.
+Scripts de referência: O script empacotamento_basico.py serve como modelo para visualização limpa de cubos.
+Restrições: Evitar Mesh3d para faces sólidas devido à triangulação. Preferir Surface para faces planas.
+Preferências de borda: Bordas dos blocos sempre pretas e bem visíveis.
+Dados: Tipos de blocos definidos por dimensões e quantidade, podendo ser editados pelo usuário.
+Regras de negócio: O app calcula a capacidade máxima do container, empacota blocos com rotação e exibe alertas se houver blocos excedentes.
+Sugestão para futuras interações: Manter padrão visual, paleta viridis, e priorizar clareza na visualização dos blocos.
