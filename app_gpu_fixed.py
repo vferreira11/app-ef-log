@@ -162,6 +162,7 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     Retorna:
         Lista de tuplas de dimensões dos blocos
     """
+<<<<<<< HEAD
     # Força conversão para DataFrame se necessário
     if isinstance(types_df, dict):
         types_df = pd.DataFrame(types_df)
@@ -175,15 +176,23 @@ def process_block_data(types_df: pd.DataFrame) -> list:
                        (valid_df["dx"] > 0) & 
                        (valid_df["dy"] > 0) & 
                        (valid_df["dz"] > 0)]
+=======
+    # Filtra linhas válidas
+    valid_df = types_df.dropna(subset=["dx", "dy", "dz", "quantidade"])
+    valid_df = valid_df[valid_df["quantidade"] > 0]
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
     
     if valid_df.empty:
         return []
     
+<<<<<<< HEAD
     # Debug: mostra os dados processados
     st.write(f"🔍 Dados processados: {len(valid_df)} tipos de bloco válidos")
     for idx, row in valid_df.iterrows():
         st.write(f"   • Bloco {idx+1}: {int(row.dx)}×{int(row.dy)}×{int(row.dz)} (Qty: {int(row.quantidade)})")
     
+=======
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
     # Expande blocos
     block_dims = []
     for _, row in valid_df.iterrows():
@@ -194,8 +203,11 @@ def process_block_data(types_df: pd.DataFrame) -> list:
     # Ordena por volume (maior primeiro)
     block_dims.sort(key=lambda d: d[0]*d[1]*d[2], reverse=True)
     
+<<<<<<< HEAD
     st.write(f"📊 Total de blocos individuais gerados: {len(block_dims)}")
     
+=======
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
     return block_dims
 
 
@@ -210,6 +222,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
     """
     st.subheader("📊 Análise do Empacotamento")
     
+<<<<<<< HEAD
     # Calcula tipos únicos corretamente
     unique_block_types = list(set(block_dims))
     unique_count = len(unique_block_types)
@@ -220,6 +233,8 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         count_this_type = block_dims.count(block_type)
         st.write(f"   • Tipo {i}: {block_type[0]}×{block_type[1]}×{block_type[2]} ({count_this_type} unidades)")
     
+=======
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
     # Cria colunas de métricas
     col1, col2, col3, col4 = st.columns(4)
     
@@ -231,9 +246,16 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         )
     
     with col2:
+<<<<<<< HEAD
         st.metric(
             "Tipos de Bloco", 
             unique_count,
+=======
+        unique_types = len(set(block_dims))
+        st.metric(
+            "Tipos de Bloco", 
+            unique_types,
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
             help="Número de tipos diferentes de bloco"
         )
     
@@ -347,6 +369,7 @@ def main():
     # Botão de execução
     show_graph = False
     if st.button("🚀 Executar CPU Heurística", type="primary", use_container_width=True):
+<<<<<<< HEAD
         # FORÇA limpeza completa do estado da sessão
         for key in list(st.session_state.keys()):
             if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores')):
@@ -371,6 +394,15 @@ def main():
         # Executa algoritmo de empacotamento
         placements = run_packing_algorithm(container, block_dims, pop_size)
         
+=======
+        # Processa dados de entrada
+        block_dims = process_block_data(types_df)
+        if not block_dims:
+            st.error("❌ Configure pelo menos um tipo de bloco válido.")
+            return
+        # Executa algoritmo de empacotamento
+        placements = run_packing_algorithm(container, block_dims, pop_size)
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
         # Armazena resultados no estado da sessão
         st.session_state.update({
             'placements': placements,
@@ -378,13 +410,20 @@ def main():
             'block_dims': block_dims,
             'last_run': True
         })
+<<<<<<< HEAD
         
+=======
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
         # Exibe resultados
         display_analysis_metrics(container, block_dims, placements)
         show_graph = True
 
     # Seção de visualização (apenas se botão foi pressionado)
+<<<<<<< HEAD
     if show_graph and st.session_state.get('last_run', False):
+=======
+    if show_graph:
+>>>>>>> 3c6da894726f8d037f70179e757e7b06865fef2a
         render_visualization(
             st.session_state['container'],
             st.session_state['placements'],
