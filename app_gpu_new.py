@@ -46,11 +46,10 @@ st.set_page_config(
 def render_header():
     """Render application header and description."""
     st.title("🎯 3D Packing System")
-    st.markdown("""
-    *Advanced 3D block packing optimization with GPU acceleration and intelligent rotation algorithms*
-    
-    📊 **Features**: GPU optimization • Rotation support • Real-time 3D visualization • Viridis color palette
-    """)
+    st.markdown(
+        """*Advanced 3D block packing optimization with GPU acceleration and intelligent rotation algorithms*\n\n
+        📊 **Features**: GPU optimization • Rotation support • Real-time 3D visualization • Viridis color palette"""
+    )
 
 
 def render_container_section() -> ContainerConfig:
@@ -70,54 +69,56 @@ def render_container_section() -> ContainerConfig:
             min_value=1, 
             value=DEFAULT_CONTAINER_DIMS['dx'],
             help="Container width dimension"
-        )
+st.set_page_config(
+    page_title="Empacotamento 3D GPU", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
     with col2:
-        dy = st.number_input(
+            "Largura (X)", 
             "Depth (Y)", 
-            min_value=1, 
-            value=DEFAULT_CONTAINER_DIMS['dy'],
-            help="Container depth dimension"
-        )
-    with col3:
-        dz = st.number_input(
+    st.title("🎯 Empacotamento 3D GPU")
+            help="Dimensão de largura do container"
+    *Otimização avançada de empacotamento 3D com aceleração GPU e algoritmos inteligentes de rotação*
+    
+    📊 **Recursos**: Otimização GPU • Suporte a rotação • Visualização 3D em tempo real • Paleta de cores Viridis
+            "Profundidade (Y)", 
             "Height (Z)", 
             min_value=1, 
-            value=DEFAULT_CONTAINER_DIMS['dz'],
+            help="Dimensão de profundidade do container"
             help="Container height dimension"
         )
     
-    container = ContainerConfig(dx, dy, dz)
+            "Altura (Z)", 
     
-    # Display container info
-    st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {container.volume:,} units")
+    st.subheader("📐 Configuração do Container")
     
     return container
 
 
 def render_blocks_section() -> pd.DataFrame:
     """
-    Render block types configuration section.
-    
-    Returns:
-        DataFrame with block types configuration
-    """
-    st.subheader("📦 Block Types Configuration")
-    
-    # Instructions
-    st.markdown("*Define different block types with their dimensions and quantities*")
-    
-    # Data editor
-    types_raw = st.data_editor(
-        DEFAULT_BLOCK_TYPES,
-        num_rows="dynamic",
-        key="block_types",
-        use_container_width=True,
-        column_config={
-            "dx": st.column_config.NumberColumn("Width", min_value=1),
-            "dy": st.column_config.NumberColumn("Depth", min_value=1), 
+        )
+    with col2:
+        dy = st.number_input(
+            "Profundidade (Y)", 
+            min_value=1, 
+            value=DEFAULT_CONTAINER_DIMS['dy'],
+            help="Dimensão de profundidade do container"
+        )
+    with col3:
+        dz = st.number_input(
+            "Altura (Z)", 
+            min_value=1, 
+            value=DEFAULT_CONTAINER_DIMS['dz'],
+            help="Dimensão de altura do container"
+        )
+    container = ContainerConfig(dx, dy, dz)
+    st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {container.volume:,} unidades")
+    return container
             "dz": st.column_config.NumberColumn("Height", min_value=1),
             "quantidade": st.column_config.NumberColumn("Quantity", min_value=1)
-        }
+    st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {container.volume:,} unidades")
     )
     
     return pd.DataFrame(types_raw) if isinstance(types_raw, dict) else types_raw
@@ -128,35 +129,31 @@ def render_gpu_parameters() -> int:
     Render GPU algorithm parameters in sidebar.
     
     Returns:
-        Population size for GPU algorithm
+    st.subheader("📦 Configuração dos Tipos de Bloco")
     """
     st.sidebar.subheader("⚙️ GPU Algorithm Settings")
-    
+    st.markdown("*Defina diferentes tipos de bloco com suas dimensões e quantidades*")
     pop_size = st.sidebar.slider(
-        "Population Size",
-        min_value=GPU_POPULATION_RANGE['min'],
-        max_value=GPU_POPULATION_RANGE['max'],
-        value=GPU_POPULATION_RANGE['default'],
-        step=GPU_POPULATION_RANGE['step'],
-        help="Larger values may give better results but take more time"
+    st.subheader("📦 Configuração dos Tipos de Bloco")
+    st.markdown("*Defina diferentes tipos de bloco com suas dimensões e quantidades*")
+    types_raw = st.data_editor(
+        DEFAULT_BLOCK_TYPES,
+        num_rows="dynamic",
+        key="block_types",
+        use_container_width=True,
+        column_config={
+            "dx": st.column_config.NumberColumn("Largura", min_value=1),
+            "dy": st.column_config.NumberColumn("Profundidade", min_value=1),
+            "dz": st.column_config.NumberColumn("Altura", min_value=1),
+            "quantidade": st.column_config.NumberColumn("Quantidade", min_value=1)
+        }
     )
-    
-    st.sidebar.markdown("""
-    **Algorithm Features:**
-    - ✅ Rotation optimization
-    - ✅ GPU acceleration  
-    - ✅ Gap filling
-    - ✅ Efficiency maximization
-    """)
-    
-    return pop_size
-
-
+    return pd.DataFrame(types_raw) if isinstance(types_raw, dict) else types_raw
 def process_block_data(types_df: pd.DataFrame) -> list:
     """
     Process and validate block types data.
     
-    Args:
+    st.subheader("⚙️ Parâmetros da Heurística GPU")
         types_df: DataFrame with block types
         
     Returns:
@@ -215,7 +212,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         placed_count = len(placements)
         total_count = len(block_dims)
         st.metric(
-            "Blocks Placed",
+    st.subheader("📊 Análise do Empacotamento")
             f"{placed_count}/{total_count}",
             help="Successfully placed blocks"
         )
@@ -274,7 +271,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     Render 3D visualization section.
     
     Args:
-        container: Container configuration
+        st.error("❌ Nenhum bloco válido para empacotar!")
         placements: List of block placements
         block_dims: List of block dimensions
     """
@@ -283,7 +280,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         return
     
     st.subheader("🎨 3D Interactive Visualization")
-    
+    st.info(f"🎯 Capacidade máxima teórica: {max_capacity} blocos")
     try:
         # Generate colors
         block_colors = map_block_colors(block_dims)
@@ -301,7 +298,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         - 🎨 **Colors**: Viridis palette for block types
         """)
         
-    except Exception as e:
+        st.warning("Nenhum bloco para visualizar.")
         st.error(f"❌ Visualization error: {str(e)}")
 
 
@@ -310,25 +307,24 @@ def main():
     
     # Header
     render_header()
-    
+
+    # Heuristic parameters (GPU slider) FIRST
+    pop_size = render_gpu_parameters()
+
     # Main configuration sections
     container = render_container_section()
     types_df = render_blocks_section()
-    pop_size = render_gpu_parameters()
-    
+
     # Execution button
-    if st.button("🚀 Run Optimization", type="primary", use_container_width=True):
-        
+    show_graph = False
+    if st.button("🚀 Executar CPU Heurística", type="primary", use_container_width=True):
         # Process input data
         block_dims = process_block_data(types_df)
-        
         if not block_dims:
             st.error("❌ Please configure at least one valid block type.")
             return
-        
         # Run packing algorithm
         placements = run_packing_algorithm(container, block_dims, pop_size)
-        
         # Store results in session state
         st.session_state.update({
             'placements': placements,
@@ -336,17 +332,17 @@ def main():
             'block_dims': block_dims,
             'last_run': True
         })
-        
         # Display results
         display_analysis_metrics(container, block_dims, placements)
-    
-    # Visualization section (if results available)
-    if st.session_state.get('last_run', False):
+        show_graph = True
+
+    # Visualization section (only if button was pressed)
+    if show_graph:
         render_visualization(
             st.session_state['container'],
             st.session_state['placements'],
             st.session_state['block_dims']
-        )
+            st.error("❌ Configure pelo menos um tipo de bloco válido.")
 
 
 if __name__ == "__main__":
