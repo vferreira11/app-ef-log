@@ -37,6 +37,38 @@ else:
 st.sidebar.subheader("Parâmetros da heurística GPU")
 pop_size = st.sidebar.slider("Tamanho da população", min_value=64, max_value=16384, value=2048, step=64)
 
+def greedy_pack(dx, dy, dz, block_dims):
+    """Empacotamento otimizado: preenche o container de forma compacta."""
+    placements = []
+    ocupado = np.zeros((dx, dy, dz), dtype=bool)
+    
+    # Para cada bloco, encontra a primeira posição válida
+    for bloco_idx, (lx, ly, lz) in enumerate(block_dims):
+        colocado = False
+        
+        # Percorre o container de forma sequencial: x -> y -> z
+        for x in range(dx - lx + 1):
+            if colocado:
+                break
+            for y in range(dy - ly + 1):
+                if colocado:
+                    break
+                for z in range(dz - lz + 1):
+                    # Verifica se o espaço está totalmente livre
+                    if not ocupado[x:x+lx, y:y+ly, z:z+lz].any():
+                        # Marca o espaço como ocupado
+                        ocupado[x:x+lx, y:y+ly, z:z+lz] = True
+                        # Adiciona o bloco
+                        placements.append((x, y, z, bloco_idx))
+                        colocado = True
+                        break
+        
+        # Se não conseguiu colocar o bloco, para
+        if not colocado:
+            break
+    
+    return placements
+
 if st.button("Executar GPU Heurística"):
     # Prepara dimensões e quantidades dos blocos
     total_blocks = sum(int(row.quantidade) for _, row in types_df.iterrows())
@@ -60,7 +92,16 @@ if st.button("Executar GPU Heurística"):
     # Executa heurística GPU
     placements = gpu_heuristic_pack(dx, dy, dz, block_dims, pop_size=pop_size, N=total_blocks)
     count = len(placements)
-    st.success(f"Solução encontrou {count} blocos de {total_blocks} solicitados!")
+
+    # Se não conseguiu preencher tudo, tenta greedy sequencial
+    if count < total_blocks:
+        st.info(f"GPU encontrou {count} blocos. Tentando preenchimento sequencial (greedy)...")
+        placements = greedy_pack(dx, dy, dz, block_dims)
+        count = len(placements)
+        st.success(f"Solução greedy encontrou {count} blocos de {total_blocks} possíveis!")
+
+    else:
+        st.success(f"Solução encontrou {count} blocos de {total_blocks} solicitados!")
 
     # Plot 3D interativo com Plotly
     try:
@@ -100,41 +141,41 @@ if st.button("Executar GPU Heurística"):
 
         # Garante que cada bloco desenhado corresponde a um placement válido
         for idx, (x0, y0, z0, o) in enumerate(placements):
+            # CORREÇÃO: usa as dimensões corretas do bloco
             lx, ly, lz = block_dims[o]
             cor = tipo_cores[(lx, ly, lz)]
-            # Checagem: bloco dentro do container
-            if (0 <= x0 <= dx-lx) and (0 <= y0 <= dy-ly) and (0 <= z0 <= dz-lz):
-                # Vértices do cubo
-                vx = [x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0]
-                vy = [y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly]
-                vz = [z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz]
-                # Faces do cubo (cada face é formada por dois triângulos)
-                faces_i = [0, 0, 0, 1, 4, 4, 4, 5, 2, 2, 2, 3]
-                faces_j = [1, 2, 4, 5, 5, 6, 1, 2, 3, 7, 6, 7]
-                faces_k = [2, 3, 5, 6, 6, 7, 2, 3, 7, 6, 5, 4]
-                fig.add_trace(go.Mesh3d(
-                    x=vx, y=vy, z=vz,
-                    i=faces_i, j=faces_j, k=faces_k,
-                    opacity=0.85,
-                    color=cor,
-                    showscale=False,
-                    hoverinfo='none'
+            
+            # Vértices do cubo com dimensões CORRETAS
+            vx = [x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0]
+            vy = [y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly]
+            vz = [z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz]
+            
+            fig.add_trace(go.Mesh3d(
+                x=vx, y=vy, z=vz,
+                i=[0, 0, 0, 1, 4, 4, 4, 5, 2, 2, 2, 3],
+                j=[1, 2, 4, 5, 5, 6, 1, 2, 3, 7, 6, 7],
+                k=[2, 3, 5, 6, 6, 7, 2, 3, 7, 6, 5, 4],
+                opacity=0.85,
+                color=cor,
+                showscale=False,
+                hoverinfo='none'
+            ))
+            
+            # Adiciona borda ao bloco
+            arestas = [
+                (0,1), (1,2), (2,3), (3,0),
+                (4,5), (5,6), (6,7), (7,4),
+                (0,4), (1,5), (2,6), (3,7)
+            ]
+            for a in arestas:
+                fig.add_trace(go.Scatter3d(
+                    x=[vx[a[0]], vx[a[1]]],
+                    y=[vy[a[0]], vy[a[1]]],
+                    z=[vz[a[0]], vz[a[1]]],
+                    mode='lines',
+                    line=dict(color='black', width=2),
+                    showlegend=False
                 ))
-                # Adiciona borda ao bloco
-                arestas = [
-                    (0,1), (1,2), (2,3), (3,0),
-                    (4,5), (5,6), (6,7), (7,4),
-                    (0,4), (1,5), (2,6), (3,7)
-                ]
-                for a in arestas:
-                    fig.add_trace(go.Scatter3d(
-                        x=[vx[a[0]], vx[a[1]]],
-                        y=[vy[a[0]], vy[a[1]]],
-                        z=[vz[a[0]], vz[a[1]]],
-                        mode='lines',
-                        line=dict(color='black', width=2),
-                        showlegend=False
-                    ))
             else:
                 # Bloco fora do container (não desenha)
                 continue
