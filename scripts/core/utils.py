@@ -46,20 +46,51 @@ def map_block_colors(block_dims: List[Tuple[int, int, int]]) -> Dict[Tuple[int, 
         block_dims: Lista de dimensões dos blocos
         
     Returns:
-        Dicionário mapeando dimensões para cores hexadecimais
+        Dicionário mapeando dimensões para cores RGB
     """
+    # Primeiro, identifica os tipos únicos
     unique_types = list(set(block_dims))
-    viridis = cm.get_cmap('viridis')
+    unique_types.sort()  # Ordena para consistência
+    
+    # Cores da paleta Viridis em formato RGB para Plotly
+    viridis_colors = [
+        "rgb(68, 1, 84)",     # roxo escuro - Tipo 1
+        "rgb(49, 104, 142)",  # azul escuro - Tipo 2  
+        "rgb(38, 130, 142)",  # azul-verde - Tipo 3
+        "rgb(31, 158, 137)",  # verde-azulado - Tipo 4
+        "rgb(110, 206, 88)",  # verde claro - Tipo 5
+        "rgb(181, 222, 43)",  # verde-amarelo - Tipo 6
+        "rgb(254, 232, 37)",  # amarelo - Tipo 7
+        "rgb(253, 231, 37)",  # amarelo claro - Tipo 8
+        "rgb(53, 183, 121)",  # verde médio - Tipo 9
+        "rgb(142, 1, 82)"     # magenta - Tipo 10
+    ]
     
     colors = {}
-    for i, block_type in enumerate(unique_types):
-        # Mapeia índice para valor entre 0 e 1
-        color_value = i / max(1, len(unique_types) - 1) if len(unique_types) > 1 else 0
-        rgba = viridis(color_value)
-        # Converte RGBA para hex
-        hex_color = f"#{int(rgba[0]*255):02x}{int(rgba[1]*255):02x}{int(rgba[2]*255):02x}"
-        colors[block_type] = hex_color
+    print(f"[DEBUG] Tipos únicos encontrados: {unique_types}")
     
+    for i, block_type in enumerate(unique_types):
+        if i < len(viridis_colors):
+            # Usa cores predefinidas
+            color = viridis_colors[i]
+            colors[block_type] = color
+            print(f"[DEBUG] Tipo {block_type} -> Cor {color}")
+        else:
+            # Para mais de 10 tipos, gera cores dinamicamente
+            try:
+                viridis = cm.get_cmap('viridis')
+                color_value = i / max(1, len(unique_types) - 1) if len(unique_types) > 1 else 0
+                rgba = viridis(color_value)
+                rgb_color = f"rgb({int(rgba[0]*255)}, {int(rgba[1]*255)}, {int(rgba[2]*255)})"
+                colors[block_type] = rgb_color
+                print(f"[DEBUG] Tipo {block_type} -> Cor dinâmica {rgb_color}")
+            except Exception as e:
+                # Fallback para cor padrão se matplotlib falhar
+                fallback_color = "rgb(68, 1, 84)"  # roxo escuro
+                colors[block_type] = fallback_color
+                print(f"[DEBUG] Tipo {block_type} -> Cor fallback {fallback_color} (erro: {e})")
+    
+    print(f"[DEBUG] Mapeamento final: {colors}")
     return colors
 
 

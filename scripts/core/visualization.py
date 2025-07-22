@@ -35,7 +35,7 @@ def create_container_wireframe(container: ContainerConfig, fig: go.Figure) -> No
         ))
 
 
-def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, color: str, fig: go.Figure) -> None:
+def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, color_index: int, fig: go.Figure) -> None:
     """Adiciona faces sólidas de um bloco ao gráfico usando Surface."""
     
     # Face inferior (z = z0)
@@ -43,7 +43,10 @@ def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, col
         x=[[x0, x0+lx], [x0, x0+lx]],
         y=[[y0, y0], [y0+ly, y0+ly]],
         z=[[z0, z0], [z0, z0]],
-        surfacecolor=[[color, color], [color, color]],
+        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+        colorscale='Viridis',
+        cmin=0,
+        cmax=10,
         showscale=False,
         opacity=1.0,
         showlegend=False
@@ -54,7 +57,10 @@ def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, col
         x=[[x0, x0+lx], [x0, x0+lx]],
         y=[[y0, y0], [y0+ly, y0+ly]],
         z=[[z0+lz, z0+lz], [z0+lz, z0+lz]],
-        surfacecolor=[[color, color], [color, color]],
+        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+        colorscale='Viridis',
+        cmin=0,
+        cmax=10,
         showscale=False,
         opacity=1.0,
         showlegend=False
@@ -65,7 +71,10 @@ def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, col
         x=[[x0, x0+lx], [x0, x0+lx]],
         y=[[y0, y0], [y0, y0]],
         z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color, color], [color, color]],
+        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+        colorscale='Viridis',
+        cmin=0,
+        cmax=10,
         showscale=False,
         opacity=1.0,
         showlegend=False
@@ -76,7 +85,10 @@ def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, col
         x=[[x0, x0+lx], [x0, x0+lx]],
         y=[[y0+ly, y0+ly], [y0+ly, y0+ly]],
         z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color, color], [color, color]],
+        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+        colorscale='Viridis',
+        cmin=0,
+        cmax=10,
         showscale=False,
         opacity=1.0,
         showlegend=False
@@ -87,7 +99,10 @@ def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, col
         x=[[x0, x0], [x0, x0]],
         y=[[y0, y0+ly], [y0, y0+ly]],
         z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color, color], [color, color]],
+        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+        colorscale='Viridis',
+        cmin=0,
+        cmax=10,
         showscale=False,
         opacity=1.0,
         showlegend=False
@@ -98,7 +113,10 @@ def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, col
         x=[[x0+lx, x0+lx], [x0+lx, x0+lx]],
         y=[[y0, y0+ly], [y0, y0+ly]],
         z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color, color], [color, color]],
+        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+        colorscale='Viridis',
+        cmin=0,
+        cmax=10,
         showscale=False,
         opacity=1.0,
         showlegend=False
@@ -150,21 +168,30 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     # Adiciona wireframe do container
     create_container_wireframe(container, fig)
     
+    # Cria mapeamento de tipos para índices numéricos da paleta Viridis
+    unique_types = list(set(block_dims))
+    unique_types.sort()  # Ordena para consistência
+    type_to_index = {block_type: i for i, block_type in enumerate(unique_types)}
+    
+    print(f"[DEBUG] Mapeamento tipo->índice: {type_to_index}")
+    
     # Adiciona cada bloco com faces sólidas e bordas
     for placement in placements:
         if len(placement) == 5:
-            x0, y0, z0, o, orientation = placement
+            x0, y0, z0, block_index, orientation = placement
             lx, ly, lz = orientation
-            original_dims = block_dims[o]
-            color = block_colors[original_dims]
+            # Sempre usa a cor do tipo original do bloco, não da rotação
+            original_dims = block_dims[block_index]
+            color_index = type_to_index.get(original_dims, 0)  # fallback para índice 0
         else:
-            x0, y0, z0, o = placement
-            lx, ly, lz = block_dims[o]
-            color = block_colors[(lx, ly, lz)]
+            x0, y0, z0, block_index = placement
+            lx, ly, lz = block_dims[block_index]
+            color_index = type_to_index.get((lx, ly, lz), 0)  # fallback para índice 0
         
-        # Adiciona faces sólidas
-        create_block_faces(x0, y0, z0, lx, ly, lz, color, fig)
+        print(f"[DEBUG] Bloco {block_index}: dim=({lx},{ly},{lz}), color_index={color_index}")
         
+        # Adiciona faces sólidas com índice de cor
+        create_block_faces(x0, y0, z0, lx, ly, lz, color_index, fig)
         # Adiciona bordas pretas
         create_block_edges(x0, y0, z0, lx, ly, lz, fig)
     

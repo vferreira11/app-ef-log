@@ -305,6 +305,11 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         # Gera cores usando paleta Viridis
         block_colors = map_block_colors(block_dims)
         
+        # Debug: mostra o mapeamento de cores
+        st.write("🎨 Mapeamento de cores Viridis:")
+        for dims, color in block_colors.items():
+            st.write(f"   • Tipo {dims[0]}×{dims[1]}×{dims[2]}: {color}")
+        
         # Cria e exibe gráfico
         fig = create_3d_plot(container, placements, block_dims, block_colors)
         st.plotly_chart(fig, use_container_width=True)
