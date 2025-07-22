@@ -91,29 +91,53 @@ if st.button("Executar GPU Heurística"):
                 showlegend=False
             ))
         
-        # Blocos com cores por tipo e preenchimento sólido
-        # Gera uma cor para cada tipo de bloco
+        # Blocos com cores por tipo usando paleta viridis
         tipo_cores = {}
         tipos_unicos = list({(lx, ly, lz) for lx, ly, lz in block_dims})
         for i, dims in enumerate(tipos_unicos):
             rgb = viridis(i / max(1, len(tipos_unicos)-1))
-            tipo_cores[dims] = f'rgba({int(rgb[0]*255)},{int(rgb[1]*255)},{int(rgb[2]*255)},0.2)'
+            tipo_cores[dims] = f'rgb({int(rgb[0]*255)},{int(rgb[1]*255)},{int(rgb[2]*255)})'
 
+        # Garante que cada bloco desenhado corresponde a um placement válido
         for idx, (x0, y0, z0, o) in enumerate(placements):
             lx, ly, lz = block_dims[o]
             cor = tipo_cores[(lx, ly, lz)]
-            fig.add_trace(go.Mesh3d(
-                x=[x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0],
-                y=[y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly],
-                z=[z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz],
-                i=[0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 5, 4],
-                j=[1, 2, 3, 0, 5, 6, 7, 4, 4, 5, 6, 7],
-                k=[2, 3, 0, 1, 6, 7, 4, 5, 7, 6, 2, 3],
-                opacity=0.2,
-                color=cor,
-                showscale=False,
-                hoverinfo='none'
-            ))
+            # Checagem: bloco dentro do container
+            if (0 <= x0 <= dx-lx) and (0 <= y0 <= dy-ly) and (0 <= z0 <= dz-lz):
+                # Vértices do cubo
+                vx = [x0, x0+lx, x0+lx, x0, x0, x0+lx, x0+lx, x0]
+                vy = [y0, y0, y0+ly, y0+ly, y0, y0, y0+ly, y0+ly]
+                vz = [z0, z0, z0, z0, z0+lz, z0+lz, z0+lz, z0+lz]
+                # Faces do cubo (cada face é formada por dois triângulos)
+                faces_i = [0, 0, 0, 1, 4, 4, 4, 5, 2, 2, 2, 3]
+                faces_j = [1, 2, 4, 5, 5, 6, 1, 2, 3, 7, 6, 7]
+                faces_k = [2, 3, 5, 6, 6, 7, 2, 3, 7, 6, 5, 4]
+                fig.add_trace(go.Mesh3d(
+                    x=vx, y=vy, z=vz,
+                    i=faces_i, j=faces_j, k=faces_k,
+                    opacity=0.85,
+                    color=cor,
+                    showscale=False,
+                    hoverinfo='none'
+                ))
+                # Adiciona borda ao bloco
+                arestas = [
+                    (0,1), (1,2), (2,3), (3,0),
+                    (4,5), (5,6), (6,7), (7,4),
+                    (0,4), (1,5), (2,6), (3,7)
+                ]
+                for a in arestas:
+                    fig.add_trace(go.Scatter3d(
+                        x=[vx[a[0]], vx[a[1]]],
+                        y=[vy[a[0]], vy[a[1]]],
+                        z=[vz[a[0]], vz[a[1]]],
+                        mode='lines',
+                        line=dict(color='black', width=2),
+                        showlegend=False
+                    ))
+            else:
+                # Bloco fora do container (não desenha)
+                continue
         
         fig.update_layout(
             scene=dict(
