@@ -2,6 +2,7 @@
 Funções de visualização 3D com Plotly.
 """
 
+import numpy as np
 import plotly.graph_objects as go
 from typing import List, Tuple, Dict
 from .models import ContainerConfig
@@ -35,118 +36,74 @@ def create_container_wireframe(container: ContainerConfig, fig: go.Figure) -> No
         ))
 
 
-def create_block_faces(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, color_index: int, fig: go.Figure) -> None:
-    """Adiciona faces sólidas de um bloco ao gráfico usando Surface."""
+def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, color_index: int, fig: go.Figure) -> None:
+    """Adiciona um bloco como mesh 3D otimizada com bordas pretas ao gráfico."""
     
-    # Face inferior (z = z0)
-    fig.add_trace(go.Surface(
-        x=[[x0, x0+lx], [x0, x0+lx]],
-        y=[[y0, y0], [y0+ly, y0+ly]],
-        z=[[z0, z0], [z0, z0]],
-        surfacecolor=[[color_index, color_index], [color_index, color_index]],
+    # Vértices do cubo
+    vertices = np.array([
+        [x0, y0, z0],           # 0: base frontal esquerda
+        [x0+lx, y0, z0],        # 1: base frontal direita  
+        [x0+lx, y0+ly, z0],     # 2: base traseira direita
+        [x0, y0+ly, z0],        # 3: base traseira esquerda
+        [x0, y0, z0+lz],        # 4: topo frontal esquerda
+        [x0+lx, y0, z0+lz],     # 5: topo frontal direita
+        [x0+lx, y0+ly, z0+lz],  # 6: topo traseira direita
+        [x0, y0+ly, z0+lz]      # 7: topo traseira esquerda
+    ])
+    
+    # Faces do cubo (cada face = 2 triângulos)
+    faces = np.array([
+        # Base inferior (z=z0)
+        [0, 1, 2], [0, 2, 3],
+        # Topo superior (z=z0+lz)  
+        [4, 6, 5], [4, 7, 6],
+        # Face frontal (y=y0)
+        [0, 4, 5], [0, 5, 1],
+        # Face traseira (y=y0+ly)
+        [3, 2, 6], [3, 6, 7],
+        # Face esquerda (x=x0)
+        [0, 3, 7], [0, 7, 4],
+        # Face direita (x=x0+lx)
+        [1, 5, 6], [1, 6, 2]
+    ])
+    
+    # Cores por vértice (mesmo índice para todo o bloco)
+    vertex_colors = [color_index] * 8
+    
+    # Adiciona mesh 3D (faces sólidas)
+    fig.add_trace(go.Mesh3d(
+        x=vertices[:, 0],
+        y=vertices[:, 1], 
+        z=vertices[:, 2],
+        i=faces[:, 0],
+        j=faces[:, 1],
+        k=faces[:, 2],
+        intensity=vertex_colors,
         colorscale='Viridis',
         cmin=0,
         cmax=10,
         showscale=False,
-        opacity=1.0,
+        opacity=0.9,
         showlegend=False
     ))
     
-    # Face superior (z = z0+lz)
-    fig.add_trace(go.Surface(
-        x=[[x0, x0+lx], [x0, x0+lx]],
-        y=[[y0, y0], [y0+ly, y0+ly]],
-        z=[[z0+lz, z0+lz], [z0+lz, z0+lz]],
-        surfacecolor=[[color_index, color_index], [color_index, color_index]],
-        colorscale='Viridis',
-        cmin=0,
-        cmax=10,
-        showscale=False,
-        opacity=1.0,
-        showlegend=False
-    ))
-    
-    # Face frontal (y = y0)
-    fig.add_trace(go.Surface(
-        x=[[x0, x0+lx], [x0, x0+lx]],
-        y=[[y0, y0], [y0, y0]],
-        z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color_index, color_index], [color_index, color_index]],
-        colorscale='Viridis',
-        cmin=0,
-        cmax=10,
-        showscale=False,
-        opacity=1.0,
-        showlegend=False
-    ))
-    
-    # Face traseira (y = y0+ly)
-    fig.add_trace(go.Surface(
-        x=[[x0, x0+lx], [x0, x0+lx]],
-        y=[[y0+ly, y0+ly], [y0+ly, y0+ly]],
-        z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color_index, color_index], [color_index, color_index]],
-        colorscale='Viridis',
-        cmin=0,
-        cmax=10,
-        showscale=False,
-        opacity=1.0,
-        showlegend=False
-    ))
-    
-    # Face esquerda (x = x0)
-    fig.add_trace(go.Surface(
-        x=[[x0, x0], [x0, x0]],
-        y=[[y0, y0+ly], [y0, y0+ly]],
-        z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color_index, color_index], [color_index, color_index]],
-        colorscale='Viridis',
-        cmin=0,
-        cmax=10,
-        showscale=False,
-        opacity=1.0,
-        showlegend=False
-    ))
-    
-    # Face direita (x = x0+lx)
-    fig.add_trace(go.Surface(
-        x=[[x0+lx, x0+lx], [x0+lx, x0+lx]],
-        y=[[y0, y0+ly], [y0, y0+ly]],
-        z=[[z0, z0], [z0+lz, z0+lz]],
-        surfacecolor=[[color_index, color_index], [color_index, color_index]],
-        colorscale='Viridis',
-        cmin=0,
-        cmax=10,
-        showscale=False,
-        opacity=1.0,
-        showlegend=False
-    ))
-
-
-def create_block_edges(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, fig: go.Figure) -> None:
-    """Adiciona bordas pretas de um bloco ao gráfico."""
-    
-    # Vértices do bloco
-    verts = [
-        (x0, y0, z0), (x0+lx, y0, z0), (x0+lx, y0+ly, z0), (x0, y0+ly, z0),  # base
-        (x0, y0, z0+lz), (x0+lx, y0, z0+lz), (x0+lx, y0+ly, z0+lz), (x0, y0+ly, z0+lz)  # topo
-    ]
-    
-    # Arestas do bloco
+    # Adiciona bordas pretas finas
     edges = [
         (0,1), (1,2), (2,3), (3,0),  # base inferior
-        (4,5), (5,6), (6,7), (7,4),  # topo
-        (0,4), (1,5), (2,6), (3,7)   # laterais
+        (4,5), (5,6), (6,7), (7,4),  # topo superior
+        (0,4), (1,5), (2,6), (3,7)   # arestas verticais
     ]
     
-    for e in edges:
-        x0e, y0e, z0e = verts[e[0]]
-        x1e, y1e, z1e = verts[e[1]]
+    for edge in edges:
+        v1, v2 = edge
         fig.add_trace(go.Scatter3d(
-            x=[x0e, x1e], y=[y0e, y1e], z=[z0e, z1e],
+            x=[vertices[v1, 0], vertices[v2, 0]],
+            y=[vertices[v1, 1], vertices[v2, 1]],
+            z=[vertices[v1, 2], vertices[v2, 2]],
             mode='lines',
-            line=dict(color='black', width=3),
-            showlegend=False
+            line=dict(color='black', width=1.5),
+            showlegend=False,
+            hoverinfo='skip'
         ))
 
 
@@ -165,8 +122,11 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     """
     fig = go.Figure()
     
+    print(f"[DEBUG] Criando visualização 3D: container={container.dimensions()}, placements={len(placements)}")
+    
     # Adiciona wireframe do container
     create_container_wireframe(container, fig)
+    print(f"[DEBUG] Wireframe adicionado: {len(fig.data)} traces")
     
     # Cria mapeamento de tipos para índices numéricos da paleta Viridis
     unique_types = list(set(block_dims))
@@ -175,7 +135,7 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     
     print(f"[DEBUG] Mapeamento tipo->índice: {type_to_index}")
     
-    # Adiciona cada bloco com faces sólidas e bordas
+    # Adiciona cada bloco com mesh otimizada e bordas
     for placement in placements:
         if len(placement) == 5:
             x0, y0, z0, block_index, orientation = placement
@@ -188,30 +148,56 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             lx, ly, lz = block_dims[block_index]
             color_index = type_to_index.get((lx, ly, lz), 0)  # fallback para índice 0
         
-        print(f"[DEBUG] Bloco {block_index}: dim=({lx},{ly},{lz}), color_index={color_index}")
-        
-        # Adiciona faces sólidas com índice de cor
-        create_block_faces(x0, y0, z0, lx, ly, lz, color_index, fig)
-        # Adiciona bordas pretas
-        create_block_edges(x0, y0, z0, lx, ly, lz, fig)
+        # Adiciona bloco como mesh 3D otimizada com bordas (13 traces por bloco: 1 mesh + 12 bordas)
+        create_block_mesh(x0, y0, z0, lx, ly, lz, color_index, fig)
     
-    # Configurações do layout
+    print(f"[DEBUG] Total de traces após adicionar blocos: {len(fig.data)}")
+    print(f"[DEBUG] Blocos renderizados: {len(placements)} (cada bloco = 13 traces: 1 mesh + 12 bordas)")
+    
+    # Configurações do layout com visualização estacionária e convenção matemática correta
     fig.update_layout(
         scene=dict(
-            xaxis_title="X",
-            yaxis_title="Y", 
-            zaxis_title="Z",
-            aspectmode="manual",
-            aspectratio=dict(
-                x=container.dx / max(container.dx, container.dy, container.dz),
-                y=container.dy / max(container.dx, container.dy, container.dz),
-                z=container.dz / max(container.dx, container.dy, container.dz)
-            )
+            xaxis_title="X (cm)",        # Horizontal (esquerda-direita)
+            yaxis_title="Y (cm)",        # Profundidade (frente-trás) 
+            zaxis_title="Z (cm)",        # Altura (baixo-cima)
+            aspectmode="cube",
+            # Configurações de câmera para visualização isométrica correta
+            camera=dict(
+                eye=dict(x=1.5, y=1.5, z=1.2),  # Posição da câmera (isométrica)
+                center=dict(x=0, y=0, z=0),      # Centro da visualização
+                up=dict(x=0, y=0, z=1)          # Z para cima (convenção matemática)
+            ),
+            dragmode=False,  # Desativa rotação/zoom
+            # Configurações dos eixos para melhor visualização
+            xaxis=dict(
+                showgrid=True,
+                gridcolor="lightgray",
+                backgroundcolor="white"
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="lightgray",
+                backgroundcolor="white"
+            ),
+            zaxis=dict(
+                showgrid=True,
+                gridcolor="lightgray",
+                backgroundcolor="white"
+            ),
+            bgcolor="white"
         ),
         width=800,
         height=800,
-        margin=dict(l=0, r=0, t=0, b=0),
-        showlegend=False
+        margin=dict(l=0, r=0, t=40, b=0),
+        showlegend=False,
+        title=dict(
+            text="Visualização 3D do Empacotamento",
+            x=0.5,
+            font=dict(size=16)
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
     )
     
+    print(f"[DEBUG] Layout configurado. Retornando figura com {len(fig.data)} traces")
     return fig
