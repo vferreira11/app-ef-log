@@ -132,24 +132,73 @@ def greedy_pack_with_rotation(container: ContainerConfig, block_dims: List[Tuple
 def gpu_optimize_packing(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], max_capacity: int) -> List[tuple]:
     """
     Otimização de empacotamento com algoritmo GPU simulado.
-    Usa regra de chão de galpão (Y=0) para distribuição realística.
+    Usa regra de chão de galpão (Z=altura) para distribuição realística.
+    Distribui blocos por múltiplos containers quando quantidade > 1.
     
     Args:
-        container: Configuração do container
+        container: Configuração do container (pode ter múltiplos containers)
         block_dims: Lista de dimensões dos blocos
         max_capacity: Capacidade máxima de blocos
         
     Returns:
-        Lista de alocações otimizadas
+        Lista de alocações otimizadas com offset para múltiplos containers
     """
     # Limita aos blocos que cabem teoricamente
     target_blocks = min(max_capacity, len(block_dims))
     target_dims = block_dims[:target_blocks]
     
-    # Executa empacotamento baseado no chão do galpão
-    placements = greedy_pack_floor_based(container, target_dims)
+    if container.quantidade == 1:
+        # Container único - algoritmo original
+        placements = greedy_pack_floor_based(container, target_dims)
+        return placements
     
-    return placements
+    # Múltiplos containers - distribui os blocos
+    all_placements = []
+    blocks_per_container = len(target_dims) // container.quantidade
+    remaining_blocks = len(target_dims) % container.quantidade
+    
+    print(f"[DEBUG] Distribuindo {len(target_dims)} blocos em {container.quantidade} containers:")
+    print(f"[DEBUG] {blocks_per_container} blocos por container, {remaining_blocks} extras")
+    
+    start_idx = 0
+    
+    for container_idx in range(container.quantidade):
+        # Calcula quantos blocos este container vai ter
+        blocks_for_this = blocks_per_container
+        if container_idx < remaining_blocks:
+            blocks_for_this += 1
+            
+        if blocks_for_this == 0:
+            continue
+            
+        # Pega os blocos para este container
+        container_blocks = target_dims[start_idx:start_idx + blocks_for_this]
+        
+        # Cria container individual
+        single_container = ContainerConfig(container.dx, container.dy, container.dz, 1)
+        
+        # Empacota neste container
+        container_placements = greedy_pack_floor_based(single_container, container_blocks)
+        
+        # Aplica offset X para separar containers visualmente
+        offset_x = container_idx * (container.dx + 10)  # 10 unidades de espaçamento
+        
+        # Adiciona offset nas coordenadas e ajusta índices dos blocos
+        for placement in container_placements:
+            if len(placement) == 5:
+                x, y, z, block_idx, orientation = placement
+                adjusted_placement = (x + offset_x, y, z, start_idx + block_idx, orientation)
+            else:
+                x, y, z, block_idx = placement
+                adjusted_placement = (x + offset_x, y, z, start_idx + block_idx)
+            
+            all_placements.append(adjusted_placement)
+        
+        print(f"[DEBUG] Container {container_idx + 1}: {len(container_placements)} blocos colocados (offset X={offset_x})")
+        start_idx += blocks_for_this
+    
+    print(f"[DEBUG] Total final: {len(all_placements)} blocos em {container.quantidade} containers")
+    return all_placements
 
 
 def hybrid_pack(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], gpu_placements: List[tuple]) -> List[tuple]:

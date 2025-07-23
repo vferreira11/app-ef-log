@@ -12,11 +12,17 @@ class ContainerConfig:
     dx: int
     dy: int
     dz: int
+    quantidade: int = 1  # Quantidade de containers disponíveis
     
     @property
     def volume(self) -> int:
         """Retorna o volume total do container."""
         return self.dx * self.dy * self.dz
+    
+    @property
+    def volume_total(self) -> int:
+        """Retorna o volume total considerando a quantidade de containers."""
+        return self.volume * self.quantidade
     
     def dimensions(self) -> Tuple[int, int, int]:
         """Retorna as dimensões como tupla."""

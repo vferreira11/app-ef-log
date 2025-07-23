@@ -9,31 +9,40 @@ from .models import ContainerConfig
 
 
 def create_container_wireframe(container: ContainerConfig, fig: go.Figure) -> None:
-    """Adiciona wireframe do container ao gráfico."""
+    """Adiciona wireframe do(s) container(s) ao gráfico."""
     dx, dy, dz = container.dx, container.dy, container.dz
     
-    # Vértices do container
-    verts = [
-        (0, 0, 0), (dx, 0, 0), (dx, dy, 0), (0, dy, 0),  # base
-        (0, 0, dz), (dx, 0, dz), (dx, dy, dz), (0, dy, dz)  # topo
-    ]
-    
-    # Arestas do container
-    edges = [
-        (0,1), (1,2), (2,3), (3,0),  # base inferior
-        (4,5), (5,6), (6,7), (7,4),  # topo
-        (0,4), (1,5), (2,6), (3,7)   # laterais
-    ]
-    
-    for e in edges:
-        x0, y0, z0 = verts[e[0]]
-        x1, y1, z1 = verts[e[1]]
-        fig.add_trace(go.Scatter3d(
-            x=[x0, x1], y=[y0, y1], z=[z0, z1],
-            mode='lines',
-            line=dict(color='gray', width=4),
-            showlegend=False
-        ))
+    # Cria wireframe para cada container
+    for container_idx in range(container.quantidade):
+        # Offset X para separar containers visualmente
+        offset_x = container_idx * (dx + 10)  # 10 unidades de espaçamento
+        
+        # Vértices do container com offset
+        verts = [
+            (offset_x, 0, 0), (offset_x + dx, 0, 0), (offset_x + dx, dy, 0), (offset_x, dy, 0),  # base
+            (offset_x, 0, dz), (offset_x + dx, 0, dz), (offset_x + dx, dy, dz), (offset_x, dy, dz)  # topo
+        ]
+        
+        # Arestas do container
+        edges = [
+            (0,1), (1,2), (2,3), (3,0),  # base inferior
+            (4,5), (5,6), (6,7), (7,4),  # topo
+            (0,4), (1,5), (2,6), (3,7)   # laterais
+        ]
+        
+        # Cor diferente para cada container para diferenciação
+        container_color = 'gray' if container_idx == 0 else f'rgb({100 + container_idx * 50}, {100 + container_idx * 50}, {100 + container_idx * 50})'
+        
+        for e in edges:
+            x0, y0, z0 = verts[e[0]]
+            x1, y1, z1 = verts[e[1]]
+            fig.add_trace(go.Scatter3d(
+                x=[x0, x1], y=[y0, y1], z=[z0, z1],
+                mode='lines',
+                line=dict(color=container_color, width=4),
+                showlegend=False,
+                name=f'Container {container_idx + 1}' if container_idx == 0 else ''
+            ))
 
 
 def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, color_index: int, fig: go.Figure) -> None:
@@ -154,44 +163,69 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     print(f"[DEBUG] Total de traces após adicionar blocos: {len(fig.data)}")
     print(f"[DEBUG] Blocos renderizados: {len(placements)} (cada bloco = 13 traces: 1 mesh + 12 bordas)")
     
+    # Calcula dimensões totais para ajustar câmera
+    total_width = container.dx * container.quantidade + (container.quantidade - 1) * 10  # dx + espaçamentos
+    max_dimension = max(total_width, container.dy, container.dz)
+    
+    # Ajusta posição da câmera baseado no número de containers para visualização ótima inicial
+    if container.quantidade == 1:
+        # Container único - posição clássica isométrica
+        camera_eye = dict(x=1.8, y=1.8, z=1.4)
+        camera_distance_factor = 1.0
+    else:
+        # Múltiplos containers - afasta mais e ajusta proporcionalmente
+        camera_distance_factor = 1.2 + (container.quantidade - 1) * 0.4
+        camera_eye = dict(
+            x=1.5 * camera_distance_factor, 
+            y=1.5 * camera_distance_factor, 
+            z=1.2 * camera_distance_factor
+        )
+    
+    center_x = total_width / 2  # Centro real de todos os containers
+    center_y = container.dy / 2
+    center_z = container.dz / 2
+    
     # Configurações do layout com visualização estacionária e convenção matemática correta
     fig.update_layout(
         scene=dict(
             xaxis_title="X (cm)",        # Horizontal (esquerda-direita)
             yaxis_title="Y (cm)",        # Profundidade (frente-trás) 
             zaxis_title="Z (cm)",        # Altura (baixo-cima)
-            aspectmode="cube",
+            aspectmode="cube",           # Proporções corretas
             # Configurações de câmera para visualização isométrica correta
             camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.2),  # Posição da câmera (isométrica)
-                center=dict(x=0, y=0, z=0),      # Centro da visualização
+                eye=camera_eye,  # Câmera isométrica ajustada dinamicamente
+                center=dict(x=center_x, y=center_y, z=center_z),  # Centro calculado corretamente
                 up=dict(x=0, y=0, z=1)          # Z para cima (convenção matemática)
             ),
-            dragmode=False,  # Desativa rotação/zoom
+            dragmode="orbit",  # Permite rotação para visualização
             # Configurações dos eixos para melhor visualização
             xaxis=dict(
                 showgrid=True,
                 gridcolor="lightgray",
-                backgroundcolor="white"
+                backgroundcolor="white",
+                range=[-5, total_width + 5]  # Margem adicional para melhor visualização
             ),
             yaxis=dict(
                 showgrid=True,
                 gridcolor="lightgray",
-                backgroundcolor="white"
+                backgroundcolor="white",
+                range=[-5, container.dy + 5]
             ),
             zaxis=dict(
                 showgrid=True,
                 gridcolor="lightgray",
-                backgroundcolor="white"
+                backgroundcolor="white",
+                range=[-2, container.dz + 2]
             ),
             bgcolor="white"
         ),
-        width=800,
+        width=min(1200, 800 + container.quantidade * 100),  # Aumenta largura para múltiplos containers
         height=800,
         margin=dict(l=0, r=0, t=40, b=0),
         showlegend=False,
         title=dict(
-            text="Visualização 3D do Empacotamento",
+            text=f"Visualização 3D - {container.quantidade} Container{'s' if container.quantidade > 1 else ''}",
             x=0.5,
             font=dict(size=16)
         ),

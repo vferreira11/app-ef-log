@@ -100,7 +100,7 @@ def render_container_section() -> ContainerConfig:
     """
     st.subheader("📐 Configuração do Container")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         dx = st.number_input(
@@ -123,11 +123,22 @@ def render_container_section() -> ContainerConfig:
             value=DEFAULT_CONTAINER_DIMS['dz'],
             help="Dimensão de altura do container"
         )
+    with col4:
+        quantidade = st.number_input(
+            "Quantidade", 
+            min_value=1, 
+            max_value=10,
+            value=1,
+            help="Número de containers disponíveis"
+        )
     
-    container = ContainerConfig(dx, dy, dz)
+    container = ContainerConfig(dx, dy, dz, quantidade)
     
     # Exibe informações do container
-    st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {container.volume:,} unidades")
+    if container.quantidade == 1:
+        st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {container.volume:,} unidades")
+    else:
+        st.info(f"📦 {container.quantidade} Containers: {format_dimensions(container.dimensions())} cada | Volume total: {container.volume_total:,} unidades")
     
     return container
 
@@ -292,11 +303,18 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric(
-            "Volume do Container",
-            f"{container.volume:,}",
-            help="Capacidade total do container"
-        )
+        if container.quantidade == 1:
+            st.metric(
+                "Volume do Container",
+                f"{container.volume:,}",
+                help="Capacidade total do container"
+            )
+        else:
+            st.metric(
+                f"Volume Total ({container.quantidade} containers)",
+                f"{container.volume_total:,}",
+                help=f"Capacidade total de {container.quantidade} containers"
+            )
     
     with col2:
         st.metric(
@@ -386,8 +404,8 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
     if len(block_dims) > MAX_BLOCKS_WARNING:
         st.warning(UI_MESSAGES['warning_performance'].format(len(block_dims)))
     
-    # Calcula capacidade
-    max_capacity = calculate_max_capacity(container.volume, block_dims)
+    # Calcula capacidade - considera múltiplos containers
+    max_capacity = calculate_max_capacity(container.volume_total, block_dims)
     st.info(UI_MESSAGES['info_capacity'].format(max_capacity))
     
     # Executa algoritmo com progresso
@@ -423,17 +441,23 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         if fig is None:
             st.error("❌ Figura 3D não foi criada corretamente.")
             return
+            
+        if len(fig.data) == 0:
+            st.error("❌ Figura 3D criada mas sem dados de renderização.")
+            return
         
         # Mensagem de debug suprimida para interface mais limpa
         # st.write(f"🔍 Debug: Figura criada com {len(fig.data)} traces")
         
         print(f"[DEBUG] Renderizando visualização com {len(fig.data)} traces")
         
-        # Configurações simplificadas para melhor compatibilidade
+        # Configurações otimizadas com controles visíveis
         config = {
-            'displayModeBar': False,  # Remove a barra de ferramentas
+            'displayModeBar': True,   # Mantém controles visíveis
             'staticPlot': False,      # Permite renderização 3D
-            'responsive': True        # Responsivo
+            'responsive': True,       # Responsivo
+            'modeBarButtonsToRemove': ['pan2d', 'select2d', 'lasso2d', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian'],  # Remove botões 2D desnecessários
+            'displaylogo': False      # Remove logo Plotly
         }
         
         print(f"[DEBUG] Usando configuração: {config}")
