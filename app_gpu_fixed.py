@@ -27,7 +27,9 @@ from scripts.core.utils import (
     map_block_colors, 
     calculate_efficiency,
     format_dimensions,
-    validate_block_data
+    validate_block_data,
+    generate_random_orders,
+    convert_orders_to_block_dims
 )
 from scripts.config.settings import (
     DEFAULT_CONTAINER_DIMS,
@@ -127,62 +129,84 @@ def render_container_section() -> ContainerConfig:
 
 def render_blocks_section() -> pd.DataFrame:
     """
-    Renderiza a seção de configuração dos tipos de bloco.
+    Renderiza a seção de geração de pedidos aleatórios.
     
     Retorna:
-        DataFrame com configuração dos tipos de bloco
+        DataFrame com pedidos gerados
     """
-    st.subheader("📦 Configuração dos Tipos de Bloco")
+    st.subheader("📦 Geração de Pedidos")
     
     # Instruções
-    st.markdown("*Defina diferentes tipos de bloco com suas dimensões e quantidades*")
+    st.markdown("*Configure a quantidade de pedidos que serão gerados aleatoriamente*")
     
-    # Editor de dados
-    types_raw = st.data_editor(
-        DEFAULT_BLOCK_TYPES,
-        num_rows="dynamic",
-        key="block_types",
+    # Slider para quantidade de pedidos
+    n_orders = st.slider(
+        "Número de Pedidos",
+        min_value=1,
+        max_value=100,
+        value=10,
+        step=1,
+        help="Quantidade de pedidos que serão gerados automaticamente"
+    )
+    
+    # Botão para gerar novos pedidos
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🎲 Gerar Pedidos", type="primary"):
+            st.session_state.orders_df = generate_random_orders(n_orders)
+            st.success(f"✅ {n_orders} pedidos gerados!")
+    
+    # Gera pedidos iniciais se não existirem
+    if 'orders_df' not in st.session_state:
+        st.session_state.orders_df = generate_random_orders(n_orders)
+    
+    # Atualiza se a quantidade mudou
+    if len(st.session_state.orders_df) != n_orders:
+        st.session_state.orders_df = generate_random_orders(n_orders)
+    
+    # Exibe a tabela de pedidos (somente leitura)
+    st.markdown("### 📋 Pedidos Gerados")
+    st.dataframe(
+        st.session_state.orders_df,
         use_container_width=True,
         column_config={
-            "dx": st.column_config.NumberColumn("Largura", min_value=1),
-            "dy": st.column_config.NumberColumn("Profundidade", min_value=1), 
-            "dz": st.column_config.NumberColumn("Altura", min_value=1),
-            "quantidade": st.column_config.NumberColumn("Quantidade", min_value=1)
+            "SDK": st.column_config.TextColumn("SDK", width="small"),
+            "Nome Produto": st.column_config.TextColumn("Produto", width="medium"),
+            "Categoria": st.column_config.TextColumn("Categoria", width="small"),
+            "Comprimento": st.column_config.NumberColumn("Comp.", width="small"),
+            "Largura": st.column_config.NumberColumn("Larg.", width="small"), 
+            "Profundidade": st.column_config.NumberColumn("Prof.", width="small")
         }
     )
     
-    return pd.DataFrame(types_raw) if isinstance(types_raw, dict) else types_raw
+    return st.session_state.orders_df
 
 
-def process_block_data(types_data) -> list:
+def process_block_data(orders_data) -> list:
     """
-    Processa e valida os dados dos tipos de bloco.
+    Processa e valida os dados dos pedidos.
     
     Args:
-        types_data: DataFrame ou lista com tipos de bloco
+        orders_data: DataFrame com pedidos gerados
         
     Retorna:
         Lista de tuplas de dimensões dos blocos
     """
-    # Converte para DataFrame se necessário
-    if isinstance(types_data, list):
-        types_df = pd.DataFrame(types_data)
-    else:
-        types_df = types_data
-    
-    # Usa função utilitária para validação
-    block_dims = validate_block_data(types_df)
+    # Converte pedidos para dimensões de blocos
+    block_dims = convert_orders_to_block_dims(orders_data)
     
     if not block_dims:
         return []
     
     # Debug: mostra os dados processados
     unique_types = list(set(block_dims))
-    st.write(f"🔍 Dados processados: {len(unique_types)} tipos únicos, {len(block_dims)} blocos totais")
+    st.write(f"🔍 Dados processados: {len(unique_types)} tipos únicos, {len(block_dims)} pedidos totais")
     
-    for i, block_type in enumerate(unique_types, 1):
-        count_this_type = block_dims.count(block_type)
-        st.write(f"   • Tipo {i}: {block_type[0]}×{block_type[1]}×{block_type[2]} ({count_this_type} unidades)")
+    # Agrupa por categoria para análise
+    category_counts = orders_data['Categoria'].value_counts()
+    st.write("📋 **Resumo por Categoria:**")
+    for category, count in category_counts.items():
+        st.write(f"   • {category}: {count} pedidos")
     
     return block_dims
 
@@ -338,7 +362,7 @@ def main():
 
     # Seções principais de configuração
     container = render_container_section()
-    types_df = render_blocks_section()
+    orders_df = render_blocks_section()
 
     # Botão de execução
     show_graph = False
@@ -355,13 +379,13 @@ def main():
 
         # Processa dados de entrada com validação completa
         st.write(UI_MESSAGES['info_processing'])
-        block_dims = process_block_data(types_df)
+        block_dims = process_block_data(orders_df)
         
         # Remove possíveis valores None ou inválidos
         block_dims = [dims for dims in block_dims if dims is not None and all(d > 0 for d in dims)]
         
         if not block_dims:
-            st.error("❌ Configure pelo menos um tipo de bloco válido.")
+            st.error("❌ Erro ao processar pedidos. Verifique os dados gerados.")
             return
             
         # Executa algoritmo de empacotamento

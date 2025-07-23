@@ -6,6 +6,7 @@ import random
 from typing import List, Tuple, Dict
 from matplotlib import cm
 import numpy as np
+import pandas as pd
 
 
 def calculate_max_capacity(container_volume: int, block_dims: List[Tuple[int, int, int]]) -> int:
@@ -157,6 +158,88 @@ def validate_block_data(types_df) -> List[Tuple[int, int, int]]:
         dims = (int(row.dx), int(row.dy), int(row.dz))
         qty = int(row.quantidade)
         block_dims.extend([dims] * qty)
+    
+    # Ordena por volume (maior primeiro)
+    block_dims.sort(key=lambda d: d[0]*d[1]*d[2], reverse=True)
+    
+    return block_dims
+
+
+def generate_random_orders(n_orders: int) -> pd.DataFrame:
+    """
+    Gera pedidos aleatórios com SDK, nome do produto, categoria e dimensões.
+    
+    Args:
+        n_orders: Número de pedidos a gerar
+        
+    Returns:
+        DataFrame com os pedidos gerados
+    """
+    categories = ["Brinquedos", "Utilidades", "Organizadores"]
+    
+    # Nomes de produtos por categoria
+    product_names = {
+        "Brinquedos": ["Boneca", "Carrinho", "Quebra-cabeça", "Pelúcia", "Blocos", "Bola", "Jogo", "Figura", "Robô", "Bichos"],
+        "Utilidades": ["Garrafa", "Caneca", "Prato", "Tigela", "Talheres", "Bandeja", "Organizador", "Cesto", "Porta-objetos", "Suporte"],
+        "Organizadores": ["Caixa", "Gaveta", "Estante", "Prateleira", "Divisória", "Porta-documentos", "Arquivo", "Pasta", "Separador", "Container"]
+    }
+    
+    orders = []
+    
+    for i in range(n_orders):
+        # Gera SDK único
+        sdk = f"SDK{1000 + i:04d}"
+        
+        # Escolhe categoria aleatória
+        category = random.choice(categories)
+        
+        # Escolhe nome do produto baseado na categoria
+        product_name = random.choice(product_names[category])
+        
+        # Gera dimensões realistas baseadas na categoria
+        if category == "Brinquedos":
+            # Brinquedos: dimensões pequenas a médias
+            length = random.randint(5, 30)
+            width = random.randint(5, 25)
+            depth = random.randint(3, 20)
+        elif category == "Utilidades":
+            # Utilidades: dimensões variadas
+            length = random.randint(8, 35)
+            width = random.randint(8, 30)
+            depth = random.randint(5, 25)
+        else:  # Organizadores
+            # Organizadores: dimensões maiores
+            length = random.randint(15, 50)
+            width = random.randint(15, 40)
+            depth = random.randint(10, 35)
+        
+        orders.append({
+            "SDK": sdk,
+            "Nome Produto": product_name,
+            "Categoria": category,
+            "Comprimento": length,
+            "Largura": width,
+            "Profundidade": depth
+        })
+    
+    return pd.DataFrame(orders)
+
+
+def convert_orders_to_block_dims(orders_df: pd.DataFrame) -> List[Tuple[int, int, int]]:
+    """
+    Converte DataFrame de pedidos para lista de dimensões de blocos.
+    
+    Args:
+        orders_df: DataFrame com pedidos
+        
+    Returns:
+        Lista de tuplas de dimensões dos blocos
+    """
+    block_dims = []
+    
+    for _, row in orders_df.iterrows():
+        dims = (int(row["Comprimento"]), int(row["Largura"]), int(row["Profundidade"]))
+        block_dims.append(dims)
     
     # Ordena por volume (maior primeiro)
     block_dims.sort(key=lambda d: d[0]*d[1]*d[2], reverse=True)
