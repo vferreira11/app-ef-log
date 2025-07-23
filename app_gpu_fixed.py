@@ -193,6 +193,7 @@ def render_blocks_section() -> pd.DataFrame:
             "Comprimento": st.column_config.NumberColumn("Comp.(cm)", width="small"),
             "Largura": st.column_config.NumberColumn("Larg.(cm)", width="small"), 
             "Profundidade": st.column_config.NumberColumn("Prof.(cm)", width="small"),
+            "Peso (kg)": st.column_config.NumberColumn("Peso (kg)", width="small", format="%.3f"),
             "Preço Unitário": st.column_config.TextColumn("Preço Unit.", width="small"),
             "Vendas 90 Dias": st.column_config.NumberColumn("Vendas 90d", width="small"),
             "Previsão Próx. Mês": st.column_config.NumberColumn("Prev. Mês", width="small")
@@ -215,12 +216,16 @@ def render_blocks_section() -> pd.DataFrame:
         with col4:
             st.metric("Preço Médio", f"R$ {analytics['avg_price']:.2f}")
         
-        # Receitas
-        col1, col2 = st.columns(2)
+        # Receitas e peso
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Receita 90 Dias", f"R$ {analytics['total_revenue_90d']:,.2f}")
         with col2:
             st.metric("Receita Prevista", f"R$ {analytics['forecast_revenue']:,.2f}")
+        with col3:
+            st.metric("Peso Médio", f"{analytics['avg_weight']:.3f} kg")
+        with col4:
+            st.metric("Peso Total Previsto", f"{analytics['total_weight_forecast']:.2f} kg")
         
         # Análise por categoria
         st.markdown("#### 📈 Por Categoria")
@@ -230,13 +235,25 @@ def render_blocks_section() -> pd.DataFrame:
                 with subcol1:
                     st.write(f"**Vendas 90d:** {data['sales_90d']:,}")
                     st.write(f"**Previsão:** {data['forecast']:,}")
+                    st.write(f"**Peso Médio:** {data['avg_weight']:.3f} kg")
                 with subcol2:
                     st.write(f"**Preço Médio:** R$ {data['avg_price']:.2f}")
                     st.write(f"**Receita 90d:** R$ {data['revenue_90d']:,.2f}")
+                    st.write(f"**Peso Total:** {data['total_weight_forecast']:.2f} kg")
                 with subcol3:
                     growth = ((data['forecast'] * 3) / data['sales_90d'] - 1) * 100 if data['sales_90d'] > 0 else 0
                     trend = "📈" if growth > 0 else "📉" if growth < 0 else "➡️"
                     st.write(f"**Tendência:** {trend} {growth:+.1f}%")
+                    # Densidade média da categoria
+                    avg_volume = 0
+                    if 'Comprimento' in st.session_state.orders_df.columns:
+                        cat_orders = st.session_state.orders_df[st.session_state.orders_df['Categoria'] == category]
+                        if not cat_orders.empty:
+                            volumes = cat_orders['Comprimento'] * cat_orders['Largura'] * cat_orders['Profundidade']
+                            avg_volume = volumes.mean()
+                            if avg_volume > 0:
+                                density = (data['avg_weight'] * 1000) / avg_volume  # g/cm³
+                                st.write(f"**Densidade:** {density:.2f} g/cm³")
     
     return st.session_state.orders_df
 

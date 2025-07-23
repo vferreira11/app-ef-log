@@ -166,6 +166,54 @@ def validate_block_data(types_df) -> List[Tuple[int, int, int]]:
     return block_dims
 
 
+def calculate_realistic_weight(category: str, volume_cm3: int, length: int, width: int, depth: int) -> float:
+    """
+    Calcula peso realista baseado na categoria e volume do produto.
+    Peso limitado a máximo 1kg conforme especificação.
+    
+    Args:
+        category: Categoria do produto
+        volume_cm3: Volume em cm³
+        length, width, depth: Dimensões em cm
+        
+    Returns:
+        Peso em kg (limitado a 1kg)
+    """
+    # Densidade base por categoria (g/cm³)
+    density_ranges = {
+        "Brinquedos": (0.3, 0.8),      # Plástico leve, pelúcia, etc.
+        "Utilidades": (0.5, 1.2),      # Plástico, cerâmica, vidro
+        "Organizadores": (0.4, 0.9)    # Plástico estrutural, papelão reforçado
+    }
+    
+    # Seleciona densidade aleatória dentro da faixa da categoria
+    min_density, max_density = density_ranges.get(category, (0.5, 1.0))
+    density = random.uniform(min_density, max_density)
+    
+    # Calcula peso base (volume * densidade)
+    weight_grams = volume_cm3 * density
+    
+    # Adiciona variação por formato (produtos alongados podem ser mais leves)
+    max_dim = max(length, width, depth)
+    min_dim = min(length, width, depth)
+    aspect_ratio = max_dim / max_dim if min_dim == 0 else max_dim / min_dim
+    
+    # Produtos muito alongados (ex: réguas) tendem a ser mais leves
+    if aspect_ratio > 3:
+        weight_grams *= random.uniform(0.7, 0.9)
+    
+    # Converte para kg
+    weight_kg = weight_grams / 1000
+    
+    # Aplica limite máximo de 1kg
+    weight_kg = min(weight_kg, 1.0)
+    
+    # Garante peso mínimo realista (mínimo 10g)
+    weight_kg = max(weight_kg, 0.01)
+    
+    return round(weight_kg, 3)
+
+
 def generate_random_orders(n_orders: int) -> pd.DataFrame:
     """
     Gera pedidos aleatórios com SDK, nome do produto, categoria, dimensões,
@@ -254,6 +302,9 @@ def generate_random_orders(n_orders: int) -> pd.DataFrame:
         trend_factor = random.uniform(0.85, 1.25)  # Tendência de crescimento/queda
         next_month_forecast = max(1, int(monthly_avg * trend_factor))
         
+        # Calcula peso realista baseado na categoria e volume
+        weight_kg = calculate_realistic_weight(category, volume_cm3, length, width, depth)
+        
         orders.append({
             "SDK": sdk,
             "Nome Produto": product_name,
@@ -261,6 +312,7 @@ def generate_random_orders(n_orders: int) -> pd.DataFrame:
             "Comprimento": length,
             "Largura": width,
             "Profundidade": depth,
+            "Peso (kg)": weight_kg,
             "Preço Unitário": f"R$ {unit_price:.2f}",
             "Vendas 90 Dias": sales_90_days,
             "Previsão Próx. Mês": next_month_forecast
@@ -302,7 +354,7 @@ def convert_orders_to_block_dims(orders_df: pd.DataFrame) -> List[Tuple[int, int
 
 def calculate_sales_analytics(orders_df: pd.DataFrame) -> Dict:
     """
-    Calcula estatísticas de vendas e previsões dos pedidos.
+    Calcula estatísticas de vendas, previsões e pesos dos pedidos.
     
     Args:
         orders_df: DataFrame com pedidos
@@ -316,12 +368,19 @@ def calculate_sales_analytics(orders_df: pd.DataFrame) -> Dict:
     # Remove 'R$' e converte preços para float
     prices = orders_df['Preço Unitário'].str.replace('R$ ', '').str.replace(',', '.').astype(float)
     
+    # Estatísticas de peso
+    weights = orders_df['Peso (kg)'] if 'Peso (kg)' in orders_df.columns else pd.Series([0] * len(orders_df))
+    total_weight_forecast = (weights * orders_df['Previsão Próx. Mês']).sum()
+    
     # Calcula estatísticas por categoria
     analytics = {
         'total_products': len(orders_df),
         'total_sales_90d': orders_df['Vendas 90 Dias'].sum(),
         'total_forecast': orders_df['Previsão Próx. Mês'].sum(),
         'avg_price': prices.mean(),
+        'avg_weight': weights.mean(),
+        'max_weight': weights.max(),
+        'total_weight_forecast': total_weight_forecast,
         'total_revenue_90d': (prices * orders_df['Vendas 90 Dias']).sum(),
         'forecast_revenue': (prices * orders_df['Previsão Próx. Mês']).sum(),
         'by_category': {}
@@ -331,12 +390,15 @@ def calculate_sales_analytics(orders_df: pd.DataFrame) -> Dict:
     for category in orders_df['Categoria'].unique():
         cat_data = orders_df[orders_df['Categoria'] == category]
         cat_prices = prices[orders_df['Categoria'] == category]
+        cat_weights = weights[orders_df['Categoria'] == category]
         
         analytics['by_category'][category] = {
             'count': len(cat_data),
             'sales_90d': cat_data['Vendas 90 Dias'].sum(),
             'forecast': cat_data['Previsão Próx. Mês'].sum(),
             'avg_price': cat_prices.mean(),
+            'avg_weight': cat_weights.mean(),
+            'total_weight_forecast': (cat_weights * cat_data['Previsão Próx. Mês']).sum(),
             'revenue_90d': (cat_prices * cat_data['Vendas 90 Dias']).sum()
         }
     
