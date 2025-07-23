@@ -60,14 +60,22 @@ def render_header():
     """)
 
 
-def render_gpu_parameters() -> int:
+def render_gpu_parameters() -> tuple:
     """
     Renderiza parâmetros do algoritmo GPU.
     
     Retorna:
-        Tamanho da população para algoritmo GPU
+        Tuple: (Tamanho da população, Tipo de algoritmo)
     """
-    st.subheader("⚙️ Parâmetros da Heurística GPU")
+    st.subheader("⚙️ Configuração do Algoritmo")
+    
+    # Seleção do tipo de algoritmo
+    algoritmo_tipo = st.selectbox(
+        "Algoritmo de Empacotamento",
+        options=["Híbrido Inteligente", "GPU Padrão", "Biomecânico (Ergonômico)", "Chão do Galpão"],
+        index=0,  # Híbrido como padrão
+        help="Escolha o algoritmo de empacotamento mais adequado para seu caso"
+    )
     
     pop_size = st.slider(
         "Tamanho da População",
@@ -78,17 +86,48 @@ def render_gpu_parameters() -> int:
         help="Valores maiores podem melhorar o resultado, mas aumentam o tempo de execução"
     )
     
-    st.markdown("""
-    **Recursos do Algoritmo:**
-    - ✅ Otimização de rotação
-    - ✅ Simulação de chão de galpão (Y=0)
-    - ✅ Empilhamento em X e Z
-    - ✅ Maximização de eficiência
-    """)
+    # Mostra informações específicas do algoritmo selecionado
+    if algoritmo_tipo == "Híbrido Inteligente":
+        st.markdown("""
+        **🎯 Algoritmo Híbrido Inteligente:**
+        - ✅ **GPU**: Motor de otimização para múltiplas soluções
+        - ✅ **Biomecânico**: Zoneamento ergonômico por classe ABC
+        - ✅ **Chão do Galpão**: Empilhamento estável a partir de Z=0
+        - ✅ **Greedy**: Seleção da melhor solução entre as ótimas
+        """)
+        st.info("🎯 **Melhor dos 3 Mundos**: Combina performance computacional, ergonomia humana e realismo físico para a solução ideal.")
     
-    st.info("🏭 **Simulação de Galpão**: Os produtos são distribuídos no chão (Y=0) e empilhados nas dimensões X (largura) e Z (altura), simulando um ambiente real de armazém.")
+    elif algoritmo_tipo == "Biomecânico (Ergonômico)":
+        st.markdown("""
+        **🧬 Algoritmo Biomecânico:**
+        - ✅ Otimização ergonômica para operadores
+        - ✅ Produtos pesados em altura ideal (100-160cm)
+        - ✅ Produtos frequentes em zona de fácil acesso
+        - ✅ Redução de lesões e fadiga
+        """)
+        st.info("🏥 **Foco Ergonômico**: Prioriza a saúde do operador alocando produtos baseado na frequência de uso e peso em zonas ergonômicas otimizadas.")
     
-    return pop_size
+    elif algoritmo_tipo == "Chão do Galpão":
+        st.markdown("""
+        **🏭 Algoritmo Chão do Galpão:**
+        - ✅ Empilhamento a partir do chão (Z=0)
+        - ✅ Maximização de densidade
+        - ✅ Simulação de armazém real
+        - ✅ Fácil implementação física
+        """)
+        st.info("🏭 **Simulação Real**: Empilha produtos começando do chão, simulando um ambiente real de armazém.")
+    
+    else:  # GPU Padrão
+        st.markdown("""
+        **🚀 Algoritmo GPU Padrão:**
+        - ✅ Otimização de rotação
+        - ✅ Algoritmo genético acelerado
+        - ✅ Empilhamento otimizado
+        - ✅ Maximização de eficiência
+        """)
+        st.info("🚀 **Alto Desempenho**: Usa otimização genética com aceleração GPU para máxima eficiência de empacotamento.")
+    
+    return pop_size, algoritmo_tipo
 
 
 def render_container_section() -> ContainerConfig:
@@ -401,7 +440,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         st.error(UI_MESSAGES['error_no_blocks'])
 
 
-def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size: int) -> list:
+def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size: int, produtos_df=None, algoritmo_tipo="GPU Padrão") -> list:
     """
     Executa o algoritmo de empacotamento com indicação de progresso.
     
@@ -409,6 +448,8 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
         container: Configuração do container
         block_dims: Lista de dimensões dos blocos
         pop_size: Tamanho da população GPU
+        produtos_df: DataFrame com dados dos produtos (opcional)
+        algoritmo_tipo: Tipo de algoritmo a ser usado
         
     Retorna:
         Lista de alocações
@@ -425,9 +466,26 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
     max_capacity = calculate_max_capacity(container.volume_total, block_dims)
     st.info(UI_MESSAGES['info_capacity'].format(max_capacity))
     
+    # Escolhe algoritmo baseado na seleção do usuário
+    if algoritmo_tipo == "Híbrido Inteligente" and produtos_df is not None and not produtos_df.empty:
+        spinner_msg = "🎯 Executando algoritmo híbrido inteligente..."
+    elif algoritmo_tipo == "Biomecânico (Ergonômico)" and produtos_df is not None and not produtos_df.empty:
+        spinner_msg = "🧬 Executando algoritmo biomecânico otimizado..."
+    elif algoritmo_tipo == "Chão do Galpão":
+        spinner_msg = "🏭 Executando algoritmo de chão do galpão..."
+    else:
+        spinner_msg = "🚀 Executando algoritmo de otimização GPU..."
+    
     # Executa algoritmo com progresso
-    with st.spinner("🚀 Executando algoritmo de otimização GPU..."):
-        placements = gpu_optimize_packing(container, block_dims, max_capacity)
+    with st.spinner(spinner_msg):
+        if algoritmo_tipo == "Híbrido Inteligente" and produtos_df is not None and not produtos_df.empty:
+            placements = gpu_optimize_packing(container, block_dims, max_capacity, produtos_df, force_floor=True, hybrid_mode=True)
+        elif algoritmo_tipo == "Biomecânico (Ergonômico)" and produtos_df is not None and not produtos_df.empty:
+            placements = gpu_optimize_packing(container, block_dims, max_capacity, produtos_df, force_floor=False)
+        elif algoritmo_tipo == "Chão do Galpão":
+            placements = gpu_optimize_packing(container, block_dims, max_capacity, None, force_floor=True)
+        else:
+            placements = gpu_optimize_packing(container, block_dims, max_capacity, None, force_floor=False)
     
     return placements
 
@@ -541,7 +599,7 @@ def main():
     render_header()
 
     # Parâmetros da heurística GPU (acima do container)
-    pop_size = render_gpu_parameters()
+    pop_size, algoritmo_tipo = render_gpu_parameters()
 
     # Seções principais de configuração
     container = render_container_section()
@@ -572,7 +630,7 @@ def main():
             return
             
         # Executa algoritmo de empacotamento
-        placements = run_packing_algorithm(container, block_dims, pop_size)
+        placements = run_packing_algorithm(container, block_dims, pop_size, orders_df, algoritmo_tipo)
         
         # Armazena resultados no estado da sessão
         st.session_state.update({

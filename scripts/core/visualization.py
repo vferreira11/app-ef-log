@@ -188,9 +188,9 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     # Configurações do layout com visualização estacionária e convenção matemática correta
     fig.update_layout(
         scene=dict(
-            xaxis_title="X (cm)",        # Horizontal (esquerda-direita)
-            yaxis_title="Y (cm)",        # Profundidade (frente-trás) 
-            zaxis_title="Z (cm)",        # Altura (baixo-cima)
+            xaxis_title="Largura (cm)",     # Horizontal (esquerda-direita)
+            yaxis_title="Profundidade (cm)",  # Profundidade (frente-trás) 
+            zaxis_title="Altura (cm)",      # Altura (baixo-cima)
             aspectmode="cube",           # Proporções corretas
             # Configurações de câmera para visualização isométrica correta
             camera=dict(
@@ -202,21 +202,33 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             # Configurações dos eixos para melhor visualização
             xaxis=dict(
                 showgrid=True,
-                gridcolor="lightgray",
+                gridcolor="dimgray",
                 backgroundcolor="white",
-                range=[-5, total_width + 5]  # Margem adicional para melhor visualização
+                tickcolor="darkgray",
+                linecolor="dimgray",
+                title=dict(font=dict(color="black")),
+                tickfont=dict(color="black"),
+                range=[0, total_width + 5]  # Container começa em 0
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor="lightgray",
+                gridcolor="dimgray",
                 backgroundcolor="white",
-                range=[-5, container.dy + 5]
+                tickcolor="darkgray",
+                linecolor="dimgray",
+                title=dict(font=dict(color="black")),
+                tickfont=dict(color="black"),
+                range=[0, container.dy + 5]  # Container começa em 0
             ),
             zaxis=dict(
                 showgrid=True,
-                gridcolor="lightgray",
+                gridcolor="dimgray",
                 backgroundcolor="white",
-                range=[-2, container.dz + 2]
+                tickcolor="darkgray",
+                linecolor="dimgray",
+                title=dict(font=dict(color="black")),
+                tickfont=dict(color="black"),
+                range=[0, container.dz + 5]  # Container começa em 0
             ),
             bgcolor="white"
         ),
