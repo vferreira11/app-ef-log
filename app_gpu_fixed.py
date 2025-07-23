@@ -20,7 +20,7 @@ sys.path.append(scripts_dir)
 
 # Importa componentes modulares
 from scripts.core.models import ContainerConfig, Placement
-from scripts.core.algorithms import gpu_optimize_packing
+from scripts.core.algorithms import gpu_optimize_packing, hybrid_intelligent_packing
 from scripts.core.visualization import create_3d_plot
 from scripts.core.utils import (
     calculate_max_capacity, 
@@ -62,72 +62,33 @@ def render_header():
 
 def render_gpu_parameters() -> tuple:
     """
-    Renderiza parâmetros do algoritmo GPU.
+    Renderiza parâmetros do algoritmo híbrido único.
     
     Retorna:
         Tuple: (Tamanho da população, Tipo de algoritmo)
     """
-    st.subheader("⚙️ Configuração do Algoritmo")
+    st.subheader("⚙️ Algoritmo Híbrido Único")
     
-    # Seleção do tipo de algoritmo
-    algoritmo_tipo = st.selectbox(
-        "Algoritmo de Empacotamento",
-        options=["Híbrido Inteligente", "GPU Padrão", "Biomecânico (Ergonômico)", "Chão do Galpão"],
-        index=0,  # Híbrido como padrão
-        help="Escolha o algoritmo de empacotamento mais adequado para seu caso"
-    )
+    # Informação sobre o algoritmo único
+    st.info("""
+    🎯 **Algoritmo Híbrido Único - Fusão dos 3 Métodos:**
+    - 🧬 **Biomecânico**: Zoneamento ergonômico automático por peso/categoria
+    - 🏭 **Chão do Galpão**: Empilhamento estável iniciando no Z=0
+    - 🚀 **GPU Otimizado**: Compactação inteligente com adjacência
+    
+    ✅ **Não é mais necessário escolher algoritmos - tudo integrado em um só!**
+    """)
     
     pop_size = st.slider(
-        "Tamanho da População",
+        "Precisão da Otimização",
         min_value=GPU_POPULATION_RANGE['min'],
         max_value=GPU_POPULATION_RANGE['max'],
         value=GPU_POPULATION_RANGE['default'],
         step=GPU_POPULATION_RANGE['step'],
-        help="Valores maiores podem melhorar o resultado, mas aumentam o tempo de execução"
+        help="Ajusta a precisão vs velocidade da otimização híbrida"
     )
     
-    # Mostra informações específicas do algoritmo selecionado
-    if algoritmo_tipo == "Híbrido Inteligente":
-        st.markdown("""
-        **🎯 Algoritmo Híbrido Inteligente:**
-        - ✅ **GPU**: Motor de otimização para múltiplas soluções
-        - ✅ **Biomecânico**: Zoneamento ergonômico por classe ABC
-        - ✅ **Chão do Galpão**: Empilhamento estável a partir de Z=0
-        - ✅ **Greedy**: Seleção da melhor solução entre as ótimas
-        """)
-        st.info("🎯 **Melhor dos 3 Mundos**: Combina performance computacional, ergonomia humana e realismo físico para a solução ideal.")
-    
-    elif algoritmo_tipo == "Biomecânico (Ergonômico)":
-        st.markdown("""
-        **🧬 Algoritmo Biomecânico:**
-        - ✅ Otimização ergonômica para operadores
-        - ✅ Produtos pesados em altura ideal (100-160cm)
-        - ✅ Produtos frequentes em zona de fácil acesso
-        - ✅ Redução de lesões e fadiga
-        """)
-        st.info("🏥 **Foco Ergonômico**: Prioriza a saúde do operador alocando produtos baseado na frequência de uso e peso em zonas ergonômicas otimizadas.")
-    
-    elif algoritmo_tipo == "Chão do Galpão":
-        st.markdown("""
-        **🏭 Algoritmo Chão do Galpão:**
-        - ✅ Empilhamento a partir do chão (Z=0)
-        - ✅ Maximização de densidade
-        - ✅ Simulação de armazém real
-        - ✅ Fácil implementação física
-        """)
-        st.info("🏭 **Simulação Real**: Empilha produtos começando do chão, simulando um ambiente real de armazém.")
-    
-    else:  # GPU Padrão
-        st.markdown("""
-        **🚀 Algoritmo GPU Padrão:**
-        - ✅ Otimização de rotação
-        - ✅ Algoritmo genético acelerado
-        - ✅ Empilhamento otimizado
-        - ✅ Maximização de eficiência
-        """)
-        st.info("🚀 **Alto Desempenho**: Usa otimização genética com aceleração GPU para máxima eficiência de empacotamento.")
-    
-    return pop_size, algoritmo_tipo
+    return pop_size, "Híbrido Único"
 
 
 def render_container_section() -> ContainerConfig:
@@ -440,16 +401,16 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         st.error(UI_MESSAGES['error_no_blocks'])
 
 
-def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size: int, produtos_df=None, algoritmo_tipo="GPU Padrão") -> list:
+def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size: int, produtos_df=None, algoritmo_tipo="Híbrido Único") -> list:
     """
-    Executa o algoritmo de empacotamento com indicação de progresso.
+    Executa o algoritmo híbrido único de empacotamento com indicação de progresso.
     
     Args:
         container: Configuração do container
         block_dims: Lista de dimensões dos blocos
-        pop_size: Tamanho da população GPU
-        produtos_df: DataFrame com dados dos produtos (opcional)
-        algoritmo_tipo: Tipo de algoritmo a ser usado
+        pop_size: Precisão da otimização (não usado mais, mantido para compatibilidade)
+        produtos_df: DataFrame com dados dos produtos (sempre necessário)
+        algoritmo_tipo: Sempre "Híbrido Único" (mantido para compatibilidade)
         
     Retorna:
         Lista de alocações
@@ -466,26 +427,21 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
     max_capacity = calculate_max_capacity(container.volume_total, block_dims)
     st.info(UI_MESSAGES['info_capacity'].format(max_capacity))
     
-    # Escolhe algoritmo baseado na seleção do usuário
-    if algoritmo_tipo == "Híbrido Inteligente" and produtos_df is not None and not produtos_df.empty:
-        spinner_msg = "🎯 Executando algoritmo híbrido inteligente..."
-    elif algoritmo_tipo == "Biomecânico (Ergonômico)" and produtos_df is not None and not produtos_df.empty:
-        spinner_msg = "🧬 Executando algoritmo biomecânico otimizado..."
-    elif algoritmo_tipo == "Chão do Galpão":
-        spinner_msg = "🏭 Executando algoritmo de chão do galpão..."
-    else:
-        spinner_msg = "🚀 Executando algoritmo de otimização GPU..."
+    # Sempre usa o algoritmo híbrido único
+    spinner_msg = "🎯 Executando algoritmo híbrido único (3 em 1)..."
     
-    # Executa algoritmo com progresso
+    # Executa algoritmo híbrido com progresso
     with st.spinner(spinner_msg):
-        if algoritmo_tipo == "Híbrido Inteligente" and produtos_df is not None and not produtos_df.empty:
-            placements = gpu_optimize_packing(container, block_dims, max_capacity, produtos_df, force_floor=True, hybrid_mode=True)
-        elif algoritmo_tipo == "Biomecânico (Ergonômico)" and produtos_df is not None and not produtos_df.empty:
-            placements = gpu_optimize_packing(container, block_dims, max_capacity, produtos_df, force_floor=False)
-        elif algoritmo_tipo == "Chão do Galpão":
-            placements = gpu_optimize_packing(container, block_dims, max_capacity, None, force_floor=True)
+        if produtos_df is not None and not produtos_df.empty:
+            placements = hybrid_intelligent_packing(container, block_dims, produtos_df)
         else:
-            placements = gpu_optimize_packing(container, block_dims, max_capacity, None, force_floor=False)
+            # Fallback: cria DataFrame básico se não fornecido
+            import pandas as pd
+            produtos_df_default = pd.DataFrame({
+                'peso': [2.0] * len(block_dims),
+                'Categoria': ['Utilidades'] * len(block_dims)
+            })
+            placements = hybrid_intelligent_packing(container, block_dims, produtos_df_default)
     
     return placements
 

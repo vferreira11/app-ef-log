@@ -45,6 +45,82 @@ def create_container_wireframe(container: ContainerConfig, fig: go.Figure) -> No
             ))
 
 
+
+def create_floor_plane(container, fig):
+    """
+    Cria um plano de base/chão para dar contexto visual profissional.
+    Adiciona uma superfície sutil no Z=0 para evitar aparência "flutuante".
+    """
+    # Calcula dimensões totais incluindo múltiplos containers
+    total_width = container.dx * container.quantidade + (container.quantidade - 1) * 10
+    
+    # Expande o plano ligeiramente além dos containers para melhor visualização
+    floor_margin = 20  # margem em cm
+    floor_x_max = total_width + floor_margin
+    floor_y_max = container.dy + floor_margin
+    
+    # Cria uma grade de pontos para o plano do chão
+    x_points = [0, floor_x_max, floor_x_max, 0]
+    y_points = [0, 0, floor_y_max, floor_y_max]
+    z_points = [0, 0, 0, 0]  # Plano em Z=0
+
+    # Adiciona plano principal (base sólida) com cor mais escura e menos transparência
+    fig.add_trace(go.Mesh3d(
+        x=x_points,
+        y=y_points,
+        z=z_points,
+        i=[0, 0],
+        j=[1, 2],
+        k=[2, 3],
+        color='rgba(80, 120, 180, 0.5)',  # Azul acinzentado mais escuro, mais opaco
+        opacity=0.5,
+        showscale=False,
+        hoverinfo='skip',
+        name='Base'
+    ))
+
+    # Adiciona contorno preto ao redor do plano
+    fig.add_trace(go.Scatter3d(
+        x=[0, floor_x_max, floor_x_max, 0, 0],
+        y=[0, 0, floor_y_max, floor_y_max, 0],
+        z=[0, 0, 0, 0, 0],
+        mode='lines',
+        line=dict(color='black', width=5),
+        showlegend=False,
+        hoverinfo='skip',
+        name='Contorno Piso'
+    ))
+
+    # Adiciona linhas de grade para dar profissionalismo
+    grid_spacing = 50  # espaçamento da grade em cm
+
+    # Linhas verticais da grade (paralelas ao eixo Y)
+    for x in range(0, int(floor_x_max) + 1, grid_spacing):
+        fig.add_trace(go.Scatter3d(
+            x=[x, x],
+            y=[0, floor_y_max],
+            z=[0, 0],
+            mode='lines',
+            line=dict(color='rgba(120, 120, 120, 0.7)', width=2),
+            showlegend=False,
+            hoverinfo='skip',
+            name='Grade'
+        ))
+
+    # Linhas horizontais da grade (paralelas ao eixo X)
+    for y in range(0, int(floor_y_max) + 1, grid_spacing):
+        fig.add_trace(go.Scatter3d(
+            x=[0, floor_x_max],
+            y=[y, y],
+            z=[0, 0],
+            mode='lines',
+            line=dict(color='rgba(200, 200, 200, 0.4)', width=1),
+            showlegend=False,
+            hoverinfo='skip',
+            name='Grade'
+        ))
+
+
 def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, color_index: int, fig: go.Figure) -> None:
     """Adiciona um bloco como mesh 3D otimizada com bordas pretas ao gráfico."""
     
@@ -136,6 +212,10 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     # Adiciona wireframe do container
     create_container_wireframe(container, fig)
     print(f"[DEBUG] Wireframe adicionado: {len(fig.data)} traces")
+    
+    # Adiciona plano de base/chão para contexto visual profissional
+    create_floor_plane(container, fig)
+    print(f"[DEBUG] Plano de base adicionado: {len(fig.data)} traces")
     
     # Cria mapeamento de tipos para índices numéricos da paleta Viridis
     unique_types = list(set(block_dims))
