@@ -52,9 +52,9 @@ st.set_page_config(
 
 def render_header():
     """Renderiza cabeçalho e descrição do aplicativo."""
-    st.title("🎯 Sistema de Empacotamento 3D GPU")
+    st.title("🎯 MAXIMIZAÇÃO DO USO DO ESTOQUE")
     st.markdown("""
-    *Otimização avançada de empacotamento 3D com aceleração GPU e algoritmos inteligentes de rotação*
+    *Otimização avançada de empacotamento 3D com aceleração GPU e algoritmos inteligentes de distribuição e rotação*
     
     📊 **Recursos**: Otimização GPU • Suporte a rotação • Visualização 3D em tempo real • Paleta de cores Viridis
     """)
@@ -71,12 +71,11 @@ def render_gpu_parameters() -> tuple:
     
     # Informação sobre o algoritmo único
     st.info("""
-    🎯 **Algoritmo Híbrido Único - Fusão dos 3 Métodos:**
+    🎯 **Algoritmo Híbrido Único - Fusão de 3 Métodos:**
     - 🧬 **Biomecânico**: Zoneamento ergonômico automático por peso/categoria
     - 🏭 **Chão do Galpão**: Empilhamento estável iniciando no Z=0
     - 🚀 **GPU Otimizado**: Compactação inteligente com adjacência
     
-    ✅ **Não é mais necessário escolher algoritmos - tudo integrado em um só!**
     """)
     
     pop_size = st.slider(
@@ -154,8 +153,7 @@ def render_blocks_section() -> pd.DataFrame:
     
     # Instruções
     st.markdown("*Configure a quantidade de pedidos que serão gerados aleatoriamente*")
-    st.info("ℹ️ **Limitação de Dimensões**: Todos os blocos são limitados a **máximo 10cm** em cada lado para garantir praticidade no manuseio e compactação otimizada.")
-    
+        
     # Slider para quantidade de pedidos
     n_orders = st.slider(
         "Número de Pedidos",
@@ -163,7 +161,7 @@ def render_blocks_section() -> pd.DataFrame:
         max_value=100,
         value=10,
         step=1,
-        help="Quantidade de pedidos que serão gerados automaticamente"
+        help="Quantidade de pedidos que serão gerados aleatoriamente"
     )
     
     # Botão para gerar novos pedidos
@@ -499,9 +497,15 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         fig.update_layout(
             scene=dict(
                 camera=dict(
-                    projection=dict(type="perspective")  # Força projeção perspectiva
+                    projection=dict(type="perspective"),  # Força projeção perspectiva
+                    # Força a posição inicial da câmera
+                    eye=dict(x=2.5, y=2.5, z=2.0),
+                    center=dict(x=0, y=0, z=0),
+                    up=dict(x=0, y=0, z=1)
                 )
-            )
+            ),
+            # Configuração para garantir que a figura seja renderizada corretamente
+            autosize=True
         )
         
         # Renderiza o gráfico
@@ -513,46 +517,63 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         st.write("### 🏷️ Legenda de Produtos")
         
         if orders_df is not None and not orders_df.empty:
-            # Cria mapeamento de dimensões para produtos
-            dim_to_product = {}
-            for _, row in orders_df.iterrows():
-                dims = (int(row['dx']), int(row['dy']), int(row['dz']))
-                product_info = f"{row['Nome Produto']} ({row['Categoria']})"
-                if dims not in dim_to_product:
-                    dim_to_product[dims] = []
-                dim_to_product[dims].append(product_info)
-            
-            # Organiza a legenda por produtos únicos
-            unique_products = {}
-            for dims in set(block_dims):
-                if dims in dim_to_product:
-                    products = list(set(dim_to_product[dims]))  # Remove duplicatas
-                    for product in products:
-                        if product not in unique_products:
-                            unique_products[product] = dims
-            
-            # Calcula número de colunas
-            num_products = len(unique_products)
-            cols_per_row = min(3, num_products)  # Máximo 3 colunas para produtos
-            
-            # Cria colunas para a legenda
-            legend_cols = st.columns(cols_per_row)
-            
-            for i, (product, dims) in enumerate(unique_products.items()):
-                col_idx = i % cols_per_row
-                with legend_cols[col_idx]:
-                    color = block_colors.get(dims, '#000000')
-                    # Cria indicador com nome do produto
-                    st.markdown(f"""
-                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                        <div style="width: 20px; height: 20px; background-color: {color}; 
-                                    border: 1px solid #000; margin-right: 10px; border-radius: 3px;"></div>
-                        <div style="font-size: 13px; line-height: 1.2;">
-                            <strong>{product}</strong><br>
-                            <small style="color: #666;">{dims[0]}×{dims[1]}×{dims[2]} cm</small>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+            try:
+                # Cria mapeamento de dimensões para produtos
+                dim_to_product = {}
+                
+                # Verifica se as colunas necessárias existem
+                required_cols = ['dx', 'dy', 'dz', 'Nome Produto', 'Categoria']
+                if all(col in orders_df.columns for col in required_cols):
+                    for _, row in orders_df.iterrows():
+                        dims = (int(row['dx']), int(row['dy']), int(row['dz']))
+                        product_info = f"{row['Nome Produto']} ({row['Categoria']})"
+                        if dims not in dim_to_product:
+                            dim_to_product[dims] = []
+                        dim_to_product[dims].append(product_info)
+                    
+                    # Organiza a legenda por produtos únicos
+                    unique_products = {}
+                    for dims in set(block_dims):
+                        if dims in dim_to_product:
+                            products = list(set(dim_to_product[dims]))  # Remove duplicatas
+                            for product in products:
+                                if product not in unique_products:
+                                    unique_products[product] = dims
+                    
+                    if unique_products:
+                        # Calcula número de colunas
+                        num_products = len(unique_products)
+                        cols_per_row = min(3, num_products)  # Máximo 3 colunas para produtos
+                        
+                        # Cria colunas para a legenda
+                        legend_cols = st.columns(cols_per_row)
+                        
+                        for i, (product, dims) in enumerate(unique_products.items()):
+                            col_idx = i % cols_per_row
+                            with legend_cols[col_idx]:
+                                color = block_colors.get(dims, '#000000')
+                                # Cria indicador com nome do produto
+                                st.markdown(f"""
+                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                    <div style="width: 20px; height: 20px; background-color: {color}; 
+                                                border: 1px solid #000; margin-right: 10px; border-radius: 3px;"></div>
+                                    <div style="font-size: 13px; line-height: 1.2;">
+                                        <strong>{product}</strong><br>
+                                        <small style="color: #666;">{dims[0]}×{dims[1]}×{dims[2]} cm</small>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    else:
+                        # Se não conseguiu mapear produtos, usa fallback
+                        raise ValueError("Não foi possível mapear produtos para dimensões")
+                else:
+                    # Se não tem as colunas necessárias, usa fallback
+                    raise ValueError(f"Colunas necessárias não encontradas. Disponíveis: {list(orders_df.columns)}")
+                    
+            except Exception as e:
+                st.warning(f"⚠️ Erro ao processar dados de produtos: {str(e)}")
+                # Fallback para mostrar apenas dimensões
+                orders_df = None
         else:
             # Fallback para dimensões quando não há dados de produto
             st.info("ℹ️ Dados de produtos não disponíveis. Mostrando dimensões:")

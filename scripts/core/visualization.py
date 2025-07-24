@@ -249,16 +249,16 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     
     # Ajusta posição da câmera baseado no número de containers para visualização ótima inicial
     if container.quantidade == 1:
-        # Container único - posição clássica isométrica
-        camera_eye = dict(x=1.8, y=1.8, z=1.4)
+        # Container único - posição clássica isométrica mais afastada
+        camera_eye = dict(x=2.5, y=2.5, z=2.0)
         camera_distance_factor = 1.0
     else:
         # Múltiplos containers - afasta mais e ajusta proporcionalmente
         camera_distance_factor = 1.2 + (container.quantidade - 1) * 0.4
         camera_eye = dict(
-            x=1.5 * camera_distance_factor, 
-            y=1.5 * camera_distance_factor, 
-            z=1.2 * camera_distance_factor
+            x=2.0 * camera_distance_factor, 
+            y=2.0 * camera_distance_factor, 
+            z=1.8 * camera_distance_factor
         )
     
     center_x = total_width / 2  # Centro real de todos os containers
