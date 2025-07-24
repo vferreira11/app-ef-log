@@ -802,12 +802,13 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     st.subheader("🎨 Visualização 3D do Empacotamento")
     
     try:
-        # Importa o novo sistema de visualização reconstruído
-        from scripts.core.visualization_new import create_multiview_3d_simple, generate_block_legend
+        # Importa o sistema ultra-robusto de visualização
+        from scripts.core.visualization_ultra_robust import create_robust_multiview_3d
+        from scripts.core.visualization_new import generate_block_legend
         
-        # Cria 3 visualizações 3D com a nova abordagem simplificada
-        st.write("🔄 Gerando visualizações 3D...")
-        figures = create_multiview_3d_simple(container, placements, block_dims)
+        # Cria 3 visualizações 3D com método ultra-confiável
+        st.write("🔄 Gerando visualizações 3D (método ultra-robusto)...")
+        figures = create_robust_multiview_3d(container, placements, block_dims)
         
         if not figures or len(figures) != 3:
             st.error("❌ Erro ao gerar visualizações 3D.")
@@ -826,21 +827,54 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         with col1:
             st.markdown("**🔍 Vista Frontal**")
             try:
-                st.plotly_chart(figures[0], use_container_width=True, key="view_frontal")
+                st.plotly_chart(
+                    figures[0], 
+                    use_container_width=True, 
+                    config={
+                        'displayModeBar': False,
+                        'staticPlot': True,
+                        'doubleClick': False,
+                        'showTips': False,
+                        'scrollZoom': False
+                    },
+                    key="view_frontal"
+                )
             except Exception as e:
                 st.error(f"Erro na vista frontal: {e}")
         
         with col2:
             st.markdown("**🔍 Vista Lateral**")
             try:
-                st.plotly_chart(figures[1], use_container_width=True, key="view_lateral")
+                st.plotly_chart(
+                    figures[1], 
+                    use_container_width=True, 
+                    config={
+                        'displayModeBar': False,
+                        'staticPlot': True,
+                        'doubleClick': False,
+                        'showTips': False,
+                        'scrollZoom': False
+                    },
+                    key="view_lateral"
+                )
             except Exception as e:
                 st.error(f"Erro na vista lateral: {e}")
         
         with col3:
             st.markdown("**🔍 Vista Superior**")
             try:
-                st.plotly_chart(figures[2], use_container_width=True, key="view_superior")
+                st.plotly_chart(
+                    figures[2], 
+                    use_container_width=True, 
+                    config={
+                        'displayModeBar': False,
+                        'staticPlot': True,
+                        'doubleClick': False,
+                        'showTips': False,
+                        'scrollZoom': False
+                    },
+                    key="view_superior"
+                )
             except Exception as e:
                 st.error(f"Erro na vista superior: {e}")
         

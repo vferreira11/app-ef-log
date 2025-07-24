@@ -11,11 +11,11 @@ from .models import ContainerConfig
 
 def create_simple_3d_block(x, y, z, dx, dy, dz, color, fig):
     """
-    Cria um bloco 3D simples usando apenas linhas (wireframe).
-    Mais confiável que mesh para visualização estática.
+    Cria um bloco 3D robusto que sempre aparece.
+    Combina wireframe com superfície para garantir visibilidade.
     """
     # Vértices do cubo
-    vertices = [
+    vertices = np.array([
         [x, y, z],           # 0: base inferior esquerda frente
         [x+dx, y, z],        # 1: base inferior direita frente
         [x+dx, y+dy, z],     # 2: base inferior direita trás
@@ -24,57 +24,93 @@ def create_simple_3d_block(x, y, z, dx, dy, dz, color, fig):
         [x+dx, y, z+dz],     # 5: topo direita frente
         [x+dx, y+dy, z+dz],  # 6: topo direita trás
         [x, y+dy, z+dz]      # 7: topo esquerda trás
-    ]
+    ])
     
-    # Define as arestas do cubo
-    edges = [
-        # Base inferior
-        (0, 1), (1, 2), (2, 3), (3, 0),
-        # Topo superior
-        (4, 5), (5, 6), (6, 7), (7, 4),
-        # Arestas verticais
-        (0, 4), (1, 5), (2, 6), (3, 7)
-    ]
-    
-    # Adiciona cada aresta como uma linha espessa
-    for edge in edges:
-        v1, v2 = edge
-        x_coords = [vertices[v1][0], vertices[v2][0]]
-        y_coords = [vertices[v1][1], vertices[v2][1]]
-        z_coords = [vertices[v1][2], vertices[v2][2]]
+    try:
+        # Tenta criar Mesh3d primeiro (mais bonito)
+        faces = np.array([
+            [0, 1, 2], [0, 2, 3],  # base inferior
+            [4, 6, 5], [4, 7, 6],  # topo superior
+            [0, 4, 5], [0, 5, 1],  # face frontal
+            [3, 2, 6], [3, 6, 7],  # face traseira
+            [0, 3, 7], [0, 7, 4],  # face esquerda
+            [1, 5, 6], [1, 6, 2]   # face direita
+        ])
         
+        fig.add_trace(go.Mesh3d(
+            x=vertices[:, 0],
+            y=vertices[:, 1], 
+            z=vertices[:, 2],
+            i=faces[:, 0],
+            j=faces[:, 1],
+            k=faces[:, 2],
+            color=color,
+            opacity=0.7,
+            showlegend=False,
+            flatshading=True,
+            hoverinfo='skip'
+        ))
+        
+    except Exception as e:
+        print(f"Mesh3d falhou, usando wireframe: {e}")
+        
+        # Fallback: wireframe + marcadores nos vértices
+        edges = [
+            (0, 1), (1, 2), (2, 3), (3, 0),  # base inferior
+            (4, 5), (5, 6), (6, 7), (7, 4),  # topo superior
+            (0, 4), (1, 5), (2, 6), (3, 7)   # arestas verticais
+        ]
+        
+        # Adiciona wireframe espesso
+        for edge in edges:
+            v1, v2 = edge
+            fig.add_trace(go.Scatter3d(
+                x=[vertices[v1, 0], vertices[v2, 0]],
+                y=[vertices[v1, 1], vertices[v2, 1]],
+                z=[vertices[v1, 2], vertices[v2, 2]],
+                mode='lines',
+                line=dict(color=color, width=6),
+                showlegend=False,
+                hoverinfo='skip'
+            ))
+        
+        # Adiciona marcadores nos vértices para dar volume visual
         fig.add_trace(go.Scatter3d(
-            x=x_coords,
-            y=y_coords,
-            z=z_coords,
-            mode='lines',
-            line=dict(color=color, width=4),
+            x=vertices[:, 0],
+            y=vertices[:, 1],
+            z=vertices[:, 2],
+            mode='markers',
+            marker=dict(
+                color=color,
+                size=8,
+                opacity=0.8
+            ),
             showlegend=False,
             hoverinfo='skip'
         ))
     
-    # Adiciona pontos nos vértices para melhor visualização
-    all_x = [v[0] for v in vertices]
-    all_y = [v[1] for v in vertices]
-    all_z = [v[2] for v in vertices]
+    # SEMPRE adiciona wireframe de contorno (garantia de visibilidade)
+    edges = [
+        (0, 1), (1, 2), (2, 3), (3, 0),  # base inferior
+        (4, 5), (5, 6), (6, 7), (7, 4),  # topo superior
+        (0, 4), (1, 5), (2, 6), (3, 7)   # arestas verticais
+    ]
     
-    fig.add_trace(go.Scatter3d(
-        x=all_x,
-        y=all_y,
-        z=all_z,
-        mode='markers',
-        marker=dict(
-            color=color,
-            size=3,
-            opacity=0.8
-        ),
-        showlegend=False,
-        hoverinfo='skip'
-    ))
+    for edge in edges:
+        v1, v2 = edge
+        fig.add_trace(go.Scatter3d(
+            x=[vertices[v1, 0], vertices[v2, 0]],
+            y=[vertices[v1, 1], vertices[v2, 1]],
+            z=[vertices[v1, 2], vertices[v2, 2]],
+            mode='lines',
+            line=dict(color='rgba(0,0,0,0.6)', width=2),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
 
 
 def create_container_outline(container: ContainerConfig, fig: go.Figure):
-    """Cria o contorno do container de forma simples e robusta."""
+    """Cria o contorno do container com melhor visibilidade."""
     dx, dy, dz = container.dx, container.dy, container.dz
     
     for container_idx in range(container.quantidade):
@@ -93,14 +129,14 @@ def create_container_outline(container: ContainerConfig, fig: go.Figure):
             [offset_x, dy, dz]          # 7
         ]
         
-        # Arestas do container
+        # Arestas do container com cores diferentes para melhor identificação
         edges = [
             (0,1), (1,2), (2,3), (3,0),  # base
             (4,5), (5,6), (6,7), (7,4),  # topo
             (0,4), (1,5), (2,6), (3,7)   # verticais
         ]
         
-        # Adiciona arestas do container
+        # Adiciona arestas do container com linha mais espessa
         for edge in edges:
             v1, v2 = edge
             fig.add_trace(go.Scatter3d(
@@ -108,10 +144,26 @@ def create_container_outline(container: ContainerConfig, fig: go.Figure):
                 y=[vertices[v1][1], vertices[v2][1]],
                 z=[vertices[v1][2], vertices[v2][2]],
                 mode='lines',
-                line=dict(color='black', width=4),
+                line=dict(color='rgba(50,50,50,0.8)', width=3),
                 showlegend=False,
+                hoverinfo='skip',
                 name=f'Container {container_idx + 1}' if container_idx == 0 else ''
             ))
+        
+        # Adiciona pontos nos cantos para melhor visualização
+        fig.add_trace(go.Scatter3d(
+            x=[v[0] for v in vertices],
+            y=[v[1] for v in vertices],
+            z=[v[2] for v in vertices],
+            mode='markers',
+            marker=dict(
+                color='rgba(50,50,50,0.6)',
+                size=4,
+                symbol='square'
+            ),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
 
 
 def get_block_color(block_index: int) -> str:
@@ -164,49 +216,71 @@ def create_3d_view(container: ContainerConfig, placements: List[Tuple],
             
             # Cria o bloco
             create_simple_3d_block(x_adjusted, y, z, dx, dy, dz, color, fig)
+            print(f"   Bloco {idx+1}: {color} em ({x_adjusted}, {y}, {z}) tamanho ({dx}, {dy}, {dz})")
             
         except Exception as e:
             print(f"Erro ao processar bloco {idx}: {e}")
             continue
     
-    # Configuração do layout
+    # Configuração do layout com proporções corretas
     max_x = container.dx * container.quantidade + 20 * (container.quantidade - 1)
     
     fig.update_layout(
         scene=dict(
             camera=camera_config,
-            aspectmode='cube',
+            aspectmode='manual',
+            aspectratio=dict(
+                x=max_x / 100,
+                y=container.dy / 100, 
+                z=container.dz / 100
+            ),
             xaxis=dict(
                 title="Largura (cm)",
                 range=[0, max_x + 10],
                 showgrid=True,
-                gridcolor="lightgray"
+                gridcolor="rgba(200,200,200,0.3)",
+                gridwidth=1,
+                zeroline=True,
+                zerolinecolor="rgba(100,100,100,0.5)",
+                backgroundcolor="rgba(240,240,240,0.8)",
+                showbackground=True
             ),
             yaxis=dict(
                 title="Profundidade (cm)",
                 range=[0, container.dy + 10],
                 showgrid=True,
-                gridcolor="lightgray"
+                gridcolor="rgba(200,200,200,0.3)",
+                gridwidth=1,
+                zeroline=True,
+                zerolinecolor="rgba(100,100,100,0.5)",
+                backgroundcolor="rgba(240,240,240,0.8)",
+                showbackground=True
             ),
             zaxis=dict(
                 title="Altura (cm)",
                 range=[0, container.dz + 10],
                 showgrid=True,
-                gridcolor="lightgray"
+                gridcolor="rgba(200,200,200,0.3)",
+                gridwidth=1,
+                zeroline=True,
+                zerolinecolor="rgba(100,100,100,0.5)",
+                backgroundcolor="rgba(240,240,240,0.8)",
+                showbackground=True
             ),
-            bgcolor="white"
+            bgcolor="rgba(255,255,255,1)"
         ),
         title=dict(
             text=f"Vista {view_name}",
             x=0.5,
-            font=dict(size=14)
+            font=dict(size=14, color="black")
         ),
-        width=400,
+        width=380,
         height=350,
-        margin=dict(l=10, r=10, t=40, b=10),
+        margin=dict(l=5, r=5, t=40, b=5),
         showlegend=False,
         plot_bgcolor='white',
-        paper_bgcolor='white'
+        paper_bgcolor='white',
+        font=dict(family="Arial, sans-serif", color="black")
     )
     
     return fig
