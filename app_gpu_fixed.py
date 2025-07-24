@@ -686,6 +686,33 @@ def main():
             st.session_state['block_dims'],
             st.session_state.get('orders_df')  # Passa orders_df para a legenda
         )
+        
+        # Mensagem de conclusão com celebração
+        st.success("🎉 **Distribuição de Estoque Concluída!**")
+        st.balloons()  # Animação de celebração
+        
+        # Informações adicionais de conclusão
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            placed_count = len(st.session_state['placements'])
+            st.info(f"📦 **{placed_count}** blocos processados")
+        with col2:
+            total_capacity = st.session_state['container'].volume()
+            efficiency = calculate_efficiency(st.session_state['container'], st.session_state['block_dims'], st.session_state['placements'])
+            st.info(f"📊 **{efficiency:.1f}%** de eficiência")
+        with col3:
+            st.info("✅ **Visualização 3D** gerada")
+        
+        st.markdown("---")
+        st.markdown("🎯 **Próximos passos:** Use os controles 3D para explorar o resultado ou ajuste os parâmetros para uma nova simulação.")
+    elif st.session_state.get('last_run', False):
+        # Se já foi executado anteriormente mas não está mostrando o gráfico
+        render_visualization(
+            st.session_state['container'],
+            st.session_state['placements'],
+            st.session_state['block_dims'],
+            st.session_state.get('orders_df')
+        )
 
 
 if __name__ == "__main__":
