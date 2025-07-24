@@ -802,83 +802,50 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     st.subheader("🎨 Visualização 3D do Empacotamento")
     
     try:
-        # Importa função das visualizações estáticas
-        from scripts.core.visualization import create_static_multiview_3d
+        # Importa o novo sistema de visualização reconstruído
+        from scripts.core.visualization_new import create_multiview_3d_simple, generate_block_legend
         
-        # Cria 3 visualizações estáticas com ângulos diferentes
-        figures = create_static_multiview_3d(container, placements, block_dims, orders_df)
+        # Cria 3 visualizações 3D com a nova abordagem simplificada
+        st.write("🔄 Gerando visualizações 3D...")
+        figures = create_multiview_3d_simple(container, placements, block_dims)
         
         if not figures or len(figures) != 3:
-            st.error("❌ Erro ao gerar visualizações estáticas.")
-            st.write(f"Debug: figures = {figures}, len = {len(figures) if figures else 'None'}")
+            st.error("❌ Erro ao gerar visualizações 3D.")
+            st.write(f"Debug: {len(figures) if figures else 0} figuras criadas")
             return
         
-        # Debug: verifica se as figuras têm dados
-        for i, fig in enumerate(figures):
-            if not fig.data:
-                st.warning(f"⚠️ Figura {i+1} não contém dados para renderização.")
+        # Verifica se as figuras têm conteúdo
+        valid_figures = [fig for fig in figures if len(fig.data) > 0]
+        st.success(f"✅ {len(valid_figures)}/3 visualizações criadas com sucesso!")
         
-        st.markdown("📸 **Múltiplas perspectivas do empacotamento:**")
+        st.markdown("### 📸 Múltiplas Perspectivas do Empacotamento")
         
-        # Mostra as 3 vistas em colunas com configuração otimizada
+        # Mostra as 3 vistas em colunas de forma simples e robusta
         col1, col2, col3 = st.columns(3)
         
         with col1:
             st.markdown("**🔍 Vista Frontal**")
-            if len(figures[0].data) > 0:
-                st.plotly_chart(
-                    figures[0], 
-                    use_container_width=True, 
-                    config={
-                        'displayModeBar': False, 
-                        'staticPlot': True,
-                        'responsive': True,
-                        'doubleClick': False,
-                        'showTips': False
-                    },
-                    key="frontal_view"
-                )
-            else:
-                st.warning("⚠️ Vista frontal sem dados")
+            try:
+                st.plotly_chart(figures[0], use_container_width=True, key="view_frontal")
+            except Exception as e:
+                st.error(f"Erro na vista frontal: {e}")
         
         with col2:
             st.markdown("**🔍 Vista Lateral**")
-            if len(figures[1].data) > 0:
-                st.plotly_chart(
-                    figures[1], 
-                    use_container_width=True, 
-                    config={
-                        'displayModeBar': False, 
-                        'staticPlot': True,
-                        'responsive': True,
-                        'doubleClick': False,
-                        'showTips': False
-                    },
-                    key="lateral_view"
-                )
-            else:
-                st.warning("⚠️ Vista lateral sem dados")
+            try:
+                st.plotly_chart(figures[1], use_container_width=True, key="view_lateral")
+            except Exception as e:
+                st.error(f"Erro na vista lateral: {e}")
         
         with col3:
             st.markdown("**🔍 Vista Superior**")
-            if len(figures[2].data) > 0:
-                st.plotly_chart(
-                    figures[2], 
-                    use_container_width=True, 
-                    config={
-                        'displayModeBar': False, 
-                        'staticPlot': True,
-                        'responsive': True,
-                        'doubleClick': False,
-                        'showTips': False
-                    },
-                    key="superior_view"
-                )
-            else:
-                st.warning("⚠️ Vista superior sem dados")
+            try:
+                st.plotly_chart(figures[2], use_container_width=True, key="view_superior")
+            except Exception as e:
+                st.error(f"Erro na vista superior: {e}")
         
-        # Gera cores para a legenda
-        block_colors = map_block_colors(block_dims)
+        # Gera legenda de cores com o novo sistema
+        block_colors = generate_block_legend(block_dims)
         
         # Exibe legenda e estatísticas
         render_legend_and_stats(block_colors, orders_df, placements, block_dims)
