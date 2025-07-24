@@ -44,7 +44,7 @@ from scripts.config.settings import (
 
 # Configura Streamlit
 st.set_page_config(
-    page_title="Empacotamento 3D GPU", 
+    page_title="PARADOXO | Estoque", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
