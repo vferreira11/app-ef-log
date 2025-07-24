@@ -214,7 +214,7 @@ def update_loading_message(placeholder, style, message, dots):
     html_content = f"""
     {style}
     <div class="loading-container">
-        <div class="loading-title">⏳ AGUARDE. VALERÁ A PENA!</div>
+        <div class="loading-title">⏳ AGUARDE</div>
         <div class="loading-spinner"></div>
         <div class="loading-message">{message}</div>
         <div class="loading-dots">{dots_display}</div>
@@ -271,7 +271,7 @@ def render_footer():
         st.markdown("""
         <div style="font-size: 0.8rem; color: #666;">
             <strong>PARADOXO</strong><br>
-            Soluções Inteligentes em Logística
+            IA feita a mão.
         </div>
         """, unsafe_allow_html=True)
     
@@ -287,18 +287,57 @@ def render_footer():
     
     with col3:
         st.markdown("""
+        <style>
+        .linkedin-link {
+            color: #0077B5 !important;
+            text-decoration: none !important;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .linkedin-link:hover {
+            border-bottom: 2px solid #0077B5;
+            transform: translateY(-1px);
+            color: #005885 !important;
+        }
+        </style>
         <div style="text-align: right; font-size: 0.8rem; color: #666;">
-            <strong>Vinícius Ferreira</strong><br>
-            Desenvolvedor & Arquiteto de Soluções
+            <strong>
+                <a href="https://www.linkedin.com/in/viniciusferreira11/" 
+                   target="_blank" 
+                   class="linkedin-link">
+                    💼 Vinícius Ferreira
+                </a>
+            </strong><br>
+            Resolvedor de problemas
         </div>
         """, unsafe_allow_html=True)
     
     # Copyright centralizado
     st.markdown("""
+    <style>
+    .linkedin-copyright {
+        color: #0077B5 !important;
+        text-decoration: none !important;
+        border-bottom: 1px dotted #0077B5;
+        transition: all 0.3s ease;
+    }
+    .linkedin-copyright:hover {
+        border-bottom: 1px solid #0077B5;
+        color: #005885 !important;
+    }
+    </style>
     <div style="text-align: center; margin-top: 1rem; padding: 1rem 0; 
                 border-top: 1px solid #eee; font-size: 0.75rem; color: #888;">
         © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
-        Desenvolvido por <strong>Vinícius Ferreira</strong> no Brasil 🇧🇷<br>
+        Desenvolvido por 
+        <strong>
+            <a href="https://www.linkedin.com/in/viniciusferreira11/" 
+               target="_blank" 
+               class="linkedin-copyright">
+                Vinícius Ferreira
+            </a>
+        </strong> no Brasil 🇧🇷<br>
         <small style="color: #aaa;">
             Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
         </small>
