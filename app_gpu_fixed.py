@@ -810,24 +810,72 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         
         if not figures or len(figures) != 3:
             st.error("❌ Erro ao gerar visualizações estáticas.")
+            st.write(f"Debug: figures = {figures}, len = {len(figures) if figures else 'None'}")
             return
         
-        st.write("📸 **Múltiplas perspectivas do empacotamento:**")
+        # Debug: verifica se as figuras têm dados
+        for i, fig in enumerate(figures):
+            if not fig.data:
+                st.warning(f"⚠️ Figura {i+1} não contém dados para renderização.")
         
-        # Mostra as 3 vistas em colunas
+        st.markdown("📸 **Múltiplas perspectivas do empacotamento:**")
+        
+        # Mostra as 3 vistas em colunas com configuração otimizada
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.write("**🔍 Vista Frontal**")
-            st.plotly_chart(figures[0], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+            st.markdown("**🔍 Vista Frontal**")
+            if len(figures[0].data) > 0:
+                st.plotly_chart(
+                    figures[0], 
+                    use_container_width=True, 
+                    config={
+                        'displayModeBar': False, 
+                        'staticPlot': True,
+                        'responsive': True,
+                        'doubleClick': False,
+                        'showTips': False
+                    },
+                    key="frontal_view"
+                )
+            else:
+                st.warning("⚠️ Vista frontal sem dados")
         
         with col2:
-            st.write("**🔍 Vista Lateral**")
-            st.plotly_chart(figures[1], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+            st.markdown("**🔍 Vista Lateral**")
+            if len(figures[1].data) > 0:
+                st.plotly_chart(
+                    figures[1], 
+                    use_container_width=True, 
+                    config={
+                        'displayModeBar': False, 
+                        'staticPlot': True,
+                        'responsive': True,
+                        'doubleClick': False,
+                        'showTips': False
+                    },
+                    key="lateral_view"
+                )
+            else:
+                st.warning("⚠️ Vista lateral sem dados")
         
         with col3:
-            st.write("**🔍 Vista Superior**")
-            st.plotly_chart(figures[2], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+            st.markdown("**🔍 Vista Superior**")
+            if len(figures[2].data) > 0:
+                st.plotly_chart(
+                    figures[2], 
+                    use_container_width=True, 
+                    config={
+                        'displayModeBar': False, 
+                        'staticPlot': True,
+                        'responsive': True,
+                        'doubleClick': False,
+                        'showTips': False
+                    },
+                    key="superior_view"
+                )
+            else:
+                st.warning("⚠️ Vista superior sem dados")
         
         # Gera cores para a legenda
         block_colors = map_block_colors(block_dims)
@@ -930,23 +978,40 @@ def render_legend_and_stats(block_colors, orders_df, placements, block_dims):
                 </div>
                 """, unsafe_allow_html=True)
     
-    # Mapeamento de cores individual suprimido para interface mais limpa
+    # Mapeamento de cores detalhado (opcional, expandido)
     with st.expander("🎨 Ver mapeamento detalhado de cores", expanded=False):
-        st.write("Mapeamento de cores Viridis:")
-        for dims, color in block_colors.items():
-            st.write(f"   • Tipo {dims[0]}×{dims[1]}×{dims[2]}: {color}")
+        st.markdown("**Esquema de cores utilizado:**")
+        for i, (dims, color) in enumerate(block_colors.items()):
+            st.markdown(f"   • **Tipo {i+1}** ({dims[0]}×{dims[1]}×{dims[2]} cm): `{color}`")
     
-    # Estatísticas da visualização
+    # Estatísticas consolidadas (evitando duplicação)
+    st.markdown("---")
+    st.markdown("### 📊 Estatísticas de Visualização")
+    
     placed_count = len(placements)
+    unique_types = len(set(block_dims))
+    volume_usado = sum(block_dims[i][0] * block_dims[i][1] * block_dims[i][2] 
+                      for i in range(min(placed_count, len(block_dims))))
+    
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Blocos Visualizados", placed_count)
+        st.metric(
+            label="📦 Blocos na Visualização",
+            value=format_br_number(placed_count),
+            help="Quantidade de blocos renderizados na visualização 3D"
+        )
     with col2:
-        st.metric("Tipos de Cores", len(block_colors))
+        st.metric(
+            label="🎨 Tipos Únicos",
+            value=unique_types,
+            help="Número de dimensões diferentes encontradas"
+        )
     with col3:
-        volume_usado = sum(block_dims[i][0] * block_dims[i][1] * block_dims[i][2] 
-                         for i in range(min(placed_count, len(block_dims))))
-        st.metric("Volume Ocupado", format_br_number(volume_usado))
+        st.metric(
+            label="📏 Volume Visualizado",
+            value=f"{format_br_number(volume_usado)} cm³",
+            help="Volume total dos blocos mostrados na visualização"
+        )
 
 
 def main():
@@ -984,6 +1049,22 @@ def main():
     # Botão de execução
     show_graph = False
     if st.button("🚀 DISTRIBUIR ESTOQUE", type="primary", use_container_width=True):
+        # Verifica se há dados de pedidos gerados
+        if 'orders_df' not in st.session_state or st.session_state.orders_df is None or st.session_state.orders_df.empty:
+            # Mostra caixa informativa se não há pedidos
+            st.info("""
+            ℹ️ **Nenhum pedido foi gerado ainda!**
+            
+            Para usar a funcionalidade de distribuição de estoque, você precisa primeiro:
+            
+            1. **Configurar os parâmetros** do container e quantidade de pedidos
+            2. **Clicar em "Gerar Pedidos"** para criar a base de dados
+            3. **Depois clicar em "DISTRIBUIR ESTOQUE"** para executar o algoritmo
+            
+            👆 Volte à seção **"Geração de Pedidos"** acima e clique em **"Gerar Pedidos"** primeiro.
+            """)
+            return
+            
         # Inicia tela de loading
         placeholder, loading_style = show_loading_screen()
         loading_messages = get_creative_loading_messages()
@@ -1072,19 +1153,20 @@ def main():
         # Linha separadora
         st.markdown("---")
         
-        # Informações adicionais de conclusão
+        # Seção de status final elegante
+        st.markdown("### 🎯 Resumo do Processamento")
+        
         col1, col2, col3 = st.columns(3)
         with col1:
             placed_count = len(st.session_state['placements'])
-            st.info(f"📦 **{format_br_number(placed_count)}** blocos processados")
+            st.success(f"✅ **{format_br_number(placed_count)}** blocos processados")
         with col2:
-            # Corrige a chamada da função calculate_efficiency
             total_count = len(st.session_state['block_dims'])
             placed_count = len(st.session_state['placements'])
             efficiency = calculate_efficiency(placed_count, total_count)
             st.info(f"📊 **{format_br_percentage(efficiency)}** de eficiência")
         with col3:
-            st.info("✅ **Visualização 3D** gerada")
+            st.info("🎨 **Visualização 3D** concluída")
         
         st.markdown("---")
         st.markdown("🎯 **Próximos passos:** Use os controles 3D para explorar o resultado ou ajuste os parâmetros para uma nova simulação.")

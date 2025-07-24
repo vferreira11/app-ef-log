@@ -152,10 +152,15 @@ def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, colo
         [1, 5, 6], [1, 6, 2]
     ])
     
-    # Cores por vértice (mesmo índice para todo o bloco)
-    vertex_colors = [color_index] * 8
+    # Define cores categóricas consistentes
+    colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    ]
     
-    # Adiciona mesh 3D (faces sólidas)
+    block_color = colors[color_index % len(colors)]
+    
+    # Adiciona mesh 3D (faces sólidas) com cor fixa
     fig.add_trace(go.Mesh3d(
         x=vertices[:, 0],
         y=vertices[:, 1], 
@@ -163,16 +168,15 @@ def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, colo
         i=faces[:, 0],
         j=faces[:, 1],
         k=faces[:, 2],
-        intensity=vertex_colors,
-        colorscale='Viridis',
-        cmin=0,
-        cmax=10,
-        showscale=False,
-        opacity=0.9,
-        showlegend=False
+        color=block_color,
+        opacity=0.8,
+        showlegend=False,
+        flatshading=True,
+        lighting=dict(ambient=0.5, diffuse=0.8, fresnel=0.1, specular=0.2, roughness=0.1),
+        lightposition=dict(x=100, y=200, z=300)
     ))
     
-    # Adiciona bordas pretas finas
+    # Adiciona bordas pretas finas para definição
     edges = [
         (0,1), (1,2), (2,3), (3,0),  # base inferior
         (4,5), (5,6), (6,7), (7,4),  # topo superior
@@ -186,7 +190,7 @@ def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, colo
             y=[vertices[v1, 1], vertices[v2, 1]],
             z=[vertices[v1, 2], vertices[v2, 2]],
             mode='lines',
-            line=dict(color='black', width=1.5),
+            line=dict(color='rgba(0,0,0,0.6)', width=1),
             showlegend=False,
             hoverinfo='skip'
         ))
@@ -408,60 +412,73 @@ def create_static_multiview_3d(container: ContainerConfig, placements: List[Tupl
                 offset_x = container_idx * (container.dx + 10) if 'container_idx' in locals() else 0
                 x_adjusted = x + offset_x
                 
-                # Cria bloco 3D usando a função existente
-                # Converte cor hex para um índice numérico simples
-                color_index = idx % 10  # Usa um índice simples
-                create_block_mesh(x_adjusted, y, z, dx, dy, dz, color_index, fig)
+                # Cria bloco 3D simples primeiro 
+                try:
+                    # Converte cor hex para um índice numérico simples
+                    color_index = idx % 10  # Usa um índice simples
+                    create_block_mesh(x_adjusted, y, z, dx, dy, dz, color_index, fig)
+                except Exception as e:
+                    # Fallback: criar um bloco básico se a mesh falhar
+                    fig.add_trace(go.Scatter3d(
+                        x=[x_adjusted, x_adjusted+dx, x_adjusted+dx, x_adjusted, x_adjusted, 
+                           x_adjusted+dx, x_adjusted+dx, x_adjusted],
+                        y=[y, y, y+dy, y+dy, y, y, y+dy, y+dy],
+                        z=[z, z, z, z, z+dz, z+dz, z+dz, z+dz],
+                        mode='markers',
+                        marker=dict(size=5, color=f'rgb({50 + idx*20}, {100 + idx*15}, {150 + idx*10})'),
+                        showlegend=False,
+                        name=f'Bloco {idx+1}'
+                    ))
         
         # Configuração específica do layout para cada vista
         fig.update_layout(
             scene=dict(
-                aspectmode='manual',
-                aspectratio=dict(x=1, y=0.8, z=0.6),
+                aspectmode='cube',  # Mudança para 'cube' para melhor proporção
                 camera=camera,
                 xaxis=dict(
                     showgrid=True,
-                    gridcolor="lightgray",
-                    backgroundcolor="white",
-                    tickcolor="darkgray",
-                    linecolor="dimgray",
-                    title=dict(text="Largura (cm)", font=dict(color="black")),
-                    tickfont=dict(color="black"),
+                    gridcolor="rgba(128,128,128,0.2)",
+                    zeroline=True,
+                    zerolinecolor="rgba(128,128,128,0.4)",
+                    backgroundcolor="rgba(240,240,240,0.8)",
+                    title=dict(text="Largura (cm)", font=dict(color="black", size=10)),
+                    tickfont=dict(color="black", size=8),
                     range=[0, container.dx * container.quantidade + 10 * (container.quantidade - 1) + 5]
                 ),
                 yaxis=dict(
                     showgrid=True,
-                    gridcolor="lightgray",
-                    backgroundcolor="white",
-                    tickcolor="darkgray",
-                    linecolor="dimgray",
-                    title=dict(text="Profundidade (cm)", font=dict(color="black")),
-                    tickfont=dict(color="black"),
+                    gridcolor="rgba(128,128,128,0.2)",
+                    zeroline=True,
+                    zerolinecolor="rgba(128,128,128,0.4)",
+                    backgroundcolor="rgba(240,240,240,0.8)",
+                    title=dict(text="Profundidade (cm)", font=dict(color="black", size=10)),
+                    tickfont=dict(color="black", size=8),
                     range=[0, container.dy + 5]
                 ),
                 zaxis=dict(
                     showgrid=True,
-                    gridcolor="lightgray",
-                    backgroundcolor="white",
-                    tickcolor="darkgray",
-                    linecolor="dimgray",
-                    title=dict(text="Altura (cm)", font=dict(color="black")),
-                    tickfont=dict(color="black"),
+                    gridcolor="rgba(128,128,128,0.2)",
+                    zeroline=True,
+                    zerolinecolor="rgba(128,128,128,0.4)",
+                    backgroundcolor="rgba(240,240,240,0.8)",
+                    title=dict(text="Altura (cm)", font=dict(color="black", size=10)),
+                    tickfont=dict(color="black", size=8),
                     range=[0, container.dz + 5]
                 ),
-                bgcolor="white"
+                bgcolor="rgba(255,255,255,1)"
             ),
-            width=400,  # Menor para visualizações estáticas
-            height=300,
-            margin=dict(l=10, r=10, t=30, b=10),
+            width=350,  # Ajustado para melhor visualização
+            height=280,
+            margin=dict(l=5, r=5, t=35, b=5),
             showlegend=False,
             title=dict(
                 text=f"Vista {view_name}",
                 x=0.5,
-                font=dict(size=12)
+                font=dict(size=11, color="black")
             ),
             plot_bgcolor='white',
-            paper_bgcolor='white'
+            paper_bgcolor='white',
+            font=dict(family="Arial, sans-serif")
         )
         
         figures.append(fig)
