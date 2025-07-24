@@ -264,46 +264,24 @@ def render_footer():
     """Renderiza rodapé profissional com informações de copyright."""
     st.markdown("---")
     
-    # CSS responsivo para o rodapé
+    # Layout responsivo usando colunas do Streamlit
+    col1, col2, col3 = st.columns([2, 1, 2])
+    
+    # CSS para estilos
     st.markdown("""
     <style>
-    .footer-container {
-        margin-top: 1rem;
-        padding: 1rem 0;
-        border-top: 1px solid #eee;
-    }
-    
-    .footer-grid {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        gap: 1rem;
-        align-items: center;
-        margin-bottom: 1rem;
-    }
-    
-    @media (max-width: 768px) {
-        .footer-grid {
-            grid-template-columns: 1fr;
-            text-align: center !important;
-            gap: 0.8rem;
-        }
-        .footer-left, .footer-right {
-            text-align: center !important;
-        }
-    }
-    
-    .footer-left {
+    .footer-company {
         font-size: 0.8rem;
         color: #666;
     }
     
-    .footer-center {
+    .footer-version {
         text-align: center;
         font-size: 0.75rem;
         color: #888;
     }
     
-    .footer-right {
+    .footer-dev {
         text-align: right;
         font-size: 0.8rem;
         color: #666;
@@ -344,52 +322,70 @@ def render_footer():
         color: #005885 !important;
     }
     
-    .copyright-text {
+    .copyright-section {
         text-align: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
         font-size: 0.75rem;
         color: #888;
         line-height: 1.4;
     }
-    </style>
     
-    <div class="footer-container">
-        <div class="footer-grid">
-            <div class="footer-left">
-                <strong>PARADOXO</strong><br>
-                IA feita a mão.
-            </div>
-            
-            <div class="footer-center">
-                <span class="version-badge">VERSÃO BETA</span><br>
-                <small>Sujeito a alterações</small>
-            </div>
-            
-            <div class="footer-right">
-                <strong>
-                    <a href="https://www.linkedin.com/in/viniciusferreira11/" 
-                       target="_blank" 
-                       class="linkedin-link">
-                        💼 Vinícius Ferreira
-                    </a>
-                </strong><br>
-                Resolvedor de problemas
-            </div>
+    @media (max-width: 768px) {
+        .footer-dev {
+            text-align: center !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Primeira linha - Empresa, Versão, Desenvolvedor
+    with col1:
+        st.markdown("""
+        <div class="footer-company">
+            <strong>PARADOXO</strong><br>
+            IA feita a mão.
         </div>
-        
-        <div class="copyright-text">
-            © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
-            Desenvolvido por 
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div class="footer-version">
+            <span class="version-badge">VERSÃO BETA</span><br>
+            <small>Sujeito a alterações</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div class="footer-dev">
             <strong>
                 <a href="https://www.linkedin.com/in/viniciusferreira11/" 
                    target="_blank" 
-                   class="linkedin-copyright">
-                    Vinícius Ferreira
+                   class="linkedin-link">
+                    💼 Vinícius Ferreira
                 </a>
-            </strong> no Brasil 🇧🇷<br>
-            <small style="color: #aaa;">
-                Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
-            </small>
+            </strong><br>
+            Resolvedor de problemas
         </div>
+        """, unsafe_allow_html=True)
+    
+    # Segunda linha - Copyright centralizado
+    st.markdown("""
+    <div class="copyright-section">
+        © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
+        Desenvolvido por 
+        <strong>
+            <a href="https://www.linkedin.com/in/viniciusferreira11/" 
+               target="_blank" 
+               class="linkedin-copyright">
+                Vinícius Ferreira
+            </a>
+        </strong> no Brasil 🇧🇷<br>
+        <small style="color: #aaa;">
+            Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
+        </small>
     </div>
     """, unsafe_allow_html=True)
 
@@ -780,7 +776,7 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
 
 def render_visualization(container: ContainerConfig, placements: list, block_dims: list, orders_df=None):
     """
-    Renderiza a seção de visualização 3D estacionária.
+    Renderiza visualizações 3D estáticas com múltiplos ângulos para evitar travamentos.
     
     Args:
         container: Configuração do container
@@ -795,168 +791,151 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     st.subheader("🎨 Visualização 3D do Empacotamento")
     
     try:
-        # Gera cores usando paleta Viridis
-        block_colors = map_block_colors(block_dims)
+        # Importa função das visualizações estáticas
+        from scripts.core.visualization import create_static_multiview_3d
         
-        # Cria e exibe gráfico estacionário
-        fig = create_3d_plot(container, placements, block_dims, block_colors)
+        # Cria 3 visualizações estáticas com ângulos diferentes
+        figures = create_static_multiview_3d(container, placements, block_dims, orders_df)
         
-        # Debug: verificar se a figura foi criada
-        if fig is None:
-            st.error("❌ Figura 3D não foi criada corretamente.")
-            return
-            
-        if len(fig.data) == 0:
-            st.error("❌ Figura 3D criada mas sem dados de renderização.")
+        if not figures or len(figures) != 3:
+            st.error("❌ Erro ao gerar visualizações estáticas.")
             return
         
-        # Mensagem de debug suprimida para interface mais limpa
-        # st.write(f"🔍 Debug: Figura criada com {len(fig.data)} traces")
+        st.write("📸 **Múltiplas perspectivas do empacotamento:**")
         
-        print(f"[DEBUG] Renderizando visualização com {len(fig.data)} traces")
-        
-        # Configurações otimizadas com controles visíveis e câmera fixa
-        config = {
-            'displayModeBar': True,   # Mantém controles visíveis
-            'staticPlot': False,      # Permite renderização 3D
-            'responsive': True,       # Responsivo
-            'modeBarButtonsToRemove': ['pan2d', 'select2d', 'lasso2d', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian'],  # Remove botões 2D desnecessários
-            'displaylogo': False,     # Remove logo Plotly
-            'doubleClick': 'reset'    # Reset para posição default no duplo clique
-        }
-        
-        print(f"[DEBUG] Usando configuração: {config}")
-        
-        # Atualiza figura para garantir visualização inicial correta
-        fig.update_layout(
-            scene=dict(
-                camera=dict(
-                    projection=dict(type="perspective"),  # Força projeção perspectiva
-                    # Força a posição inicial da câmera
-                    eye=dict(x=2.5, y=2.5, z=2.0),
-                    center=dict(x=0, y=0, z=0),
-                    up=dict(x=0, y=0, z=1)
-                )
-            ),
-            # Configuração para garantir que a figura seja renderizada corretamente
-            autosize=True
-        )
-        
-        # Renderiza o gráfico
-        st.plotly_chart(fig, use_container_width=True, config=config)
-        
-        print(f"[DEBUG] Gráfico renderizado com sucesso")
-        
-        # Legenda de produtos
-        st.write("### 🏷️ Legenda de Produtos")
-        
-        if orders_df is not None and not orders_df.empty:
-            try:
-                # Cria mapeamento de dimensões para produtos
-                dim_to_product = {}
-                
-                # Verifica se as colunas necessárias existem
-                required_cols = ['Comprimento', 'Largura', 'Profundidade', 'Nome Produto', 'Categoria']
-                if all(col in orders_df.columns for col in required_cols):
-                    for _, row in orders_df.iterrows():
-                        dims = (int(row['Comprimento']), int(row['Largura']), int(row['Profundidade']))
-                        product_info = f"{row['Nome Produto']} ({row['Categoria']})"
-                        if dims not in dim_to_product:
-                            dim_to_product[dims] = []
-                        dim_to_product[dims].append(product_info)
-                    
-                    # Organiza a legenda por produtos únicos
-                    unique_products = {}
-                    for dims in set(block_dims):
-                        if dims in dim_to_product:
-                            products = list(set(dim_to_product[dims]))  # Remove duplicatas
-                            for product in products:
-                                if product not in unique_products:
-                                    unique_products[product] = dims
-                    
-                    if unique_products:
-                        # Calcula número de colunas
-                        num_products = len(unique_products)
-                        cols_per_row = min(3, num_products)  # Máximo 3 colunas para produtos
-                        
-                        # Cria colunas para a legenda
-                        legend_cols = st.columns(cols_per_row)
-                        
-                        for i, (product, dims) in enumerate(unique_products.items()):
-                            col_idx = i % cols_per_row
-                            with legend_cols[col_idx]:
-                                color = block_colors.get(dims, '#000000')
-                                # Cria indicador com nome do produto
-                                st.markdown(f"""
-                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                    <div style="width: 20px; height: 20px; background-color: {color}; 
-                                                border: 1px solid #000; margin-right: 10px; border-radius: 3px;"></div>
-                                    <div style="font-size: 13px; line-height: 1.2;">
-                                        <strong>{product}</strong><br>
-                                        <small style="color: #666;">{dims[0]}×{dims[1]}×{dims[2]} cm</small>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                    else:
-                        # Se não conseguiu mapear produtos, usa fallback
-                        raise ValueError("Não foi possível mapear produtos para dimensões")
-                else:
-                    # Se não tem as colunas necessárias, usa fallback
-                    raise ValueError(f"Colunas necessárias não encontradas. Disponíveis: {list(orders_df.columns)}")
-                    
-            except Exception as e:
-                st.warning(f"⚠️ Erro ao processar dados de produtos: {str(e)}")
-                # Fallback para mostrar apenas dimensões
-                orders_df = None
-        else:
-            # Fallback para dimensões quando não há dados de produto
-            st.info("ℹ️ Dados de produtos não disponíveis. Mostrando dimensões:")
-            
-            # Organiza a legenda em colunas para melhor layout
-            unique_types = list(set(block_dims))
-            unique_types.sort()  # Ordena para consistência
-            
-            # Calcula número de colunas baseado na quantidade de tipos
-            num_types = len(unique_types)
-            cols_per_row = min(4, num_types)  # Máximo 4 colunas
-            
-            # Cria colunas para a legenda
-            legend_cols = st.columns(cols_per_row)
-            
-            for i, block_type in enumerate(unique_types):
-                col_idx = i % cols_per_row
-                with legend_cols[col_idx]:
-                    color = block_colors.get(block_type, '#000000')
-                    # Cria um pequeno quadrado colorido como indicador
-                    st.markdown(f"""
-                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: {color}; 
-                                    border: 1px solid #000; margin-right: 8px; border-radius: 3px;"></div>
-                        <span style="font-size: 14px;">{block_type[0]}×{block_type[1]}×{block_type[2]}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-        
-        # Mapeamento de cores individual suprimido para interface mais limpa
-        with st.expander("🎨 Ver mapeamento detalhado de cores", expanded=False):
-            st.write("Mapeamento de cores Viridis:")
-            for dims, color in block_colors.items():
-                st.write(f"   • Tipo {dims[0]}×{dims[1]}×{dims[2]}: {color}")
-        
-        # Estatísticas da visualização
-        placed_count = len(placements)
+        # Mostra as 3 vistas em colunas
         col1, col2, col3 = st.columns(3)
+        
         with col1:
-            st.metric("Blocos Visualizados", placed_count)
+            st.write("**🔍 Vista Frontal**")
+            st.plotly_chart(figures[0], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+        
         with col2:
-            st.metric("Tipos de Cores", len(block_colors))
+            st.write("**🔍 Vista Lateral**")
+            st.plotly_chart(figures[1], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+        
         with col3:
-            volume_usado = sum(block_dims[i][0] * block_dims[i][1] * block_dims[i][2] 
-                             for i in range(min(placed_count, len(block_dims))))
-            st.metric("Volume Ocupado", format_br_number(volume_usado))
-            
-            
+            st.write("**🔍 Vista Superior**")
+            st.plotly_chart(figures[2], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+        
+        # Gera cores para a legenda
+        block_colors = map_block_colors(block_dims, orders_df)
+        
+        # Exibe legenda e estatísticas
+        render_legend_and_stats(block_colors, orders_df, placements, block_dims)
+        
     except Exception as e:
         st.error(f"❌ Erro na visualização: {str(e)}")
+
+
+def render_legend_and_stats(block_colors, orders_df, placements, block_dims):
+    """Renderiza legenda de produtos e estatísticas."""
+    st.write("### 🏷️ Legenda de Produtos")
+    
+    if orders_df is not None and not orders_df.empty:
+        try:
+            # Cria mapeamento de dimensões para produtos
+            dim_to_product = {}
+            
+            # Verifica se as colunas necessárias existem
+            required_cols = ['Comprimento', 'Largura', 'Profundidade', 'Nome Produto', 'Categoria']
+            
+            if all(col in orders_df.columns for col in required_cols):
+                for _, row in orders_df.iterrows():
+                    dims = (int(row['Comprimento']), int(row['Largura']), int(row['Profundidade']))
+                    product_info = f"{row['Nome Produto']} ({row['Categoria']})"
+                    if dims not in dim_to_product:
+                        dim_to_product[dims] = []
+                    dim_to_product[dims].append(product_info)
+                
+                # Organiza a legenda por produtos únicos
+                unique_products = {}
+                for dims in set(block_dims):
+                    if dims in dim_to_product:
+                        products = list(set(dim_to_product[dims]))  # Remove duplicatas
+                        for product in products:
+                            if product not in unique_products:
+                                unique_products[product] = dims
+                
+                if unique_products:
+                    # Calcula número de colunas
+                    num_products = len(unique_products)
+                    cols_per_row = min(3, num_products)  # Máximo 3 colunas para produtos
+                    
+                    # Cria colunas para a legenda
+                    legend_cols = st.columns(cols_per_row)
+                    
+                    for i, (product, dims) in enumerate(unique_products.items()):
+                        col_idx = i % cols_per_row
+                        with legend_cols[col_idx]:
+                            color = block_colors.get(dims, '#000000')
+                            # Cria indicador com nome do produto
+                            st.markdown(f"""
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div style="width: 20px; height: 20px; background-color: {color}; 
+                                            border: 1px solid #000; margin-right: 10px; border-radius: 3px;"></div>
+                                <div style="font-size: 13px; line-height: 1.2;">
+                                    <strong>{product}</strong><br>
+                                    <small style="color: #666;">{dims[0]}×{dims[1]}×{dims[2]} cm</small>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                else:
+                    # Fallback para dimensões
+                    orders_df = None
+            else:
+                # Fallback para dimensões
+                orders_df = None
+                    
+        except Exception as e:
+            st.warning(f"⚠️ Erro ao processar dados de produtos: {str(e)}")
+            orders_df = None
+    
+    # Fallback para dimensões quando não há dados de produto válidos
+    if orders_df is None or orders_df.empty:
+        st.info("ℹ️ Dados de produtos não disponíveis. Mostrando dimensões:")
+        
+        # Organiza a legenda em colunas para melhor layout
+        unique_types = list(set(block_dims))
+        unique_types.sort()  # Ordena para consistência
+        
+        # Calcula número de colunas baseado na quantidade de tipos
+        num_types = len(unique_types)
+        cols_per_row = min(4, num_types)  # Máximo 4 colunas
+        
+        # Cria colunas para a legenda
+        legend_cols = st.columns(cols_per_row)
+        
+        for i, block_type in enumerate(unique_types):
+            col_idx = i % cols_per_row
+            with legend_cols[col_idx]:
+                color = block_colors.get(block_type, '#000000')
+                # Cria um pequeno quadrado colorido como indicador
+                st.markdown(f"""
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: {color}; 
+                                border: 1px solid #000; margin-right: 8px; border-radius: 3px;"></div>
+                    <span style="font-size: 14px;">{block_type[0]}×{block_type[1]}×{block_type[2]}</span>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Mapeamento de cores individual suprimido para interface mais limpa
+    with st.expander("🎨 Ver mapeamento detalhado de cores", expanded=False):
+        st.write("Mapeamento de cores Viridis:")
+        for dims, color in block_colors.items():
+            st.write(f"   • Tipo {dims[0]}×{dims[1]}×{dims[2]}: {color}")
+    
+    # Estatísticas da visualização
+    placed_count = len(placements)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Blocos Visualizados", placed_count)
+    with col2:
+        st.metric("Tipos de Cores", len(block_colors))
+    with col3:
+        volume_usado = sum(block_dims[i][0] * block_dims[i][1] * block_dims[i][2] 
+                         for i in range(min(placed_count, len(block_dims))))
+        st.metric("Volume Ocupado", format_br_number(volume_usado))
 
 
 def main():

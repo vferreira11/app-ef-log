@@ -334,3 +334,125 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
     
     print(f"[DEBUG] Layout configurado. Retornando figura com {len(fig.data)} traces")
     return fig
+
+
+def create_static_multiview_3d(container: ContainerConfig, placements: List[Tuple], block_dims: List[Tuple], orders_df=None) -> List[go.Figure]:
+    """
+    Cria 3 visualizações estáticas com ângulos diferentes para substituir a visualização interativa.
+    
+    Args:
+        container: Configuração do container
+        placements: Lista de posicionamentos dos blocos
+        block_dims: Dimensões dos blocos
+        orders_df: DataFrame com dados dos pedidos (opcional)
+        
+    Returns:
+        Lista com 3 figuras (frontal, lateral, superior)
+    """
+    from .utils import map_block_colors
+    
+    # Mapeia cores dos blocos
+    block_colors = map_block_colors(block_dims, orders_df)
+    
+    figures = []
+    view_names = ['Frontal', 'Lateral Direita', 'Superior']
+    
+    # Configurações de câmera para cada vista
+    camera_configs = [
+        # Vista Frontal (olhando de frente)
+        dict(
+            eye=dict(x=0, y=-2, z=0.5),
+            center=dict(x=0.5, y=0.5, z=0.5),
+            up=dict(x=0, y=0, z=1)
+        ),
+        # Vista Lateral Direita
+        dict(
+            eye=dict(x=2, y=0, z=0.5),
+            center=dict(x=0.5, y=0.5, z=0.5),
+            up=dict(x=0, y=0, z=1)
+        ),
+        # Vista Superior (olhando de cima)
+        dict(
+            eye=dict(x=0.5, y=0.5, z=2),
+            center=dict(x=0.5, y=0.5, z=0.5),
+            up=dict(x=0, y=1, z=0)
+        )
+    ]
+    
+    for i, (view_name, camera) in enumerate(zip(view_names, camera_configs)):
+        fig = go.Figure()
+        
+        # Adiciona container wireframe
+        create_container_wireframe(container, fig)
+        
+        # Adiciona plano do chão
+        create_floor_plane(container, fig)
+        
+        # Adiciona blocos posicionados
+        for idx, (x, y, z, dx, dy, dz, container_idx) in enumerate(placements):
+            if idx < len(block_colors):
+                color = block_colors[idx]
+                
+                # Offset para múltiplos containers
+                offset_x = container_idx * (container.dx + 10)
+                x_adjusted = x + offset_x
+                
+                # Cria bloco 3D
+                fig.add_trace(create_3d_block(
+                    x_adjusted, y, z, dx, dy, dz, color, f"Bloco {idx + 1}"
+                ))
+        
+        # Configuração específica do layout para cada vista
+        fig.update_layout(
+            scene=dict(
+                aspectmode='manual',
+                aspectratio=dict(x=1, y=0.8, z=0.6),
+                camera=camera,
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor="lightgray",
+                    backgroundcolor="white",
+                    tickcolor="darkgray",
+                    linecolor="dimgray",
+                    title=dict(text="Largura (cm)", font=dict(color="black")),
+                    tickfont=dict(color="black"),
+                    range=[0, container.dx * container.quantidade + 10 * (container.quantidade - 1) + 5]
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridcolor="lightgray",
+                    backgroundcolor="white",
+                    tickcolor="darkgray",
+                    linecolor="dimgray",
+                    title=dict(text="Profundidade (cm)", font=dict(color="black")),
+                    tickfont=dict(color="black"),
+                    range=[0, container.dy + 5]
+                ),
+                zaxis=dict(
+                    showgrid=True,
+                    gridcolor="lightgray",
+                    backgroundcolor="white",
+                    tickcolor="darkgray",
+                    linecolor="dimgray",
+                    title=dict(text="Altura (cm)", font=dict(color="black")),
+                    tickfont=dict(color="black"),
+                    range=[0, container.dz + 5]
+                ),
+                bgcolor="white"
+            ),
+            width=400,  # Menor para visualizações estáticas
+            height=300,
+            margin=dict(l=10, r=10, t=30, b=10),
+            showlegend=False,
+            title=dict(
+                text=f"Vista {view_name}",
+                x=0.5,
+                font=dict(size=12)
+            ),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
+        )
+        
+        figures.append(fig)
+    
+    return figures
