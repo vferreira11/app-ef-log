@@ -152,7 +152,7 @@ def render_blocks_section() -> pd.DataFrame:
     st.subheader("📦 Geração de Pedidos")
     
     # Instruções
-    st.markdown("*Configure a quantidade de pedidos que serão gerados aleatoriamente*")
+    st.markdown("*Configure a quantidade de produtos distintos para geração aleatória*")
         
     # Slider para quantidade de pedidos
     n_orders = st.slider(
@@ -522,10 +522,10 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
                 dim_to_product = {}
                 
                 # Verifica se as colunas necessárias existem
-                required_cols = ['dx', 'dy', 'dz', 'Nome Produto', 'Categoria']
+                required_cols = ['Comprimento', 'Largura', 'Profundidade', 'Nome Produto', 'Categoria']
                 if all(col in orders_df.columns for col in required_cols):
                     for _, row in orders_df.iterrows():
-                        dims = (int(row['dx']), int(row['dy']), int(row['dz']))
+                        dims = (int(row['Comprimento']), int(row['Largura']), int(row['Profundidade']))
                         product_info = f"{row['Nome Produto']} ({row['Categoria']})"
                         if dims not in dim_to_product:
                             dim_to_product[dims] = []
