@@ -271,7 +271,7 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             xaxis_title="Largura (cm)",     # Horizontal (esquerda-direita)
             yaxis_title="Profundidade (cm)",  # Profundidade (frente-trás) 
             zaxis_title="Altura (cm)",      # Altura (baixo-cima)
-            aspectmode="cube",           # Proporções corretas
+            aspectmode="data",           # Mantém proporções reais dos dados
             # Configurações de câmera para visualização isométrica correta
             camera=dict(
                 eye=camera_eye,  # Câmera isométrica ajustada dinamicamente
