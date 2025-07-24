@@ -802,83 +802,40 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     st.subheader("🎨 Visualização 3D do Empacotamento")
     
     try:
-        # Importa o sistema ultra-robusto de visualização
-        from scripts.core.visualization_ultra_robust import create_robust_multiview_3d
-        from scripts.core.visualization_new import generate_block_legend
+        # Sistema ultra-simples: apenas 1 visualização 2D
+        from scripts.core.visualization_simple_2d import create_simple_3d_2d_view
         
-        # Cria 3 visualizações 3D com método ultra-confiável
-        st.write("🔄 Gerando visualizações 3D (método ultra-robusto)...")
-        figures = create_robust_multiview_3d(container, placements, block_dims)
+        st.write("🔄 Gerando visualização 3D isométrica...")
+        figure = create_simple_3d_2d_view(container, placements, block_dims)
         
-        if not figures or len(figures) != 3:
-            st.error("❌ Erro ao gerar visualizações 3D.")
-            st.write(f"Debug: {len(figures) if figures else 0} figuras criadas")
+        if not figure or len(figure.data) == 0:
+            st.error("❌ Erro ao gerar visualização 2D.")
             return
         
-        # Verifica se as figuras têm conteúdo
-        valid_figures = [fig for fig in figures if len(fig.data) > 0]
-        st.success(f"✅ {len(valid_figures)}/3 visualizações criadas com sucesso!")
+        st.success(f"✅ Visualização criada com {len(figure.data)} elementos!")
         
-        st.markdown("### 📸 Múltiplas Perspectivas do Empacotamento")
+        st.markdown("### � Vista do Empacotamento")
         
-        # Mostra as 3 vistas em colunas de forma simples e robusta
-        col1, col2, col3 = st.columns(3)
+        # Exibe a visualização única de forma simples
+        st.markdown("#### � Vista Frontal do Empacotamento")
         
-        with col1:
-            st.markdown("**🔍 Vista Frontal**")
-            try:
-                st.plotly_chart(
-                    figures[0], 
-                    use_container_width=True, 
-                    config={
-                        'displayModeBar': False,
-                        'staticPlot': True,
-                        'doubleClick': False,
-                        'showTips': False,
-                        'scrollZoom': False
-                    },
-                    key="view_frontal"
-                )
-            except Exception as e:
-                st.error(f"Erro na vista frontal: {e}")
+        # Debug: mostra informações sobre a figura
+        st.write(f"📊 Elementos na figura: {len(figure.data)}")
         
-        with col2:
-            st.markdown("**🔍 Vista Lateral**")
-            try:
-                st.plotly_chart(
-                    figures[1], 
-                    use_container_width=True, 
-                    config={
-                        'displayModeBar': False,
-                        'staticPlot': True,
-                        'doubleClick': False,
-                        'showTips': False,
-                        'scrollZoom': False
-                    },
-                    key="view_lateral"
-                )
-            except Exception as e:
-                st.error(f"Erro na vista lateral: {e}")
+        # Configuração mínima para exibição
+        config = {
+            'displayModeBar': False,
+            'staticPlot': True
+        }
         
-        with col3:
-            st.markdown("**🔍 Vista Superior**")
-            try:
-                st.plotly_chart(
-                    figures[2], 
-                    use_container_width=True, 
-                    config={
-                        'displayModeBar': False,
-                        'staticPlot': True,
-                        'doubleClick': False,
-                        'showTips': False,
-                        'scrollZoom': False
-                    },
-                    key="view_superior"
-                )
-            except Exception as e:
-                st.error(f"Erro na vista superior: {e}")
+        try:
+            st.plotly_chart(figure, use_container_width=True, config=config)
+            st.success("✅ Visualização renderizada com sucesso!")
+        except Exception as render_error:
+            st.error(f"❌ Erro ao renderizar: {str(render_error)}")
         
-        # Gera legenda de cores com o novo sistema
+        # Gera legenda simples
+        from scripts.core.visualization_new import generate_block_legend
         block_colors = generate_block_legend(block_dims)
         
         # Exibe legenda e estatísticas
