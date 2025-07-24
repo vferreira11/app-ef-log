@@ -214,7 +214,7 @@ def update_loading_message(placeholder, style, message, dots):
     html_content = f"""
     {style}
     <div class="loading-container">
-        <div class="loading-title">⚡ PARADOXO ENGINE</div>
+        <div class="loading-title">⏳ AGUARDE. VALERÁ A PENA!</div>
         <div class="loading-spinner"></div>
         <div class="loading-message">{message}</div>
         <div class="loading-dots">{dots_display}</div>
@@ -258,6 +258,52 @@ def render_header():
     
     📊 **Recursos**: Otimização GPU • Suporte a rotação • Visualização 3D em tempo real • Paleta de cores Viridis
     """)
+
+
+def render_footer():
+    """Renderiza rodapé profissional com informações de copyright."""
+    st.markdown("---")
+    
+    # Layout em colunas para o rodapé
+    col1, col2, col3 = st.columns([2, 1, 2])
+    
+    with col1:
+        st.markdown("""
+        <div style="font-size: 0.8rem; color: #666;">
+            <strong>PARADOXO</strong><br>
+            Soluções Inteligentes em Logística
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="text-align: center; font-size: 0.75rem; color: #888;">
+            <span style="background: linear-gradient(45deg, #FF6B35, #F7931E); 
+                         -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+                         font-weight: bold;">VERSÃO BETA</span><br>
+            <small>Sujeito a alterações</small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style="text-align: right; font-size: 0.8rem; color: #666;">
+            <strong>Vinícius Ferreira</strong><br>
+            Desenvolvedor & Arquiteto de Soluções
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Copyright centralizado
+    st.markdown("""
+    <div style="text-align: center; margin-top: 1rem; padding: 1rem 0; 
+                border-top: 1px solid #eee; font-size: 0.75rem; color: #888;">
+        © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
+        Desenvolvido por <strong>Vinícius Ferreira</strong> no Brasil 🇧🇷<br>
+        <small style="color: #aaa;">
+            Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
+        </small>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def render_gpu_parameters() -> tuple:
@@ -891,8 +937,9 @@ def main():
                 'last_run': True
             })
             
-            # Mostra tela de conclusão
-            show_completion_screen(placeholder, loading_style)
+            # Mantém loading enquanto prepara a visualização
+            update_loading_message(placeholder, loading_style, "🎨 Gerando visualização 3D", 3)
+            time.sleep(0.5)
             
             # Exibe resultados
             display_analysis_metrics(container, block_dims, placements, orders_df)
@@ -905,12 +952,38 @@ def main():
 
     # Seção de visualização (apenas se botão foi pressionado)
     if show_graph and st.session_state.get('last_run', False):
+        # Renderiza a visualização primeiro
         render_visualization(
             st.session_state['container'],
             st.session_state['placements'],
             st.session_state['block_dims'],
             st.session_state.get('orders_df')  # Passa orders_df para a legenda
         )
+        
+        # Remove a tela de loading APENAS depois da visualização
+        if 'loading_placeholder' in locals():
+            placeholder.empty()
+        
+        # Pequena pausa para garantir que o gráfico foi renderizado
+        time.sleep(1)
+        
+        # Mostra tela de conclusão APÓS o gráfico estar pronto
+        completion_placeholder = st.empty()
+        with completion_placeholder.container():
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 2rem; border-radius: 15px; text-align: center; 
+                        color: white; margin: 1rem 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <h2 style="margin: 0; font-size: 2rem;">🎉 EMPACOTAMENTO CONCLUÍDO!</h2>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem; opacity: 0.9;">
+                    Sua visualização 3D está pronta! ✨
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Remove a mensagem de conclusão após 4 segundos
+        time.sleep(4)
+        completion_placeholder.empty()
         
         # 🎉 CELEBRAÇÃO FINAL COM BALÕES!
         st.balloons()
@@ -921,7 +994,10 @@ def main():
             placed_count = len(st.session_state['placements'])
             st.info(f"📦 **{format_br_number(placed_count)}** blocos processados")
         with col2:
-            efficiency = calculate_efficiency(st.session_state['container'], st.session_state['block_dims'], st.session_state['placements'])
+            # Corrige a chamada da função calculate_efficiency
+            total_count = len(st.session_state['block_dims'])
+            placed_count = len(st.session_state['placements'])
+            efficiency = calculate_efficiency(placed_count, total_count)
             st.info(f"📊 **{format_br_percentage(efficiency)}** de eficiência")
         with col3:
             st.info("✅ **Visualização 3D** gerada")
@@ -936,6 +1012,9 @@ def main():
             st.session_state['block_dims'],
             st.session_state.get('orders_df')
         )
+    
+    # Rodapé profissional
+    render_footer()
 
 
 if __name__ == "__main__":
