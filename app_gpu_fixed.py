@@ -264,83 +264,132 @@ def render_footer():
     """Renderiza rodapé profissional com informações de copyright."""
     st.markdown("---")
     
-    # Layout em colunas para o rodapé
-    col1, col2, col3 = st.columns([2, 1, 2])
-    
-    with col1:
-        st.markdown("""
-        <div style="font-size: 0.8rem; color: #666;">
-            <strong>PARADOXO</strong><br>
-            IA feita a mão.
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div style="text-align: center; font-size: 0.75rem; color: #888;">
-            <span style="background: linear-gradient(45deg, #FF6B35, #F7931E); 
-                         -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-                         font-weight: bold;">VERSÃO BETA</span><br>
-            <small>Sujeito a alterações</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <style>
-        .linkedin-link {
-            color: #0077B5 !important;
-            text-decoration: none !important;
-            border-bottom: 2px solid transparent;
-            transition: all 0.3s ease;
-            display: inline-block;
-        }
-        .linkedin-link:hover {
-            border-bottom: 2px solid #0077B5;
-            transform: translateY(-1px);
-            color: #005885 !important;
-        }
-        </style>
-        <div style="text-align: right; font-size: 0.8rem; color: #666;">
-            <strong>
-                <a href="https://www.linkedin.com/in/viniciusferreira11/" 
-                   target="_blank" 
-                   class="linkedin-link">
-                    💼 Vinícius Ferreira
-                </a>
-            </strong><br>
-            Resolvedor de problemas
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Copyright centralizado
+    # CSS responsivo para o rodapé
     st.markdown("""
     <style>
+    .footer-container {
+        margin-top: 1rem;
+        padding: 1rem 0;
+        border-top: 1px solid #eee;
+    }
+    
+    .footer-grid {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .footer-grid {
+            grid-template-columns: 1fr;
+            text-align: center !important;
+            gap: 0.8rem;
+        }
+        .footer-left, .footer-right {
+            text-align: center !important;
+        }
+    }
+    
+    .footer-left {
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    .footer-center {
+        text-align: center;
+        font-size: 0.75rem;
+        color: #888;
+    }
+    
+    .footer-right {
+        text-align: right;
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    .version-badge {
+        background: linear-gradient(45deg, #FF6B35, #F7931E);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: bold;
+        display: inline-block;
+    }
+    
+    .linkedin-link {
+        color: #0077B5 !important;
+        text-decoration: none !important;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+    
+    .linkedin-link:hover {
+        border-bottom: 2px solid #0077B5;
+        transform: translateY(-1px);
+        color: #005885 !important;
+    }
+    
     .linkedin-copyright {
         color: #0077B5 !important;
         text-decoration: none !important;
         border-bottom: 1px dotted #0077B5;
         transition: all 0.3s ease;
     }
+    
     .linkedin-copyright:hover {
         border-bottom: 1px solid #0077B5;
         color: #005885 !important;
     }
+    
+    .copyright-text {
+        text-align: center;
+        font-size: 0.75rem;
+        color: #888;
+        line-height: 1.4;
+    }
     </style>
-    <div style="text-align: center; margin-top: 1rem; padding: 1rem 0; 
-                border-top: 1px solid #eee; font-size: 0.75rem; color: #888;">
-        © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
-        Desenvolvido por 
-        <strong>
-            <a href="https://www.linkedin.com/in/viniciusferreira11/" 
-               target="_blank" 
-               class="linkedin-copyright">
-                Vinícius Ferreira
-            </a>
-        </strong> no Brasil 🇧🇷<br>
-        <small style="color: #aaa;">
-            Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
-        </small>
+    
+    <div class="footer-container">
+        <div class="footer-grid">
+            <div class="footer-left">
+                <strong>PARADOXO</strong><br>
+                IA feita a mão.
+            </div>
+            
+            <div class="footer-center">
+                <span class="version-badge">VERSÃO BETA</span><br>
+                <small>Sujeito a alterações</small>
+            </div>
+            
+            <div class="footer-right">
+                <strong>
+                    <a href="https://www.linkedin.com/in/viniciusferreira11/" 
+                       target="_blank" 
+                       class="linkedin-link">
+                        💼 Vinícius Ferreira
+                    </a>
+                </strong><br>
+                Resolvedor de problemas
+            </div>
+        </div>
+        
+        <div class="copyright-text">
+            © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
+            Desenvolvido por 
+            <strong>
+                <a href="https://www.linkedin.com/in/viniciusferreira11/" 
+                   target="_blank" 
+                   class="linkedin-copyright">
+                    Vinícius Ferreira
+                </a>
+            </strong> no Brasil 🇧🇷<br>
+            <small style="color: #aaa;">
+                Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
+            </small>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -942,11 +991,9 @@ def main():
             st.session_state['last_run'] = False
             st.session_state['show_completion'] = False
 
-            # Processa dados com loading animado
-            for i, message in enumerate(loading_messages[:6]):  # Primeiras 6 mensagens
-                for dots in range(1, 4):  # Animação de 1 a 3 pontos
-                    update_loading_message(placeholder, loading_style, message, dots)
-                    time.sleep(0.4)  # Pausa para animação
+            # Processa dados com loading animado (sem sleeps que travem)
+            for i, message in enumerate(loading_messages[:3]):  # Apenas 3 mensagens rápidas
+                update_loading_message(placeholder, loading_style, message, 3)
             
             # Processa dados de entrada
             block_dims = process_block_data(orders_df)
@@ -959,11 +1006,8 @@ def main():
                 st.error("❌ Erro ao processar pedidos. Verifique os dados gerados.")
                 return
             
-            # Continua loading durante execução do algoritmo
-            for i, message in enumerate(loading_messages[6:]):  # Mensagens restantes
-                for dots in range(1, 4):
-                    update_loading_message(placeholder, loading_style, message, dots)
-                    time.sleep(0.3)
+            # Loading para algoritmo
+            update_loading_message(placeholder, loading_style, "🧠 Executando algoritmo inteligente", 3)
             
             # Executa algoritmo de empacotamento
             placements = run_packing_algorithm(container, block_dims, pop_size, orders_df, algoritmo_tipo)
@@ -1003,21 +1047,12 @@ def main():
             st.session_state.get('orders_df')  # Passa orders_df para a legenda
         )
         
-        # Mostra tela de conclusão se for a primeira vez
+        # Mostra tela de conclusão e celebração IMEDIATAMENTE após renderização
         if st.session_state.get('show_completion', False):
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 2rem; border-radius: 15px; text-align: center; 
-                        color: white; margin: 1rem 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                <h2 style="margin: 0; font-size: 2rem;">🎉 EMPACOTAMENTO CONCLUÍDO!</h2>
-                <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem; opacity: 0.9;">
-                    Sua visualização 3D está pronta! ✨
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            
             # 🎉 CELEBRAÇÃO COM BALÕES APÓS A VISUALIZAÇÃO!
             st.balloons()
+            
+            st.success("🎉 **EMPACOTAMENTO CONCLUÍDO!** Sua visualização 3D está pronta! ✨")
             
             # Remove a flag para não mostrar novamente
             st.session_state['show_completion'] = False
