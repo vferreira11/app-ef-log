@@ -17,47 +17,98 @@ ZONA_CRITICA = (0, 3)        # 0-30cm: Chão → Flexão severa (evitar se poss�
 
 def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], produtos_df) -> List[tuple]:
     """
-    🎯 ALGORITMO HÍBRIDO ÚNICO - FUSÃO DOS 3 MÉTODOS
-    ==============================================
-    Combina automaticamente:
-    1. 🧬 BIOMECÂNICO: Zoneamento ergonômico por peso/categoria
-    2. 🏭 CHÃO DO GALPÃO: Empilhamento estável iniciando no Z=0
-    3. 🚀 GPU OTIMIZADO: Compactação inteligente com adjacência
+    🎯 ALGORITMO HÍBRIDO INTELIGENTE - FUSÃO ABC + BIOMECÂNICO + GREEDY
+    =====================================================================
+    FLUXO OTIMIZADO DE 4 INTELIGÊNCIAS:
+    1. 📊 ABC: Classificação por demanda/giro (prioridade operacional)
+    2. 🧬 BIOMECÂNICO: Zoneamento ergonômico inteligente (ABC + peso + categoria)
+    3. 🏭 CHÃO DO GALPÃO: Empilhamento estável + validação física
+    4. 🚀 GREEDY OTIMIZADO: Ajuste fino + preenchimento de lacunas
     
-    Elimina a necessidade de escolher algoritmos - tudo em um só!
+    SEQUÊNCIA OTIMIZADA:
+    ABC → Biomecânica → Física → Greedy → Compactação Final
     """
-    print("[DEBUG] === 🎯 ALGORITMO HÍBRIDO ÚNICO (3 EM 1) ===")
+    print("[DEBUG] === 🎯 ALGORITMO HÍBRIDO INTELIGENTE (4 INTELIGÊNCIAS) ===")
     print(f"[DEBUG] Container: {container.dx}x{container.dy}x{container.dz}")
     print(f"[DEBUG] Blocos a processar: {len(block_dims)}")
     
-    # 🧬 BIOMECÂNICO: Classifica produtos por peso e categoria
-    produtos_com_peso = []
+    # 📊 ETAPA 1: ANÁLISE ABC + BIOMECÂNICA INTELIGENTE
+    produtos_com_abc = []
     for i, dims in enumerate(block_dims):
         if i < len(produtos_df):
             peso = produtos_df.iloc[i].get('peso', produtos_df.iloc[i].get('peso_kg', 2.0))
             categoria = produtos_df.iloc[i].get('Categoria', produtos_df.iloc[i].get('categoria', 'Utilidades'))
+            demanda = produtos_df.iloc[i].get('Previsão Próx. Mês', produtos_df.iloc[i].get('demanda', 10))
         else:
             peso = 2.0
             categoria = 'Utilidades'
-        produtos_com_peso.append((i, dims, peso, categoria))
+            demanda = 10
+        
+        # Calcula inteligência ABC + Biomecânica
+        classe_abc = classificar_abc_por_giro(demanda)
+        zona_ergonomica = determinar_zona_biomecanica(demanda, peso, categoria)
+        
+        produtos_com_abc.append((i, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
     
-    # 🧬 BIOMECÂNICO: Ordena por critério ergonômico (pesados primeiro para base estável)
-    produtos_com_peso.sort(key=lambda x: (x[2], x[1][0] * x[1][1] * x[1][2]), reverse=True)
-    print(f"[DEBUG] 🧬 Ordenação biomecânica - Produtos pesados primeiro: {[(p[0], f'{p[2]:.1f}kg', p[3]) for p in produtos_com_peso[:5]]}")
+    # 📊 ORDENAÇÃO INTELIGENTE: ABC → Demanda → Zona → Peso
+    produtos_com_abc.sort(key=lambda x: (
+        0 if x[4] == 'A' else 1 if x[4] == 'B' else 2,  # ABC primeiro
+        -x[6],  # Demanda decrescente dentro da classe
+        0 if x[5] == ZONA_PREMIUM else 1,  # Zona premium preferencial
+        -x[2] if x[4] in ['A', 'B'] else x[2]  # Peso: pesados primeiro para A/B, leves primeiro para C
+    ))
+    
+    print(f"[DEBUG] 📊 Ordenação ABC inteligente - Primeiros 5: {[(p[0], f'{p[2]:.1f}kg', p[4], f'{p[6]}dem', p[3]) for p in produtos_com_abc[:5]]}")
     
     alocacoes = []
+    produtos_nao_alocados = []  # 🤖 LISTA PARA GREEDY
     posicoes_ocupadas = set()
     
-    # 🏭 CHÃO DO GALPÃO: Define zonas biomecânicas baseadas na altura
-    def get_zona_biomecanica(z, peso):
-        """Determina adequação biomecânica por altura e peso - TEMPORARIAMENTE DESABILITADO PARA DEBUG"""
-        return True  # SEMPRE ADEQUADO PARA DEBUG
+    # 🏭 CHÃO DO GALPÃO: Define zonas ABC + biomecânicas baseadas na altura
+    def get_zona_abc_biomecanica(z, peso, classe_abc, zona_ergonomica):
+        """Determina adequação ABC + biomecânica por altura, peso e demanda"""
+        z_min, z_max = zona_ergonomica
+        
+        # 📊 PRIORIDADE ABC: Classe A deve estar na zona correta
+        if classe_abc == 'A':
+            if not (z_min <= z <= z_max):
+                return False  # Classe A DEVE estar na zona ABC correta
+        elif classe_abc == 'B':
+            if not (z_min <= z <= z_max + 3):  # Tolerância +3cm para classe B
+                return False
+        # Classe C pode ir em qualquer lugar (mais flexível)
+        
+        # 🧬 VERIFICAÇÃO BIOMECÂNICA: Backup de segurança por peso
+        if z <= 5:  # 0-5cm: Zona do chão
+            return peso >= 0.8  # Produtos médios/pesados no chão
+        elif z <= 30:  # 5-30cm: Zona baixa
+            return peso >= 0.3  # Produtos leves+ na zona baixa
+        elif z <= 120:  # 30-120cm: Zona ergonômica ideal
+            return True  # Qualquer peso - zona principal
+        elif z <= 180:  # 120-180cm: Zona alta
+            return peso <= 6.0  # Produtos até 6kg na zona alta
+        else:  # >180cm: Zona crítica
+            return peso <= 4.0  # Produtos até 4kg na zona crítica
     
-    # 🚀 GPU OTIMIZADO: Função de score de compactação melhorada
-    def calcular_score_compactacao(x, y, z, w, d, h, peso, categoria):
-        """Score multifatorial para otimização de espaço"""
+    # 🚀 FUNÇÃO DE SCORE ABC + COMPACTAÇÃO
+    def calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica):
+        """Score que considera ABC + proximidade + adjacência"""
         # Base: proximidade ao canto (0,0,0)
         score = x + y + z * 0.1
+        
+        # 📊 BONUS/PENALIZAÇÃO ABC MASSIVA
+        z_min, z_max = zona_ergonomica
+        if classe_abc == 'A':
+            if z_min <= z <= z_max:
+                score -= 100.0  # BONUS ENORME para A na zona correta
+            else:
+                score += 50.0   # PENALIZAÇÃO SEVERA para A fora da zona
+        elif classe_abc == 'B':
+            if z_min <= z <= z_max + 3:  # Tolerância para B
+                score -= 20.0   # Bonus moderado
+            else:
+                score += 10.0   # Penalização leve
+        # Classe C não tem bonus/penalização (flexível)
         
         # Bonus por adjacência (blocos vizinhos)
         bonus_adjacencia = 0
@@ -71,31 +122,31 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
         
         score -= bonus_adjacencia * 2.0  # Forte incentivo à proximidade
         
-        # 🧬 Bonus biomecânico por categoria
+        # 🧬 Bonus biomecânico por categoria (secundário)
         if categoria in ['Brinquedos', 'Organizadores']:
-            score -= 5.0  # Prioriza itens acessíveis
+            score -= 3.0  # Prioriza itens acessíveis (menor que ABC)
         elif categoria == 'Utilidades':
-            score += 2.0  # Pode ficar em locais menos acessíveis
+            score += 1.0  # Pode ficar em locais menos acessíveis
             
         return score
     
-    # 🎯 ALGORITMO PRINCIPAL: Fusão dos 3 métodos
-    for produto_idx, dims, peso, categoria in produtos_com_peso:
+    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL (ABC + BIOMECÂNICA + FÍSICA)
+    for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_com_abc:
         w, d, h = dims
         melhor_posicao = None
         melhor_score = float('inf')
         
-        print(f"[DEBUG] 🎯 Processando produto {produto_idx}: {w}x{d}x{h}, {peso:.1f}kg, {categoria}")
+        print(f"[DEBUG] 🎯 Processando produto {produto_idx}: {w}x{d}x{h}, {peso:.1f}kg, {classe_abc}, {categoria}")
         print(f"[DEBUG] 📐 Container disponível: {container.dx}x{container.dy}x{container.dz}")
         
         # 🏭 CHÃO DO GALPÃO: Força prioridade por camadas (Z crescente)
         for z in range(0, container.dz - h + 1):
             
-            # 🧬 BIOMECÂNICO: Verifica adequação da altura para o peso
-            zona_adequada = get_zona_biomecanica(z, peso)
-            print(f"[DEBUG] 🧬 Z={z}: zona adequada para {peso:.1f}kg? {zona_adequada}")
+            # 📊 ABC + 🧬 BIOMECÂNICO: Verifica adequação integrada
+            zona_adequada = get_zona_abc_biomecanica(z, peso, classe_abc, zona_ergonomica)
+            print(f"[DEBUG] 📊🧬 Z={z}: zona ABC+bio adequada para {classe_abc}({peso:.1f}kg)? {zona_adequada}")
             if not zona_adequada:
-                print(f"[DEBUG] ❌ Zona biomecânica rejeitou Z={z} para peso {peso:.1f}kg")
+                print(f"[DEBUG] ❌ Zona ABC+biomecânica rejeitou Z={z} para {classe_abc}")
                 continue
                 
             # Busca posição na camada atual
@@ -122,25 +173,26 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                     if colidiu:
                         continue
                     
-                    # 🏭 CHÃO DO GALPÃO: Verifica estabilidade - TEMPORARIAMENTE DESABILITADO PARA DEBUG
-                    estavel = True  # SEMPRE ESTÁVEL PARA DEBUG
-                    # if z > 0:
-                    #     area_com_suporte = 0
-                    #     area_total = w * d
-                    #     for check_x in range(x, x + w):
-                    #         for check_y in range(y, y + d):
-                    #             if (check_x, check_y, z - 1) in posicoes_ocupadas:
-                    #                 area_com_suporte += 1
-                    #     # Reduzido de 75% para 50% para ser mais flexível
-                    #     if (area_com_suporte / area_total) < 0.50:
-                    #         estavel = False
+                    # 🏭 CHÃO DO GALPÃO: Verifica estabilidade (60% de suporte mínimo)
+                    estavel = True
+                    if z > 0:
+                        area_com_suporte = 0
+                        area_total = w * d
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                    area_com_suporte += 1
+                        # 60% de suporte mínimo (equilibrio entre realismo e flexibilidade)
+                        if (area_com_suporte / area_total) < 0.60:
+                            estavel = False
                     
                     if not estavel:
-                        print(f"[DEBUG] ⚠️ Posição ({x},{y},{z}) instável")
+                        suporte_percent = (area_com_suporte / area_total) * 100 if z > 0 else 100
+                        print(f"[DEBUG] ⚠️ Posição ({x},{y},{z}) instável - suporte {suporte_percent:.1f}% (mín 60%)")
                         continue
                     
-                    # 🚀 GPU OTIMIZADO: Calcula score de otimização
-                    score = calcular_score_compactacao(x, y, z, w, d, h, peso, categoria)
+                    # 🚀 SCORE ABC INTELIGENTE: Calcula score integrado
+                    score = calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica)
                     
                     if score < melhor_score:
                         melhor_score = score
@@ -166,12 +218,129 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
             
             alocacoes.append((x, y, z, produto_idx))
             zona = "chão" if z <= 5 else "baixa" if z <= 30 else "ideal" if z <= 120 else "alta" if z <= 180 else "crítica"
-            print(f"[DEBUG] ✅ Produto {produto_idx} alocado em ({x},{y},{z}) - Zona: {zona}, Score: {melhor_score:.2f}")
+            print(f"[DEBUG] ✅ Produto {produto_idx} ({classe_abc}) alocado em ({x},{y},{z}) - Zona: {zona}, Score: {melhor_score:.2f}")
         else:
-            print(f"[DEBUG] ❌ Produto {produto_idx} não pôde ser alocado - sem espaço adequado")
+            # 🤖 ADICIONA À LISTA GREEDY
+            produtos_nao_alocados.append((produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
+            print(f"[DEBUG] ⏳ Produto {produto_idx} ({classe_abc}) não alocado - será processado pelo GREEDY")
     
-    print(f"[DEBUG] === 🎯 HÍBRIDO ÚNICO CONCLUÍDO: {len(alocacoes)}/{len(block_dims)} produtos alocados ===")
+    print(f"[DEBUG] 📊 ETAPA 2 CONCLUÍDA: {len(alocacoes)} alocados, {len(produtos_nao_alocados)} para GREEDY")
+    
+    # 🤖 ETAPA 3: GREEDY INTELIGENTE (Recuperação + Otimização)
+    if produtos_nao_alocados:
+        print(f"[DEBUG] === 🤖 GREEDY INTELIGENTE: Processando {len(produtos_nao_alocados)} produtos ===")
+        
+        # Ordena produtos não alocados por prioridade (A > B > C, demanda alta > baixa)
+        produtos_nao_alocados.sort(key=lambda x: (
+            0 if x[4] == 'A' else 1 if x[4] == 'B' else 2,  # ABC primeiro
+            -x[6],  # Demanda decrescente
+            -x[2]   # Peso decrescente (estabilidade)
+        ))
+        
+        alocacoes_greedy = aplicar_greedy_inteligente(
+            container, produtos_nao_alocados, posicoes_ocupadas
+        )
+        
+        alocacoes.extend(alocacoes_greedy)
+        print(f"[DEBUG] 🤖 GREEDY recuperou: {len(alocacoes_greedy)} produtos adicionais")
+    
+    print(f"[DEBUG] === 🎯 HÍBRIDO INTELIGENTE CONCLUÍDO: {len(alocacoes)}/{len(block_dims)} produtos alocados ===")
     return alocacoes
+
+
+def aplicar_greedy_inteligente(container: ContainerConfig, produtos_nao_alocados: List[tuple], posicoes_ocupadas: set) -> List[tuple]:
+    """
+    🤖 GREEDY INTELIGENTE: Recupera produtos rejeitados com flexibilidade adaptativa
+    
+    Args:
+        container: Configuração do container
+        produtos_nao_alocados: Lista de produtos que falharam na alocação ABC
+        posicoes_ocupadas: Set de posições já ocupadas (modificado in-place)
+        
+    Returns:
+        Lista de alocações recuperadas pelo Greedy
+    """
+    alocacoes_greedy = []
+    
+    for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_nao_alocados:
+        w, d, h = dims
+        melhor_posicao = None
+        melhor_score = float('inf')
+        
+        print(f"[DEBUG] 🤖 GREEDY processando {produto_idx} ({classe_abc}): {w}x{d}x{h}")
+        
+        # 🤖 GREEDY: Busca QUALQUER posição válida (sem restrições ABC)
+        for z in range(0, container.dz - h + 1):
+            for x in range(0, container.dx - w + 1):
+                for y in range(0, container.dy - d + 1):
+                    
+                    # Verifica colisões
+                    colidiu = False
+                    for check_x in range(x, x + w):
+                        for check_y in range(y, y + d):
+                            for check_z in range(z, z + h):
+                                if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                    colidiu = True
+                                    break
+                            if colidiu:
+                                break
+                        if colidiu:
+                            break
+                    
+                    if colidiu:
+                        continue
+                    
+                    # 🏭 Verifica estabilidade básica (mais flexível que ABC)
+                    estavel = True
+                    if z > 0:
+                        area_com_suporte = 0
+                        area_total = w * d
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                    area_com_suporte += 1
+                        # 40% de suporte mínimo (mais flexível que os 60% do ABC)
+                        if (area_com_suporte / area_total) < 0.40:
+                            estavel = False
+                    
+                    if not estavel:
+                        continue
+                    
+                    # 🤖 Score Greedy: prioriza proximidade + prefere zona ABC quando possível
+                    score = x + y + z * 0.1
+                    
+                    # Bonus se conseguir ficar na zona ABC ideal (mas não obrigatório)
+                    z_min, z_max = zona_ergonomica
+                    if z_min <= z <= z_max:
+                        score -= 10.0  # Bonus por zona correta
+                    
+                    # Bonus por classe (tenta salvar classe A)
+                    if classe_abc == 'A':
+                        score -= 5.0  # Prioriza classe A
+                    elif classe_abc == 'B':
+                        score -= 2.0  # Prioriza classe B
+                    
+                    if score < melhor_score:
+                        melhor_score = score
+                        melhor_posicao = (x, y, z)
+        
+        # Aloca se encontrou posição
+        if melhor_posicao:
+            x, y, z = melhor_posicao
+            
+            # Marca posições como ocupadas
+            for check_x in range(x, x + w):
+                for check_y in range(y, y + d):
+                    for check_z in range(z, z + h):
+                        posicoes_ocupadas.add((check_x, check_y, check_z))
+            
+            alocacoes_greedy.append((x, y, z, produto_idx))
+            zona = "chão" if z <= 5 else "baixa" if z <= 30 else "ideal" if z <= 120 else "alta" if z <= 180 else "crítica"
+            print(f"[DEBUG] 🤖 GREEDY salvou {produto_idx} ({classe_abc}) em ({x},{y},{z}) - Zona: {zona}")
+        else:
+            print(f"[DEBUG] 🤖 GREEDY falhou: {produto_idx} ({classe_abc}) sem espaço")
+    
+    return alocacoes_greedy
 
 
 def gpu_optimize_packing_biomecanico(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], produtos_df) -> List[tuple]:
