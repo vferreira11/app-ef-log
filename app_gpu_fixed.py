@@ -13,6 +13,8 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
+import time
+import random
 
 # Adiciona o diretório scripts ao path para imports
 scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
@@ -44,10 +46,208 @@ from scripts.config.settings import (
 
 # Configura Streamlit
 st.set_page_config(
-    page_title="PARADOXO | Estoque", 
+    page_title=".: PARADOXO :.", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+
+def format_br_number(value, decimals=0):
+    """
+    Formata números no padrão brasileiro.
+    
+    Args:
+        value: Número a ser formatado
+        decimals: Número de casas decimais (0 para inteiros)
+    
+    Returns:
+        String formatada no padrão brasileiro
+    """
+    if decimals == 0:
+        # Para inteiros: usa ponto como separador de milhares
+        return f"{int(value):,}".replace(',', '.')
+    else:
+        # Para decimais: vírgula decimal e ponto para milhares
+        formatted = f"{value:,.{decimals}f}"
+        # Troca vírgula por ponto para milhares, depois ponto por vírgula para decimal
+        parts = formatted.split('.')
+        if len(parts) > 1:
+            decimal_part = parts[-1]
+            integer_part = '.'.join(parts[:-1]).replace(',', '.')
+            return f"{integer_part},{decimal_part}"
+        else:
+            return formatted.replace(',', '.')
+
+
+def format_br_currency(value):
+    """
+    Formata valores monetários no padrão brasileiro.
+    
+    Args:
+        value: Valor a ser formatado
+    
+    Returns:
+        String formatada como moeda brasileira
+    """
+    return f"R$ {format_br_number(value, 2)}"
+
+
+def format_br_percentage(value):
+    """
+    Formata porcentagens no padrão brasileiro.
+    
+    Args:
+        value: Valor da porcentagem
+    
+    Returns:
+        String formatada como porcentagem brasileira
+    """
+    return f"{format_br_number(value, 1)}%"
+
+
+def get_creative_loading_messages():
+    """
+    Retorna lista de mensagens criativas de loading estilo The Sims.
+    
+    Returns:
+        Lista de mensagens de loading temáticas
+    """
+    return [
+        "📦 Organizando produtos no depósito",
+        "🎯 Calculando posições otimizadas", 
+        "🔧 Ajustando algoritmos híbridos",
+        "🧠 Aplicando inteligência biomecânica",
+        "🚀 Executando otimização GPU",
+        "📏 Medindo espaços disponíveis",
+        "🏗️ Construindo layout 3D",
+        "⚖️ Balanceando distribuição de peso",
+        "🎨 Gerando paleta de cores",
+        "📊 Analisando eficiência espacial",
+        "🔍 Verificando colisões",
+        "✨ Aplicando toque final",
+        "🎪 Preparando visualização mágica"
+    ]
+
+
+def show_loading_screen():
+    """
+    Exibe tela de loading criativa com mensagens dinâmicas.
+    
+    Returns:
+        Container placeholder para controle da tela
+    """
+    # Cria placeholder que vai ocupar toda a tela
+    placeholder = st.empty()
+    
+    # Estilo CSS para tela de loading
+    loading_style = """
+    <style>
+    .loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(26, 28, 36, 0.95);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    
+    .loading-title {
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+        color: #00D4AA;
+        font-weight: bold;
+    }
+    
+    .loading-message {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        min-height: 2rem;
+    }
+    
+    .loading-dots {
+        font-size: 2rem;
+        color: #00D4AA;
+        margin-top: 1rem;
+        min-height: 3rem;
+    }
+    
+    .loading-spinner {
+        border: 4px solid #333;
+        border-top: 4px solid #00D4AA;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 2s linear infinite;
+        margin: 2rem 0;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    </style>
+    """
+    
+    return placeholder, loading_style
+
+
+def update_loading_message(placeholder, style, message, dots):
+    """
+    Atualiza a mensagem de loading com animação de pontos.
+    
+    Args:
+        placeholder: Container do Streamlit
+        style: CSS da tela de loading
+        message: Mensagem atual
+        dots: Número de pontos (1-3)
+    """
+    dots_display = "." * dots
+    
+    html_content = f"""
+    {style}
+    <div class="loading-container">
+        <div class="loading-title">⚡ PARADOXO ENGINE</div>
+        <div class="loading-spinner"></div>
+        <div class="loading-message">{message}</div>
+        <div class="loading-dots">{dots_display}</div>
+    </div>
+    """
+    
+    placeholder.markdown(html_content, unsafe_allow_html=True)
+
+
+def show_completion_screen(placeholder, style):
+    """
+    Exibe tela de conclusão com celebração.
+    
+    Args:
+        placeholder: Container do Streamlit  
+        style: CSS base
+    """
+    completion_html = f"""
+    {style}
+    <div class="loading-container">
+        <div class="loading-title">🎉 CONCLUÍDO!</div>
+        <div style="font-size: 1.8rem; margin: 2rem 0; color: #00D4AA;">
+            ✅ Distribuição de Estoque Finalizada
+        </div>
+        <div style="font-size: 1.2rem; color: #ccc;">
+            Preparando visualização...
+        </div>
+    </div>
+    """
+    
+    placeholder.markdown(completion_html, unsafe_allow_html=True)
+    time.sleep(2)  # Exibe por 2 segundos
+    placeholder.empty()  # Remove a tela de loading
 
 
 def render_header():
@@ -135,9 +335,9 @@ def render_container_section() -> ContainerConfig:
     
     # Exibe informações do container
     if container.quantidade == 1:
-        st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {container.volume:,} unidades")
+        st.info(f"📦 Container: {format_dimensions(container.dimensions())} | Volume: {format_br_number(container.volume)} unidades")
     else:
-        st.info(f"📦 {container.quantidade} Containers: {format_dimensions(container.dimensions())} cada | Volume total: {container.volume_total:,} unidades")
+        st.info(f"📦 {container.quantidade} Containers: {format_dimensions(container.dimensions())} cada | Volume total: {format_br_number(container.volume_total)} unidades")
     
     return container
 
@@ -208,18 +408,18 @@ def render_blocks_section() -> pd.DataFrame:
         with col1:
             st.metric("Total Produtos", analytics['total_products'])
         with col2:
-            st.metric("Vendas 90 Dias", f"{analytics['total_sales_90d']:,}")
+            st.metric("Vendas 90 Dias", format_br_number(analytics['total_sales_90d']))
         with col3:
-            st.metric("Previsão Mês", f"{analytics['total_forecast']:,}")
+            st.metric("Previsão Mês", format_br_number(analytics['total_forecast']))
         with col4:
             st.metric("Preço Médio", f"R$ {analytics['avg_price']:.2f}")
         
         # Receitas e peso
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Receita 90 Dias", f"R$ {analytics['total_revenue_90d']:,.2f}")
+            st.metric("Receita 90 Dias", format_br_currency(analytics['total_revenue_90d']))
         with col2:
-            st.metric("Receita Prevista", f"R$ {analytics['forecast_revenue']:,.2f}")
+            st.metric("Receita Prevista", format_br_currency(analytics['forecast_revenue']))
         with col3:
             st.metric("Peso Médio", f"{analytics['avg_weight']:.3f} kg")
         with col4:
@@ -231,12 +431,12 @@ def render_blocks_section() -> pd.DataFrame:
             with st.expander(f"🏷️ {category} ({data['count']} produtos)"):
                 subcol1, subcol2, subcol3 = st.columns(3)
                 with subcol1:
-                    st.write(f"**Vendas 90d:** {data['sales_90d']:,}")
-                    st.write(f"**Previsão:** {data['forecast']:,}")
+                    st.write(f"**Vendas 90d:** {format_br_number(data['sales_90d'])}")
+                    st.write(f"**Previsão:** {format_br_number(data['forecast'])}")
                     st.write(f"**Peso Médio:** {data['avg_weight']:.3f} kg")
                 with subcol2:
                     st.write(f"**Preço Médio:** R$ {data['avg_price']:.2f}")
-                    st.write(f"**Receita 90d:** R$ {data['revenue_90d']:,.2f}")
+                    st.write(f"**Receita 90d:** {format_br_currency(data['revenue_90d'])}")
                     st.write(f"**Peso Total:** {data['total_weight_forecast']:.2f} kg")
                 with subcol3:
                     growth = ((data['forecast'] * 3) / data['sales_90d'] - 1) * 100 if data['sales_90d'] > 0 else 0
@@ -278,14 +478,14 @@ def process_block_data(orders_data) -> list:
     unique_types = list(set(block_dims))
     
     st.write(f"🔍 **Processamento para próximos 30 dias:**")
-    st.write(f"   • **{unique_products} produtos únicos** gerando **{total_forecast:,} blocos totais**")
+    st.write(f"   • **{unique_products} produtos únicos** gerando **{format_br_number(total_forecast)} blocos totais**")
     st.write(f"   • **{len(unique_types)} tipos de dimensões** diferentes")
     
     # Agrupa por categoria para análise
     category_forecast = orders_data.groupby('Categoria')['Previsão Próx. Mês'].sum()
     st.write("� **Blocos por Categoria:**")
     for category, forecast in category_forecast.items():
-        st.write(f"   • {category}: {forecast:,} blocos")
+        st.write(f"   • {category}: {format_br_number(forecast)} blocos")
     
     return block_dims
 
@@ -321,13 +521,13 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         if container.quantidade == 1:
             st.metric(
                 "Volume do Container",
-                f"{container.volume:,}",
+                format_br_number(container.volume),
                 help="Capacidade total do container"
             )
         else:
             st.metric(
                 f"Volume Total ({container.quantidade} containers)",
-                f"{container.volume_total:,}",
+                format_br_number(container.volume_total),
                 help=f"Capacidade total de {container.quantidade} containers"
             )
     
@@ -351,7 +551,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         efficiency = calculate_efficiency(placed_count, total_count)
         st.metric(
             "Eficiência",
-            f"{efficiency:.1f}%",
+            format_br_percentage(efficiency),
             help="Percentual de eficiência do empacotamento"
         )
     
@@ -363,11 +563,11 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
         # Métricas de resumo
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Total de Blocos", f"{packing_summary['total_blocks']:,}")
+            st.metric("Total de Blocos", format_br_number(packing_summary['total_blocks']))
         with col2:
-            st.metric("Blocos Empacotados", f"{packing_summary['packed_blocks']:,}")
+            st.metric("Blocos Empacotados", format_br_number(packing_summary['packed_blocks']))
         with col3:
-            st.metric("Eficiência Geral", f"{packing_summary['efficiency']:.1f}%")
+            st.metric("Eficiência Geral", format_br_percentage(packing_summary['efficiency']))
         
         # Tabela detalhada por produto
         if packing_summary['products']:
@@ -618,7 +818,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         with col3:
             volume_usado = sum(block_dims[i][0] * block_dims[i][1] * block_dims[i][2] 
                              for i in range(min(placed_count, len(block_dims))))
-            st.metric("Volume Ocupado", f"{volume_usado:,}")
+            st.metric("Volume Ocupado", format_br_number(volume_usado))
             
             
     except Exception as e:
@@ -641,42 +841,67 @@ def main():
     # Botão de execução
     show_graph = False
     if st.button("🚀 DISTRIBUIR ESTOQUE", type="primary", use_container_width=True):
-        # FORÇA limpeza completa do estado da sessão
-        for key in list(st.session_state.keys()):
-            if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores')):
-                del st.session_state[key]
+        # Inicia tela de loading
+        placeholder, loading_style = show_loading_screen()
+        loading_messages = get_creative_loading_messages()
         
-        st.session_state['placements'] = []
-        st.session_state['container'] = None
-        st.session_state['block_dims'] = []
-        st.session_state['last_run'] = False
-
-        # Processa dados de entrada com validação completa
-        st.write(UI_MESSAGES['info_processing'])
-        block_dims = process_block_data(orders_df)
-        
-        # Remove possíveis valores None ou inválidos
-        block_dims = [dims for dims in block_dims if dims is not None and all(d > 0 for d in dims)]
-        
-        if not block_dims:
-            st.error("❌ Erro ao processar pedidos. Verifique os dados gerados.")
-            return
+        try:
+            # FORÇA limpeza completa do estado da sessão
+            for key in list(st.session_state.keys()):
+                if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores')):
+                    del st.session_state[key]
             
-        # Executa algoritmo de empacotamento
-        placements = run_packing_algorithm(container, block_dims, pop_size, orders_df, algoritmo_tipo)
-        
-        # Armazena resultados no estado da sessão
-        st.session_state.update({
-            'placements': placements,
-            'container': container,
-            'block_dims': block_dims,
-            'orders_df': orders_df,  # Armazena orders_df para usar na análise
-            'last_run': True
-        })
-        
-        # Exibe resultados
-        display_analysis_metrics(container, block_dims, placements, orders_df)
-        show_graph = True
+            st.session_state['placements'] = []
+            st.session_state['container'] = None
+            st.session_state['block_dims'] = []
+            st.session_state['last_run'] = False
+
+            # Processa dados com loading animado
+            for i, message in enumerate(loading_messages[:6]):  # Primeiras 6 mensagens
+                for dots in range(1, 4):  # Animação de 1 a 3 pontos
+                    update_loading_message(placeholder, loading_style, message, dots)
+                    time.sleep(0.4)  # Pausa para animação
+            
+            # Processa dados de entrada
+            block_dims = process_block_data(orders_df)
+            
+            # Remove possíveis valores None ou inválidos
+            block_dims = [dims for dims in block_dims if dims is not None and all(d > 0 for d in dims)]
+            
+            if not block_dims:
+                placeholder.empty()
+                st.error("❌ Erro ao processar pedidos. Verifique os dados gerados.")
+                return
+            
+            # Continua loading durante execução do algoritmo
+            for i, message in enumerate(loading_messages[6:]):  # Mensagens restantes
+                for dots in range(1, 4):
+                    update_loading_message(placeholder, loading_style, message, dots)
+                    time.sleep(0.3)
+            
+            # Executa algoritmo de empacotamento
+            placements = run_packing_algorithm(container, block_dims, pop_size, orders_df, algoritmo_tipo)
+            
+            # Armazena resultados no estado da sessão
+            st.session_state.update({
+                'placements': placements,
+                'container': container,
+                'block_dims': block_dims,
+                'orders_df': orders_df,  # Armazena orders_df para usar na análise
+                'last_run': True
+            })
+            
+            # Mostra tela de conclusão
+            show_completion_screen(placeholder, loading_style)
+            
+            # Exibe resultados
+            display_analysis_metrics(container, block_dims, placements, orders_df)
+            show_graph = True
+            
+        except Exception as e:
+            placeholder.empty()
+            st.error(f"❌ Erro durante processamento: {str(e)}")
+            return
 
     # Seção de visualização (apenas se botão foi pressionado)
     if show_graph and st.session_state.get('last_run', False):
@@ -687,19 +912,17 @@ def main():
             st.session_state.get('orders_df')  # Passa orders_df para a legenda
         )
         
-        # Mensagem de conclusão com celebração
-        st.success("🎉 **Distribuição de Estoque Concluída!**")
-        st.balloons()  # Animação de celebração
+        # 🎉 CELEBRAÇÃO FINAL COM BALÕES!
+        st.balloons()
         
         # Informações adicionais de conclusão
         col1, col2, col3 = st.columns(3)
         with col1:
             placed_count = len(st.session_state['placements'])
-            st.info(f"📦 **{placed_count}** blocos processados")
+            st.info(f"📦 **{format_br_number(placed_count)}** blocos processados")
         with col2:
-            total_capacity = st.session_state['container'].volume()
             efficiency = calculate_efficiency(st.session_state['container'], st.session_state['block_dims'], st.session_state['placements'])
-            st.info(f"📊 **{efficiency:.1f}%** de eficiência")
+            st.info(f"📊 **{format_br_percentage(efficiency)}** de eficiência")
         with col3:
             st.info("✅ **Visualização 3D** gerada")
         

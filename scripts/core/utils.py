@@ -313,7 +313,7 @@ def generate_random_orders(n_orders: int) -> pd.DataFrame:
             "Largura": width,
             "Profundidade": depth,
             "Peso (kg)": weight_kg,
-            "Preço Unitário": f"R$ {unit_price:.2f}",
+            "Preço Unitário": f"R$ {unit_price:.2f}".replace('.', ','),
             "Vendas 90 Dias": sales_90_days,
             "Previsão Próx. Mês": next_month_forecast
         })
