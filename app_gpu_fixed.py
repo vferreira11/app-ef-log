@@ -933,13 +933,14 @@ def main():
         try:
             # FORÇA limpeza completa do estado da sessão
             for key in list(st.session_state.keys()):
-                if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores')):
+                if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores', 'show_completion')):
                     del st.session_state[key]
             
             st.session_state['placements'] = []
             st.session_state['container'] = None
             st.session_state['block_dims'] = []
             st.session_state['last_run'] = False
+            st.session_state['show_completion'] = False
 
             # Processa dados com loading animado
             for i, message in enumerate(loading_messages[:6]):  # Primeiras 6 mensagens
@@ -973,12 +974,12 @@ def main():
                 'container': container,
                 'block_dims': block_dims,
                 'orders_df': orders_df,  # Armazena orders_df para usar na análise
-                'last_run': True
+                'last_run': True,
+                'show_completion': True  # Flag para mostrar a tela de conclusão
             })
             
             # Mantém loading enquanto prepara a visualização
             update_loading_message(placeholder, loading_style, "🎨 Gerando visualização 3D", 3)
-            time.sleep(0.5)
             
             # Exibe resultados
             display_analysis_metrics(container, block_dims, placements, orders_df)
@@ -991,7 +992,10 @@ def main():
 
     # Seção de visualização (apenas se botão foi pressionado)
     if show_graph and st.session_state.get('last_run', False):
-        # Renderiza a visualização primeiro
+        # Remove a tela de loading ANTES de renderizar
+        placeholder.empty()
+        
+        # Renderiza a visualização
         render_visualization(
             st.session_state['container'],
             st.session_state['placements'],
@@ -999,16 +1003,8 @@ def main():
             st.session_state.get('orders_df')  # Passa orders_df para a legenda
         )
         
-        # Remove a tela de loading APENAS depois da visualização
-        if 'loading_placeholder' in locals():
-            placeholder.empty()
-        
-        # Pequena pausa para garantir que o gráfico foi renderizado
-        time.sleep(1)
-        
-        # Mostra tela de conclusão APÓS o gráfico estar pronto
-        completion_placeholder = st.empty()
-        with completion_placeholder.container():
+        # Mostra tela de conclusão se for a primeira vez
+        if st.session_state.get('show_completion', False):
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 2rem; border-radius: 15px; text-align: center; 
@@ -1019,13 +1015,12 @@ def main():
                 </p>
             </div>
             """, unsafe_allow_html=True)
-        
-        # Remove a mensagem de conclusão após 4 segundos
-        time.sleep(4)
-        completion_placeholder.empty()
-        
-        # 🎉 CELEBRAÇÃO FINAL COM BALÕES!
-        st.balloons()
+            
+            # 🎉 CELEBRAÇÃO COM BALÕES APÓS A VISUALIZAÇÃO!
+            st.balloons()
+            
+            # Remove a flag para não mostrar novamente
+            st.session_state['show_completion'] = False
         
         # Informações adicionais de conclusão
         col1, col2, col3 = st.columns(3)
