@@ -1,9 +1,0 @@
-size,method,fitness,tempo_s,timeout
-20,greedy,3672,10.57,False
-20,milp,4000,25.32,False
-25,greedy,7137,22.15,False
-25,milp,7812,72.57,False
-30,greedy,12378,39.62,False
-30,milp,13500,195.37,False
-35,greedy,19635,84.15,False
-35,milp,21437,473.63,False
