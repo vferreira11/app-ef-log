@@ -352,7 +352,7 @@ def create_static_multiview_3d(container: ContainerConfig, placements: List[Tupl
     from .utils import map_block_colors
     
     # Mapeia cores dos blocos
-    block_colors = map_block_colors(block_dims, orders_df)
+    block_colors = map_block_colors(block_dims)
     
     figures = []
     view_names = ['Frontal', 'Lateral Direita', 'Superior']
@@ -389,13 +389,23 @@ def create_static_multiview_3d(container: ContainerConfig, placements: List[Tupl
         create_floor_plane(container, fig)
         
         # Adiciona blocos posicionados
-        for idx, (x, y, z, dx, dy, dz, container_idx) in enumerate(placements):
+        for idx, placement in enumerate(placements):
             if idx < len(block_dims):
+                # Verifica quantos valores temos no placement
+                if len(placement) == 7:
+                    x, y, z, dx, dy, dz, container_idx = placement
+                elif len(placement) == 6:
+                    x, y, z, dx, dy, dz = placement
+                    container_idx = 0  # Container padrão
+                else:
+                    # Formato inesperado, pula este bloco
+                    continue
+                    
                 dims = block_dims[idx]
                 color = block_colors.get(dims, '#1f77b4')  # Cor padrão azul se não encontrar
                 
-                # Offset para múltiplos containers
-                offset_x = container_idx * (container.dx + 10)
+                # Offset para múltiplos containers (se aplicável)
+                offset_x = container_idx * (container.dx + 10) if 'container_idx' in locals() else 0
                 x_adjusted = x + offset_x
                 
                 # Cria bloco 3D usando a função existente

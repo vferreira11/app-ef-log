@@ -332,20 +332,37 @@ def render_footer():
         line-height: 1.4;
     }
     
+    /* Responsividade melhorada para mobile */
     @media (max-width: 768px) {
-        .footer-dev {
+        .footer-company, .footer-dev {
             text-align: center !important;
+            font-size: 0.75rem !important;
+        }
+        .footer-version {
+            font-size: 0.7rem !important;
+        }
+        .version-badge {
+            font-size: 0.7rem !important;
+        }
+        .copyright-section {
+            font-size: 0.7rem !important;
         }
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # Primeira linha - Empresa, Versão, Desenvolvedor
+    # Primeira linha - Desenvolvedor, Versão, Empresa (ordem trocada)
     with col1:
         st.markdown("""
         <div class="footer-company">
-            <strong>PARADOXO</strong><br>
-            IA feita a mão.
+            <strong>
+                <a href="https://www.linkedin.com/in/viniciusferreira11/" 
+                   target="_blank" 
+                   class="linkedin-link">
+                    💼 Vinícius Ferreira
+                </a>
+            </strong><br>
+            Resolvedor de problemas
         </div>
         """, unsafe_allow_html=True)
     
@@ -360,14 +377,8 @@ def render_footer():
     with col3:
         st.markdown("""
         <div class="footer-dev">
-            <strong>
-                <a href="https://www.linkedin.com/in/viniciusferreira11/" 
-                   target="_blank" 
-                   class="linkedin-link">
-                    💼 Vinícius Ferreira
-                </a>
-            </strong><br>
-            Resolvedor de problemas
+            <strong>PARADOXO</strong><br>
+            IA feita a mão.
         </div>
         """, unsafe_allow_html=True)
     
@@ -501,15 +512,7 @@ def render_blocks_section() -> pd.DataFrame:
             st.session_state.orders_df = generate_random_orders(n_orders)
             st.success(f"✅ {n_orders} pedidos gerados!")
     
-    # Gera pedidos iniciais se não existirem
-    if 'orders_df' not in st.session_state:
-        st.session_state.orders_df = generate_random_orders(n_orders)
-    
-    # Atualiza se a quantidade mudou
-    if len(st.session_state.orders_df) != n_orders:
-        st.session_state.orders_df = generate_random_orders(n_orders)
-    
-    # Exibe a tabela de pedidos APENAS após geração
+    # Exibe a tabela de pedidos APENAS se existir no session_state (após clique do botão)
     if 'orders_df' in st.session_state and not st.session_state.orders_df.empty:
         st.markdown("### 📋 Pedidos Gerados")
         st.dataframe(
@@ -530,52 +533,55 @@ def render_blocks_section() -> pd.DataFrame:
         }
     )
     
-    # Calcula e exibe estatísticas de vendas
-    analytics = calculate_sales_analytics(st.session_state.orders_df)
-    if analytics:
-        st.markdown("### 📊 Análise de Vendas")
-        
-        # Métricas gerais
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Produtos", analytics['total_products'])
-        with col2:
-            st.metric("Vendas 90 Dias", format_br_number(analytics['total_sales_90d']))
-        with col3:
-            st.metric("Previsão Mês", format_br_number(analytics['total_forecast']))
-        with col4:
-            st.metric("Preço Médio", f"R$ {analytics['avg_price']:.2f}")
-        
-        # Receitas e peso
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Receita 90 Dias", format_br_currency(analytics['total_revenue_90d']))
-        with col2:
-            st.metric("Receita Prevista", format_br_currency(analytics['forecast_revenue']))
-        with col3:
-            st.metric("Peso Médio", f"{analytics['avg_weight']:.3f} kg")
-        with col4:
-            st.metric("Peso Total Previsto", f"{analytics['total_weight_forecast']:.2f} kg")
-        
-        # Análise por categoria
-        st.markdown("#### 📈 Por Categoria")
-        for category, data in analytics['by_category'].items():
-            with st.expander(f"🏷️ {category} ({data['count']} produtos)"):
-                subcol1, subcol2, subcol3 = st.columns(3)
-                with subcol1:
-                    st.write(f"**Vendas 90d:** {format_br_number(data['sales_90d'])}")
-                    st.write(f"**Previsão:** {format_br_number(data['forecast'])}")
-                    st.write(f"**Peso Médio:** {data['avg_weight']:.3f} kg")
-                with subcol2:
-                    st.write(f"**Preço Médio:** R$ {data['avg_price']:.2f}")
-                    st.write(f"**Receita 90d:** {format_br_currency(data['revenue_90d'])}")
-                    st.write(f"**Peso Total:** {data['total_weight_forecast']:.2f} kg")
-                with subcol3:
+    # Calcula e exibe estatísticas de vendas (só se existir orders_df)
+    if 'orders_df' in st.session_state and not st.session_state.orders_df.empty:
+        analytics = calculate_sales_analytics(st.session_state.orders_df)
+        if analytics:
+            st.markdown("### 📊 Análise de Vendas")
+            
+            # Métricas gerais
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Produtos", analytics['total_products'])
+            with col2:
+                st.metric("Vendas 90 Dias", format_br_number(analytics['total_sales_90d']))
+            with col3:
+                st.metric("Previsão Mês", format_br_number(analytics['total_forecast']))
+            with col4:
+                st.metric("Preço Médio", f"R$ {analytics['avg_price']:.2f}")
+            
+            # Receitas e peso
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Receita 90 Dias", format_br_currency(analytics['total_revenue_90d']))
+            with col2:
+                st.metric("Receita Prevista", format_br_currency(analytics['forecast_revenue']))
+            with col3:
+                st.metric("Peso Médio", f"{analytics['avg_weight']:.3f} kg")
+            with col4:
+                st.metric("Peso Total Previsto", f"{analytics['total_weight_forecast']:.2f} kg")
+            
+            # Análise por categoria
+            st.markdown("#### 📈 Por Categoria")
+            for category, data in analytics['by_category'].items():
+                with st.expander(f"🏷️ {category} ({data['count']} produtos)"):
+                    subcol1, subcol2, subcol3 = st.columns(3)
+                    with subcol1:
+                        st.write(f"**Vendas 90d:** {format_br_number(data['sales_90d'])}")
+                    with subcol2:
+                        st.write(f"**Previsão:** {format_br_number(data['forecast'])}")
+                        st.write(f"**Peso Médio:** {data['avg_weight']:.3f} kg")
+                    with subcol3:
+                        st.write(f"**Preço Médio:** R$ {data['avg_price']:.2f}")
+                        st.write(f"**Receita 90d:** {format_br_currency(data['revenue_90d'])}")
+                        st.write(f"**Peso Total:** {data['total_weight_forecast']:.2f} kg")
+                    
+                    # Tendência de crescimento
                     growth = ((data['forecast'] * 3) / data['sales_90d'] - 1) * 100 if data['sales_90d'] > 0 else 0
                     trend = "📈" if growth > 0 else "📉" if growth < 0 else "➡️"
                     st.write(f"**Tendência:** {trend} {growth:+.1f}%")
-                    # Densidade média da categoria
-                    avg_volume = 0
+                    
+                    # Densidade média da categoria (se dados disponíveis)
                     if 'Comprimento' in st.session_state.orders_df.columns:
                         cat_orders = st.session_state.orders_df[st.session_state.orders_df['Categoria'] == category]
                         if not cat_orders.empty:
@@ -585,7 +591,8 @@ def render_blocks_section() -> pd.DataFrame:
                                 density = (data['avg_weight'] * 1000) / avg_volume  # g/cm³
                                 st.write(f"**Densidade:** {density:.2f} g/cm³")
     
-    return st.session_state.orders_df
+    # Retorna o DataFrame se existir, senão retorna None
+    return st.session_state.get('orders_df', None)
 
 
 def process_block_data(orders_data) -> list:
@@ -719,17 +726,18 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
                 }
             )
     
-    # Mensagens de status
-    placed_count = len(placements)
-    total_count = len(block_dims)
-    
-    if placed_count == total_count:
-        st.success(UI_MESSAGES['success_perfect'].format(total_count))
-    elif placed_count > 0:
-        missing = total_count - placed_count
-        st.warning(UI_MESSAGES['warning_partial'].format(missing))
-    else:
-        st.error(UI_MESSAGES['error_no_blocks'])
+    # Mensagens de status (só exibe se houver processamento real)
+    if placements:  # Só mostra se realmente processou algum empacotamento
+        placed_count = len(placements)
+        total_count = len(block_dims)
+        
+        if placed_count == total_count:
+            st.success(UI_MESSAGES['success_perfect'].format(total_count))
+        elif placed_count > 0:
+            missing = total_count - placed_count
+            st.warning(UI_MESSAGES['warning_partial'].format(missing))
+        else:
+            st.error(UI_MESSAGES['error_no_blocks'])
 
 
 def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size: int, produtos_df=None, algoritmo_tipo="Híbrido Único") -> list:
@@ -822,7 +830,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
             st.plotly_chart(figures[2], use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
         
         # Gera cores para a legenda
-        block_colors = map_block_colors(block_dims, orders_df)
+        block_colors = map_block_colors(block_dims)
         
         # Exibe legenda e estatísticas
         render_legend_and_stats(block_colors, orders_df, placements, block_dims)
@@ -835,7 +843,8 @@ def render_legend_and_stats(block_colors, orders_df, placements, block_dims):
     """Renderiza legenda de produtos e estatísticas."""
     st.write("### 🏷️ Legenda de Produtos")
     
-    if orders_df is not None and not orders_df.empty:
+    # Verificação robusta para orders_df
+    if orders_df is not None and hasattr(orders_df, 'empty') and not orders_df.empty:
         try:
             # Cria mapeamento de dimensões para produtos
             dim_to_product = {}
@@ -884,18 +893,17 @@ def render_legend_and_stats(block_colors, orders_df, placements, block_dims):
                             </div>
                             """, unsafe_allow_html=True)
                 else:
-                    # Fallback para dimensões
-                    orders_df = None
+                    # Fallback para dimensões usando só as dimensões dos blocos
+                    st.info("ℹ️ Informações detalhadas dos produtos não disponíveis.")
             else:
-                # Fallback para dimensões
-                orders_df = None
+                # Fallback para dimensões usando só as dimensões dos blocos  
+                st.info("ℹ️ Colunas necessárias não encontradas nos dados dos produtos.")
                     
         except Exception as e:
             st.warning(f"⚠️ Erro ao processar dados de produtos: {str(e)}")
-            orders_df = None
     
     # Fallback para dimensões quando não há dados de produto válidos
-    if orders_df is None or orders_df.empty:
+    if orders_df is None or (hasattr(orders_df, 'empty') and orders_df.empty):
         st.info("ℹ️ Dados de produtos não disponíveis. Mostrando dimensões:")
         
         # Organiza a legenda em colunas para melhor layout
@@ -964,14 +972,8 @@ def main():
     # Linha separadora
     st.markdown("---")
     
-    # ========================================
-    # SEÇÃO 3: ANÁLISE DE VENDAS (só aparece se houver dados)
-    # ========================================
+    # Linha separadora (só aparece se houver dados)
     if orders_df is not None and not orders_df.empty:
-        st.subheader("📊 Análise de Vendas")
-        display_analysis_metrics(container, [], [], orders_df)
-        
-        # Linha separadora
         st.markdown("---")
     
     # ========================================
