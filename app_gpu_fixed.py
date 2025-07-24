@@ -446,7 +446,7 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
     return placements
 
 
-def render_visualization(container: ContainerConfig, placements: list, block_dims: list):
+def render_visualization(container: ContainerConfig, placements: list, block_dims: list, orders_df=None):
     """
     Renderiza a seção de visualização 3D estacionária.
     
@@ -454,6 +454,7 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         container: Configuração do container
         placements: Lista de alocações dos blocos
         block_dims: Lista de dimensões dos blocos
+        orders_df: DataFrame com informações dos produtos para legenda
     """
     if not placements:
         st.warning("Nenhum bloco para visualizar.")
@@ -482,48 +483,103 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         
         print(f"[DEBUG] Renderizando visualização com {len(fig.data)} traces")
         
-        # Configurações otimizadas com controles visíveis
+        # Configurações otimizadas com controles visíveis e câmera fixa
         config = {
             'displayModeBar': True,   # Mantém controles visíveis
             'staticPlot': False,      # Permite renderização 3D
             'responsive': True,       # Responsivo
             'modeBarButtonsToRemove': ['pan2d', 'select2d', 'lasso2d', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian'],  # Remove botões 2D desnecessários
-            'displaylogo': False      # Remove logo Plotly
+            'displaylogo': False,     # Remove logo Plotly
+            'doubleClick': 'reset'    # Reset para posição default no duplo clique
         }
         
         print(f"[DEBUG] Usando configuração: {config}")
+        
+        # Atualiza figura para garantir visualização inicial correta
+        fig.update_layout(
+            scene=dict(
+                camera=dict(
+                    projection=dict(type="perspective")  # Força projeção perspectiva
+                )
+            )
+        )
         
         # Renderiza o gráfico
         st.plotly_chart(fig, use_container_width=True, config=config)
         
         print(f"[DEBUG] Gráfico renderizado com sucesso")
         
-        # Legenda de cores dos objetos
-        st.write("### 🎨 Legenda de Cores")
+        # Legenda de produtos
+        st.write("### 🏷️ Legenda de Produtos")
         
-        # Organiza a legenda em colunas para melhor layout
-        unique_types = list(set(block_dims))
-        unique_types.sort()  # Ordena para consistência
-        
-        # Calcula número de colunas baseado na quantidade de tipos
-        num_types = len(unique_types)
-        cols_per_row = min(4, num_types)  # Máximo 4 colunas
-        
-        # Cria colunas para a legenda
-        legend_cols = st.columns(cols_per_row)
-        
-        for i, block_type in enumerate(unique_types):
-            col_idx = i % cols_per_row
-            with legend_cols[col_idx]:
-                color = block_colors.get(block_type, '#000000')
-                # Cria um pequeno quadrado colorido como indicador
-                st.markdown(f"""
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: {color}; 
-                                border: 1px solid #000; margin-right: 8px; border-radius: 3px;"></div>
-                    <span style="font-size: 14px;">{block_type[0]}×{block_type[1]}×{block_type[2]}</span>
-                </div>
-                """, unsafe_allow_html=True)
+        if orders_df is not None and not orders_df.empty:
+            # Cria mapeamento de dimensões para produtos
+            dim_to_product = {}
+            for _, row in orders_df.iterrows():
+                dims = (int(row['dx']), int(row['dy']), int(row['dz']))
+                product_info = f"{row['Nome Produto']} ({row['Categoria']})"
+                if dims not in dim_to_product:
+                    dim_to_product[dims] = []
+                dim_to_product[dims].append(product_info)
+            
+            # Organiza a legenda por produtos únicos
+            unique_products = {}
+            for dims in set(block_dims):
+                if dims in dim_to_product:
+                    products = list(set(dim_to_product[dims]))  # Remove duplicatas
+                    for product in products:
+                        if product not in unique_products:
+                            unique_products[product] = dims
+            
+            # Calcula número de colunas
+            num_products = len(unique_products)
+            cols_per_row = min(3, num_products)  # Máximo 3 colunas para produtos
+            
+            # Cria colunas para a legenda
+            legend_cols = st.columns(cols_per_row)
+            
+            for i, (product, dims) in enumerate(unique_products.items()):
+                col_idx = i % cols_per_row
+                with legend_cols[col_idx]:
+                    color = block_colors.get(dims, '#000000')
+                    # Cria indicador com nome do produto
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 20px; height: 20px; background-color: {color}; 
+                                    border: 1px solid #000; margin-right: 10px; border-radius: 3px;"></div>
+                        <div style="font-size: 13px; line-height: 1.2;">
+                            <strong>{product}</strong><br>
+                            <small style="color: #666;">{dims[0]}×{dims[1]}×{dims[2]} cm</small>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            # Fallback para dimensões quando não há dados de produto
+            st.info("ℹ️ Dados de produtos não disponíveis. Mostrando dimensões:")
+            
+            # Organiza a legenda em colunas para melhor layout
+            unique_types = list(set(block_dims))
+            unique_types.sort()  # Ordena para consistência
+            
+            # Calcula número de colunas baseado na quantidade de tipos
+            num_types = len(unique_types)
+            cols_per_row = min(4, num_types)  # Máximo 4 colunas
+            
+            # Cria colunas para a legenda
+            legend_cols = st.columns(cols_per_row)
+            
+            for i, block_type in enumerate(unique_types):
+                col_idx = i % cols_per_row
+                with legend_cols[col_idx]:
+                    color = block_colors.get(block_type, '#000000')
+                    # Cria um pequeno quadrado colorido como indicador
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                        <div style="width: 20px; height: 20px; background-color: {color}; 
+                                    border: 1px solid #000; margin-right: 8px; border-radius: 3px;"></div>
+                        <span style="font-size: 14px;">{block_type[0]}×{block_type[1]}×{block_type[2]}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
         
         # Mapeamento de cores individual suprimido para interface mais limpa
         with st.expander("🎨 Ver mapeamento detalhado de cores", expanded=False):
@@ -563,7 +619,7 @@ def main():
 
     # Botão de execução
     show_graph = False
-    if st.button("🚀 Executar GPU Heurística", type="primary", use_container_width=True):
+    if st.button("🚀 DISTRIBUIR ESTOQUE", type="primary", use_container_width=True):
         # FORÇA limpeza completa do estado da sessão
         for key in list(st.session_state.keys()):
             if key.startswith(('placements', 'container', 'block_dims', 'last_run', 'tipo_cores')):
@@ -606,7 +662,8 @@ def main():
         render_visualization(
             st.session_state['container'],
             st.session_state['placements'],
-            st.session_state['block_dims']
+            st.session_state['block_dims'],
+            st.session_state.get('orders_df')  # Passa orders_df para a legenda
         )
 
 

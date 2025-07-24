@@ -322,7 +322,9 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             font=dict(size=16)
         ),
         plot_bgcolor='white',
-        paper_bgcolor='white'
+        paper_bgcolor='white',
+        # Configuração adicional para garantir câmera inicial correta
+        scene_camera_projection_type="perspective"
     )
     
     print(f"[DEBUG] Layout configurado. Retornando figura com {len(fig.data)} traces")
