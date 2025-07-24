@@ -509,14 +509,16 @@ def render_blocks_section() -> pd.DataFrame:
     if len(st.session_state.orders_df) != n_orders:
         st.session_state.orders_df = generate_random_orders(n_orders)
     
-    # Exibe a tabela de pedidos (somente leitura)
-    st.markdown("### 📋 Pedidos Gerados")
-    st.dataframe(
-        st.session_state.orders_df,
-        use_container_width=True,
-        column_config={
-            "SDK": st.column_config.TextColumn("SDK", width="small"),
-            "Nome Produto": st.column_config.TextColumn("Produto", width="medium"),
+    # Exibe a tabela de pedidos APENAS após geração
+    if 'orders_df' in st.session_state and not st.session_state.orders_df.empty:
+        st.markdown("### 📋 Pedidos Gerados")
+        st.dataframe(
+            st.session_state.orders_df,
+            use_container_width=True,
+            hide_index=True,  # Remove o índice da tabela
+            column_config={
+                "SDK": st.column_config.TextColumn("SDK", width="small"),
+                "Nome Produto": st.column_config.TextColumn("Produto", width="medium"),
             "Categoria": st.column_config.TextColumn("Categoria", width="small"),
             "Comprimento": st.column_config.NumberColumn("Comp.(cm)", width="small"),
             "Largura": st.column_config.NumberColumn("Larg.(cm)", width="small"), 
@@ -705,6 +707,7 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
             st.dataframe(
                 df_summary,
                 use_container_width=True,
+                hide_index=True,  # Remove o índice da tabela
                 column_config={
                     "sdk": st.column_config.TextColumn("SDK", width="small"),
                     "produto": st.column_config.TextColumn("Produto", width="medium"),
@@ -941,16 +944,41 @@ def render_legend_and_stats(block_colors, orders_df, placements, block_dims):
 def main():
     """Ponto de entrada principal da aplicação."""
     
-    # Cabeçalho
+    # ========================================
+    # SEÇÃO 1: APRESENTAÇÃO
+    # ========================================
     render_header()
-
-    # Parâmetros da heurística GPU (acima do container)
-    pop_size, algoritmo_tipo = render_gpu_parameters()
-
-    # Seções principais de configuração
+    
+    # Linha separadora
+    st.markdown("---")
+    
+    # ========================================
+    # SEÇÃO 2: CONFIGURAÇÃO DO CONTAINER + GERAÇÃO DE PEDIDOS
+    # ========================================
+    st.subheader("⚙️ Configuração do Sistema")
+    
+    # Container e geração de pedidos na mesma seção
     container = render_container_section()
     orders_df = render_blocks_section()
-
+    
+    # Linha separadora
+    st.markdown("---")
+    
+    # ========================================
+    # SEÇÃO 3: ANÁLISE DE VENDAS (só aparece se houver dados)
+    # ========================================
+    if orders_df is not None and not orders_df.empty:
+        st.subheader("📊 Análise de Vendas")
+        display_analysis_metrics(container, [], [], orders_df)
+        
+        # Linha separadora
+        st.markdown("---")
+    
+    # ========================================
+    # SEÇÃO 4: EXECUÇÃO
+    # ========================================
+    st.subheader("🚀 Processamento")
+    
     # Botão de execução
     show_graph = False
     if st.button("🚀 DISTRIBUIR ESTOQUE", type="primary", use_container_width=True):
@@ -988,8 +1016,8 @@ def main():
             # Loading para algoritmo
             update_loading_message(placeholder, loading_style, "🧠 Executando algoritmo inteligente", 3)
             
-            # Executa algoritmo de empacotamento
-            placements = run_packing_algorithm(container, block_dims, pop_size, orders_df, algoritmo_tipo)
+            # Executa algoritmo de empacotamento com configuração padrão
+            placements = run_packing_algorithm(container, block_dims, 50, orders_df, "hibrido")
             
             # Armazena resultados no estado da sessão
             st.session_state.update({
@@ -1004,8 +1032,6 @@ def main():
             # Mantém loading enquanto prepara a visualização
             update_loading_message(placeholder, loading_style, "🎨 Gerando visualização 3D", 3)
             
-            # Exibe resultados
-            display_analysis_metrics(container, block_dims, placements, orders_df)
             show_graph = True
             
         except Exception as e:
@@ -1013,8 +1039,13 @@ def main():
             st.error(f"❌ Erro durante processamento: {str(e)}")
             return
 
-    # Seção de visualização (apenas se botão foi pressionado)
+    # ========================================
+    # SEÇÃO 5: VISUALIZAÇÃO (só aparece após execução)
+    # ========================================
     if show_graph and st.session_state.get('last_run', False):
+        # Linha separadora
+        st.markdown("---")
+        
         # Remove a tela de loading ANTES de renderizar
         placeholder.empty()
         
@@ -1036,6 +1067,9 @@ def main():
             # Remove a flag para não mostrar novamente
             st.session_state['show_completion'] = False
         
+        # Linha separadora
+        st.markdown("---")
+        
         # Informações adicionais de conclusão
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -1053,6 +1087,9 @@ def main():
         st.markdown("---")
         st.markdown("🎯 **Próximos passos:** Use os controles 3D para explorar o resultado ou ajuste os parâmetros para uma nova simulação.")
     elif st.session_state.get('last_run', False):
+        # Linha separadora
+        st.markdown("---")
+        
         # Se já foi executado anteriormente mas não está mostrando o gráfico
         render_visualization(
             st.session_state['container'],

@@ -390,17 +390,18 @@ def create_static_multiview_3d(container: ContainerConfig, placements: List[Tupl
         
         # Adiciona blocos posicionados
         for idx, (x, y, z, dx, dy, dz, container_idx) in enumerate(placements):
-            if idx < len(block_colors):
-                color = block_colors[idx]
+            if idx < len(block_dims):
+                dims = block_dims[idx]
+                color = block_colors.get(dims, '#1f77b4')  # Cor padrão azul se não encontrar
                 
                 # Offset para múltiplos containers
                 offset_x = container_idx * (container.dx + 10)
                 x_adjusted = x + offset_x
                 
-                # Cria bloco 3D
-                fig.add_trace(create_3d_block(
-                    x_adjusted, y, z, dx, dy, dz, color, f"Bloco {idx + 1}"
-                ))
+                # Cria bloco 3D usando a função existente
+                # Converte cor hex para um índice numérico simples
+                color_index = idx % 10  # Usa um índice simples
+                create_block_mesh(x_adjusted, y, z, dx, dy, dz, color_index, fig)
         
         # Configuração específica do layout para cada vista
         fig.update_layout(
