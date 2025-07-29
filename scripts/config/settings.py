@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 # Dimensões padrão do container
 DEFAULT_CONTAINER_DIMS = {
-    'dx': 30,
-    'dy': 40, 
-    'dz': 50
+    'dx': 15,  # Largura
+    'dy': 30,  # Profundidade
+    'dz': 20   # Altura
 }
 
 # Tipos de bloco padrão

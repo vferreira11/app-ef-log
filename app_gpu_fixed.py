@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Sistema de Empacotamento 3D - Aplicação Principal Streamlit
 =========================================================
@@ -9,10 +10,22 @@ Uso:
     streamlit run app_gpu_fixed.py
 """
 
+import os
+import sys
+
+# Força encoding UTF-8 no Windows
+if sys.platform.startswith('win'):
+    try:
+        import codecs
+        if hasattr(sys.stdout, 'detach'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+    except Exception:
+        # Fallback: define ambiente UTF-8
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 import streamlit as st
 import pandas as pd
-import sys
-import os
 import time
 import random
 
@@ -114,7 +127,7 @@ def get_creative_loading_messages():
     """
     return [
         "📦 Organizando produtos no depósito",
-        "🎯 Calculando posições otimizadas", 
+        "📍 Calculando posições otimizadas", 
         "🔧 Ajustando algoritmos híbridos",
         "🧠 Aplicando inteligência biomecânica",
         "🚀 Executando otimização GPU",
@@ -252,7 +265,7 @@ def show_completion_screen(placeholder, style):
 
 def render_header():
     """Renderiza cabeçalho e descrição do aplicativo."""
-    st.title("🎯 MAXIMIZAÇÃO DO USO DO ESTOQUE")
+    st.title("📦 MAXIMIZAÇÃO DO USO DO ESTOQUE")
     st.markdown("""
     *Otimização avançada de empacotamento 3D com aceleração GPU e algoritmos inteligentes de distribuição e rotação*
     
@@ -412,7 +425,7 @@ def render_gpu_parameters() -> tuple:
     
     # Informação sobre o algoritmo único
     st.info("""
-    🎯 **Algoritmo Híbrido Único - Fusão de 3 Métodos:**
+    📍 **Algoritmo Híbrido Único - Fusão de 3 Métodos:**
     - 🧬 **Biomecânico**: Zoneamento ergonômico automático por peso/categoria
     - 🏭 **Chão do Galpão**: Empilhamento estável iniciando no Z=0
     - 🚀 **GPU Otimizado**: Compactação inteligente com adjacência
@@ -767,7 +780,7 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
     st.info(UI_MESSAGES['info_capacity'].format(max_capacity))
     
     # Sempre usa o algoritmo híbrido único
-    spinner_msg = "🎯 Executando algoritmo híbrido único (3 em 1)..."
+    spinner_msg = "📍 Executando algoritmo híbrido único (3 em 1)..."
     
     # Executa algoritmo híbrido com progresso
     with st.spinner(spinner_msg):
@@ -787,7 +800,7 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, pop_size
 
 def render_visualization(container: ContainerConfig, placements: list, block_dims: list, orders_df=None):
     """
-    Renderiza visualizações 3D estáticas com múltiplos ângulos para evitar travamentos.
+    Renderiza visualização 3D do empacotamento.
     
     Args:
         container: Configuração do container
@@ -802,11 +815,162 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     st.subheader("🎨 Visualização 3D do Empacotamento")
     
     try:
-        # Sistema ultra-simples: apenas 1 visualização 2D
-        from scripts.core.visualization_simple_2d import create_simple_3d_2d_view
+        st.write("🔄 Gerando visualização 3D...")
         
-        st.write("🔄 Gerando visualização 3D isométrica...")
-        figure = create_simple_3d_2d_view(container, placements, block_dims)
+        # Renderiza a visualização 3D
+        # Cria visualização 3D diretamente com Plotly
+        import plotly.graph_objects as go
+        import plotly.colors as pc
+        import numpy as np
+        
+        st.write("🔄 Gerando visualização 3D...")
+        
+        fig = go.Figure()
+        
+        # 1. Adiciona chão cinza claro
+        dx, dy, dz = container.dx, container.dy, container.dz
+        
+        # Chão como superfície cinza clara
+        fig.add_trace(go.Mesh3d(
+            x=[0, dx, dx, 0],
+            y=[0, 0, dy, dy],
+            z=[0, 0, 0, 0],
+            i=[0, 0],
+            j=[1, 2], 
+            k=[2, 3],
+            color='lightgray',
+            opacity=0.3,
+            name='Chão',
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+        
+        # 2. Adiciona wireframe do container
+        # Vértices do container
+        vertices = [
+            [0, 0, 0], [dx, 0, 0], [dx, dy, 0], [0, dy, 0],  # base
+            [0, 0, dz], [dx, 0, dz], [dx, dy, dz], [0, dy, dz]  # topo
+        ]
+        
+        # Arestas do container
+        edges = [(0,1), (1,2), (2,3), (3,0), (4,5), (5,6), (6,7), (7,4), (0,4), (1,5), (2,6), (3,7)]
+        
+        for start, end in edges:
+            fig.add_trace(go.Scatter3d(
+                x=[vertices[start][0], vertices[end][0]],
+                y=[vertices[start][1], vertices[end][1]], 
+                z=[vertices[start][2], vertices[end][2]],
+                mode='lines',
+                line=dict(color='black', width=2),
+                name='Container',
+                showlegend=False,
+                hoverinfo='skip'
+            ))
+        
+        # 3. Mapeamento de cores Viridis por tipo de produto
+        unique_dims = list(set(block_dims))
+        viridis_colors = pc.sample_colorscale('Viridis', np.linspace(0, 1, len(unique_dims)))
+        dim_to_color = {dim: color for dim, color in zip(unique_dims, viridis_colors)}
+        
+        # 4. Adiciona blocos com cores por tipo
+        for i, placement in enumerate(placements):
+            if placement is None:
+                continue
+                
+            # Extrai coordenadas dependendo da estrutura
+            if hasattr(placement, 'x'):  # Objeto Placement
+                x, y, z = placement.x, placement.y, placement.z
+                block_idx = placement.block_index
+            elif len(placement) >= 4:  # Tupla com índice
+                x, y, z, block_idx = placement[:4]
+            else:
+                continue
+            
+            # Obtém dimensões do bloco
+            if isinstance(block_dims[block_idx], dict):
+                bdx = block_dims[block_idx].get('dx', 1)
+                bdy = block_dims[block_idx].get('dy', 1) 
+                bdz = block_dims[block_idx].get('dz', 1)
+                current_dim = (bdx, bdy, bdz)
+            elif isinstance(block_dims[block_idx], (tuple, list)):
+                bdx, bdy, bdz = block_dims[block_idx]
+                current_dim = block_dims[block_idx]
+            else:
+                print(f"[ERRO] Formato inválido para block_dims[{block_idx}]: {block_dims[block_idx]}")
+                continue
+            
+            # Cor baseada no tipo de produto (dimensões)
+            color = dim_to_color.get(current_dim, viridis_colors[0])
+            
+            # Adiciona cubo sólido do bloco usando Mesh3d
+            fig.add_trace(go.Mesh3d(
+                x=[x, x+bdx, x+bdx, x, x, x+bdx, x+bdx, x],
+                y=[y, y, y+bdy, y+bdy, y, y, y+bdy, y+bdy],
+                z=[z, z, z, z, z+bdz, z+bdz, z+bdz, z+bdz],
+                i=[7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2],
+                j=[3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3],
+                k=[0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6],
+                color=color,
+                opacity=1.0,
+                name=f'Tipo {current_dim[0]}×{current_dim[1]}×{current_dim[2]}',
+                showlegend=False,
+                hovertemplate=f'<b>Bloco {i+1}</b><br>'+
+                             f'Posição: ({x}, {y}, {z})<br>'+
+                             f'Dimensões: {bdx}×{bdy}×{bdz}<br>'+
+                             '<extra></extra>'
+            ))
+            
+            # Adiciona wireframe do bloco para definir bordas
+            block_vertices = [
+                [x, y, z], [x+bdx, y, z], [x+bdx, y+bdy, z], [x, y+bdy, z],
+                [x, y, z+bdz], [x+bdx, y, z+bdz], [x+bdx, y+bdy, z+bdz], [x, y+bdy, z+bdz]
+            ]
+            
+            for start, end in edges:
+                fig.add_trace(go.Scatter3d(
+                    x=[block_vertices[start][0], block_vertices[end][0]],
+                    y=[block_vertices[start][1], block_vertices[end][1]],
+                    z=[block_vertices[start][2], block_vertices[end][2]],
+                    mode='lines',
+                    line=dict(color='black', width=2),
+                    showlegend=False,
+                    hoverinfo='skip'
+                ))
+        
+        # 5. Configuração do layout com proporções reais preservadas
+        fig.update_layout(
+            title="📦 Visualização 3D do Empacotamento",
+            scene=dict(
+                xaxis_title="Largura (X) - cm",
+                yaxis_title="Profundidade (Y) - cm", 
+                zaxis_title="Altura (Z) - cm",
+                aspectmode='data',
+                aspectratio=dict(x=1, y=1, z=1),  # Mantém escala real
+                xaxis=dict(
+                    range=[0, dx],
+                    showgrid=True,
+                    gridcolor='rgba(200,200,200,0.3)'
+                ),
+                yaxis=dict(
+                    range=[0, dy],
+                    showgrid=True,
+                    gridcolor='rgba(200,200,200,0.3)'
+                ),
+                zaxis=dict(
+                    range=[0, dz],
+                    showgrid=True,
+                    gridcolor='rgba(200,200,200,0.3)'
+                ),
+                # Camera na posição default do Plotly
+                bgcolor='white'
+            ),
+            width=900,
+            height=700,
+            margin=dict(l=0, r=0, t=50, b=0),
+            showlegend=False
+        )
+        
+        figure = fig
         
         if not figure or len(figure.data) == 0:
             st.error("❌ Erro ao gerar visualização 2D.")
@@ -814,29 +978,45 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         
         st.success(f"✅ Visualização criada com {len(figure.data)} elementos!")
         
-        st.markdown("### � Vista do Empacotamento")
+        st.markdown("### 🎨 Visualização 3D Interativa")
         
-        # Exibe a visualização única de forma simples
-        st.markdown("#### � Vista Frontal do Empacotamento")
-        
-        # Debug: mostra informações sobre a figura
-        st.write(f"📊 Elementos na figura: {len(figure.data)}")
-        
-        # Configuração mínima para exibição
+        # Configuração para visualização 3D interativa
         config = {
-            'displayModeBar': False,
-            'staticPlot': True
+            'displayModeBar': True,
+            'staticPlot': False
         }
         
         try:
             st.plotly_chart(figure, use_container_width=True, config=config)
-            st.success("✅ Visualização renderizada com sucesso!")
+            st.success("✅ Visualização 3D renderizada com sucesso!")
+            
+            # Adiciona legenda de tipos de produto
+            st.markdown("### 🎨 Legenda de Tipos de Produto (Paleta Viridis)")
+            
+            # Organiza legenda em colunas
+            unique_types = list(unique_dims)
+            cols_per_row = min(4, len(unique_types))
+            legend_cols = st.columns(cols_per_row)
+            
+            for i, dim_type in enumerate(unique_types):
+                col_idx = i % cols_per_row
+                with legend_cols[col_idx]:
+                    color = dim_to_color[dim_type]
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div style="width: 25px; height: 25px; background-color: {color}; 
+                                    border: 1px solid #000; margin-right: 10px; border-radius: 4px;"></div>
+                        <div style="font-size: 14px; font-weight: bold;">
+                            {dim_type[0]}×{dim_type[1]}×{dim_type[2]} cm
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
         except Exception as render_error:
             st.error(f"❌ Erro ao renderizar: {str(render_error)}")
         
-        # Gera legenda simples
-        from scripts.core.visualization_new import generate_block_legend
-        block_colors = generate_block_legend(block_dims)
+        # Gera legenda com cores Viridis por tipo
+        block_colors = dim_to_color
         
         # Exibe legenda e estatísticas
         render_legend_and_stats(block_colors, orders_df, placements, block_dims)
@@ -1112,7 +1292,7 @@ def main():
         st.markdown("---")
         
         # Seção de status final elegante
-        st.markdown("### 🎯 Resumo do Processamento")
+        st.markdown("### 📍 Resumo do Processamento")
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -1127,7 +1307,7 @@ def main():
             st.info("🎨 **Visualização 3D** concluída")
         
         st.markdown("---")
-        st.markdown("🎯 **Próximos passos:** Use os controles 3D para explorar o resultado ou ajuste os parâmetros para uma nova simulação.")
+        st.markdown("📍 **Próximos passos:** Use os controles 3D para explorar o resultado ou ajuste os parâmetros para uma nova simulação.")
     elif st.session_state.get('last_run', False):
         # Linha separadora
         st.markdown("---")

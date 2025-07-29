@@ -196,7 +196,7 @@ def create_block_mesh(x0: int, y0: int, z0: int, lx: int, ly: int, lz: int, colo
         ))
 
 
-def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_dims: List[Tuple[int, int, int]], block_colors: Dict[Tuple[int, int, int], str]) -> go.Figure:
+def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_dims: List[Tuple[int, int, int]], block_colors: Dict[Tuple[int, int, int], str] = None) -> go.Figure:
     """
     Cria visualização 3D completa do empacotamento.
     
@@ -275,11 +275,11 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             xaxis_title="Largura (cm)",     # Horizontal (esquerda-direita)
             yaxis_title="Profundidade (cm)",  # Profundidade (frente-trás) 
             zaxis_title="Altura (cm)",      # Altura (baixo-cima)
-            aspectmode="manual",         # Controle manual das proporções
+            aspectmode="data",         # Proporções baseadas nos dados reais
             aspectratio=dict(
-                x=total_width/max_dimension, 
-                y=container.dy/max_dimension, 
-                z=container.dz/max_dimension
+                x=1.0, 
+                y=container.dy/total_width, 
+                z=container.dz/total_width
             ),
             # Configurações de câmera para visualização isométrica correta
             camera=dict(
@@ -292,7 +292,7 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             xaxis=dict(
                 showgrid=True,
                 gridcolor="dimgray",
-                backgroundcolor="white",
+                backgroundcolor="lightgray",
                 tickcolor="darkgray",
                 linecolor="dimgray",
                 title=dict(font=dict(color="black")),
@@ -302,7 +302,7 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             yaxis=dict(
                 showgrid=True,
                 gridcolor="dimgray",
-                backgroundcolor="white",
+                backgroundcolor="lightgray",
                 tickcolor="darkgray",
                 linecolor="dimgray",
                 title=dict(font=dict(color="black")),
@@ -312,14 +312,14 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             zaxis=dict(
                 showgrid=True,
                 gridcolor="dimgray",
-                backgroundcolor="white",
+                backgroundcolor="lightgray",
                 tickcolor="darkgray",
                 linecolor="dimgray",
                 title=dict(font=dict(color="black")),
                 tickfont=dict(color="black"),
                 range=[0, container.dz + 5]  # Container começa em 0
             ),
-            bgcolor="white"
+            bgcolor="lightgray"
         ),
         width=min(1200, 800 + container.quantidade * 100),  # Aumenta largura para múltiplos containers
         height=800,
@@ -330,8 +330,8 @@ def create_3d_plot(container: ContainerConfig, placements: List[tuple], block_di
             x=0.5,
             font=dict(size=16)
         ),
-        plot_bgcolor='white',
-        paper_bgcolor='white',
+        plot_bgcolor='lightgray',
+        paper_bgcolor='lightgray',
         # Configuração adicional para garantir câmera inicial correta
         scene_camera_projection_type="perspective"
     )
