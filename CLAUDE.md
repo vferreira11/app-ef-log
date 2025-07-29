@@ -2,6 +2,14 @@
 
 Instruções para Claude Code (claude.ai/code) para este repositório.
 
+## Preferências de Comunicação
+- Comunicar em português, mantendo termos técnicos em inglês
+- Respostas objetivas e bem estruturadas visualmente
+- Fornecer exemplos didáticos considerando TDAH
+- Alertar sobre possíveis otimizações
+- Usar paleta Viridis para cores
+- Aplicar princípios de clean code
+
 ## Execução da Aplicação
 
 ### Configuração Recomendada
@@ -35,11 +43,13 @@ streamlit run app_gpu_fixed.py
 - **`app_gpu_fixed.py`** - Interface Streamlit principal
   - Configuração do container
   - Geração de pedidos aleatórios
-  - Visualização 3D interativa
+  - Visualização 3D interativa dupla
   - Análise de resultados
+  - Loading screen animada
+  - Tratamento UTF-8 automático
 
 ### Visualização 3D
-Especificações exatas da visualização:
+Especificações da visualização dupla:
 
 1. **Container**
    - Dimensões: 15x30x20 cm (largura x profundidade x altura)
@@ -53,24 +63,29 @@ Especificações exatas da visualização:
    - Escala: 1:1 com container
 
 3. **Layout**
-   - aspectmode: 'data'
-   - aspectratio: 1:1:1
-   - Camera: Default Plotly
-   - Dimensões: 900x700px
+   - Vista Principal:
+     - aspectmode: 'data'
+     - aspectratio: 1:1:1
+     - Camera: Default Plotly (isométrica)
+   - Vista Alternativa:
+     - Camera: Lateral (eye: x=2.5, y=0, z=2.0)
+   - Dimensões: 900x700px (cada vista)
 
 4. **Interatividade**
    - Hover: Info do bloco
    - displayModeBar: true
    - staticPlot: false
+   - Manipulação independente das vistas
 
 ### Módulos Core
 Estrutura sob `scripts/core/`:
 
 - **`algorithms.py`**
-  - Algoritmo híbrido único com 3 inteligências:
-    1. Biomecânico: Zoneamento ergonômico por peso
-    2. Chão do Galpão: Empilhamento estável Z=0
-    3. GPU Otimizado: Compactação com adjacência
+  - Algoritmo híbrido único com 4 inteligências:
+    1. ABC: Classificação por demanda/giro
+    2. Biomecânico: Zoneamento ergonômico por peso
+    3. Chão do Galpão: Empilhamento estável Z=0
+    4. GREEDY Otimizado: Ajuste fino + lacunas
 
 - **`models.py`**
   - ContainerConfig: Dimensões e quantidade
@@ -80,11 +95,13 @@ Estrutura sob `scripts/core/`:
   - Renderização 3D via Plotly
   - Suporte multi-container
   - Mapeamento de cores Viridis
+  - Visualização dupla independente
 
 - **`utils.py`**
   - Cálculos de capacidade
   - Validação de dimensões
   - Análise de eficiência
+  - Formatação BR (números/moeda)
 
 ### Configurações
 - **`scripts/config/settings.py`**
@@ -92,6 +109,29 @@ Estrutura sob `scripts/core/`:
   - Tipos de bloco default
   - Configurações de GPU
   - Mensagens da UI
+
+### Sistema de Inteligência
+Sequência otimizada de 4 etapas:
+
+1. **ABC** - Priorização baseada em:
+   - Demanda (vendas + previsão)
+   - Giro de estoque
+   - Categoria do produto
+
+2. **Biomecânico** - Zoneamento por:
+   - Peso do produto
+   - Classificação ABC
+   - Ergonomia do operador
+
+3. **Física** - Validação de:
+   - Estabilidade no chão
+   - Distribuição de peso
+   - Suporte mínimo 60%
+
+4. **GREEDY** - Otimização final:
+   - Preenchimento de lacunas
+   - Compactação de espaço
+   - Recuperação de produtos
 
 ### Zonas Ergonômicas
 - ZONA_PREMIUM (100-160cm): Alcance ótimo
@@ -103,9 +143,10 @@ Estrutura sob `scripts/core/`:
 ### Fluxo de Dados
 1. Configuração via interface
 2. Geração/validação de pedidos
-3. Algoritmo híbrido único
-4. Visualização 3D
-5. Análise de eficiência
+3. Análise ABC + Biomecânica
+4. Processamento híbrido 4x
+5. Visualização 3D dupla
+6. Análise de eficiência
 
 ### Dependências
 - Streamlit: Interface web
