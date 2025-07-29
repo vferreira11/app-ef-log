@@ -1,153 +1,122 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Instruções para Claude Code (claude.ai/code) para este repositório.
 
-## Development Commands
+## Execução da Aplicação
 
-### Running the Application
-
-#### Método Recomendado (Windows):
-
-**Opção 1 - Script Batch:**
+### Configuração Recomendada
 ```bash
-# Execute o script batch (duplo clique ou via CMD)
-run_app.bat
-```
-
-**Opção 2 - Script PowerShell:**
-```powershell
-# Execute via PowerShell
-.\run_app.ps1
-```
-
-#### Método Manual:
-```bash
-# Configure o encoding antes de executar
+# Configure o encoding (Windows)
 chcp 65001
 set PYTHONIOENCODING=utf-8
 set PYTHONUTF8=1
 
-# Activate virtual environment (Windows)
-.venv\Scripts\activate
+# Ative o ambiente virtual
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Linux/Mac
 
-# Run the main Streamlit application
-streamlit run app_gpu_fixed.py
-```
-
-#### Resolução de Problemas de Encoding:
-- **Erro 'charmap' codec**: Use os scripts automatizados acima
-- **Emojis não aparecem**: Verifique se o terminal suporta UTF-8
-- **Caracteres estranhos**: Execute `chcp 65001` antes do comando
-
-### Dependencies
-```bash
-# Install dependencies
+# Instale as dependências
 pip install -r requirements.txt
 ```
 
-## Architecture Overview
+### Executar a Aplicação
+```bash
+streamlit run app_gpu_fixed.py
+```
 
-### Main Application
-- **`app_gpu_fixed.py`** - Primary Streamlit interface that orchestrates the 3D packing optimization system
-- Entry point that combines all core modules and provides the web interface
+### Resolução de Problemas
+- **Erro 'charmap' codec**: Configure UTF-8 antes de executar
+- **Emojis quebrados**: Terminal deve suportar UTF-8
+- **Caracteres estranhos**: Execute `chcp 65001` (Windows)
 
-### Visualização 3D Padrão
-A visualização 3D do empacotamento segue estas configurações exatas:
+## Arquitetura
+
+### Interface Principal
+- **`app_gpu_fixed.py`** - Interface Streamlit principal
+  - Configuração do container
+  - Geração de pedidos aleatórios
+  - Visualização 3D interativa
+  - Análise de resultados
+
+### Visualização 3D
+Especificações exatas da visualização:
 
 1. **Container**
-   - Dimensões padrão: 15x30x20 cm (largura x profundidade x altura)
-   - Wireframe em preto com espessura 2
-   - Plano do chão em cinza claro (opacity: 0.3)
+   - Dimensões: 15x30x20 cm (largura x profundidade x altura)
+   - Wireframe: Preto, espessura 2px
+   - Chão: Cinza claro (opacity: 0.3)
 
 2. **Blocos**
-   - Cores: Paleta Viridis por tipo de bloco
-   - Opacidade: 1.0 (totalmente sólidos)
-   - Bordas: Pretas com espessura 2
-   - Dimensões: Escala real 1:1 com o container
+   - Cores: Paleta Viridis por tipo
+   - Opacidade: 1.0
+   - Bordas: Pretas, espessura 2px
+   - Escala: 1:1 com container
 
 3. **Layout**
    - aspectmode: 'data'
-   - aspectratio: x=1, y=1, z=1
-   - Camera: Posição default do Plotly (sem configuração manual)
-   - Dimensões: width=900, height=700
+   - aspectratio: 1:1:1
+   - Camera: Default Plotly
+   - Dimensões: 900x700px
 
-4. **Interação**
-   - Hover com informações do bloco (posição e dimensões)
+4. **Interatividade**
+   - Hover: Info do bloco
    - displayModeBar: true
    - staticPlot: false
 
-### Core Modules Structure
-The application follows a modular architecture under `scripts/core/`:
+### Módulos Core
+Estrutura sob `scripts/core/`:
 
-- **`algorithms.py`** - Contains hybrid intelligent packing algorithms combining:
-  - ABC classification for demand-based prioritization
-  - Biomechanical zoning for ergonomic placement (operator height-based zones)
-  - GPU-accelerated optimization using CuPy/Numba
-  - Greedy algorithms for gap filling
+- **`algorithms.py`**
+  - Algoritmo híbrido único com 3 inteligências:
+    1. Biomecânico: Zoneamento ergonômico por peso
+    2. Chão do Galpão: Empilhamento estável Z=0
+    3. GPU Otimizado: Compactação com adjacência
 
-- **`models.py`** - Data models and classes:
-  - `ContainerConfig` - Container dimensions and properties
-  - `Placement` - Block positioning with orientations
-  - `BlockType` - Block specifications and volume calculations
+- **`models.py`**
+  - ContainerConfig: Dimensões e quantidade
+  - Placement: Posicionamento 3D
 
-- **`visualization.py`** - 3D visualization using Plotly:
-  - Interactive 3D plotting with container wireframes
-  - Block placement visualization with color mapping
-  - Multi-container support with spatial separation
+- **`visualization.py`**
+  - Renderização 3D via Plotly
+  - Suporte multi-container
+  - Mapeamento de cores Viridis
 
-- **`utils.py`** - Utility functions for:
-  - Capacity calculations and efficiency metrics
-  - Color mapping using Viridis palette
-  - Block validation and dimension formatting
-  - Analytics and reporting functions
+- **`utils.py`**
+  - Cálculos de capacidade
+  - Validação de dimensões
+  - Análise de eficiência
 
-### Configuration
-- **`scripts/config/settings.py`** - Centralized configuration including:
-  - Default container dimensions and block types
-  - GPU population parameters
-  - Biomechanical zones (ZONA_PREMIUM, ZONA_BOA, etc.)
-  - UI messages and visualization settings
+### Configurações
+- **`scripts/config/settings.py`**
+  - Container padrão: 15x30x20 cm
+  - Tipos de bloco default
+  - Configurações de GPU
+  - Mensagens da UI
 
-### Algorithm Intelligence System
-The core algorithm (`hybrid_intelligent_packing`) implements a 4-stage optimization:
+### Zonas Ergonômicas
+- ZONA_PREMIUM (100-160cm): Alcance ótimo
+- ZONA_BOA (160-180cm): Esforço mínimo
+- ZONA_ACEITAVEL (70-100cm): Baixo esforço
+- ZONA_RUIM (30-70cm): Alto esforço
+- ZONA_CRITICA (0-30cm): Zona crítica
 
-1. **ABC Classification** - Demand-based product prioritization
-2. **Biomechanical Zoning** - Ergonomic placement based on operator height (170cm reference)
-3. **Physical Validation** - Floor-level stability and weight distribution
-4. **Greedy Optimization** - Gap filling and compaction
+### Fluxo de Dados
+1. Configuração via interface
+2. Geração/validação de pedidos
+3. Algoritmo híbrido único
+4. Visualização 3D
+5. Análise de eficiência
 
-### Ergonomic Zones (Height-based)
-- ZONA_PREMIUM (100-160cm): Optimal reach zone
-- ZONA_BOA (160-180cm): Minimal effort zone
-- ZONA_ACEITAVEL (70-100cm): Low effort zone
-- ZONA_RUIM (30-70cm): High effort zone
-- ZONA_CRITICA (0-30cm): Critical zone (avoid heavy items)
+### Dependências
+- Streamlit: Interface web
+- Plotly: Visualização 3D
+- NumPy/Pandas: Processamento
+- Numba: Aceleração GPU
 
-### Data Flow
-1. User configures containers and blocks via Streamlit interface
-2. Data validation through `utils.py` functions
-3. Algorithm selection (GPU, hybrid, or biomechanical)
-4. Processing through `algorithms.py` with ABC classification
-5. 3D visualization via `visualization.py`
-6. Results display with efficiency metrics
+### Dados
+- `data/produtos_simulados.csv`: Dataset de teste
+- `.streamlit/config.toml`: Configuração Streamlit
 
-### Key Dependencies
-- **Streamlit** - Web interface framework
-- **Plotly** - 3D visualization
-- **NumPy/Pandas** - Data processing
-- **Numba** - GPU acceleration
-- **PuLP** - Linear programming (legacy MILP support)
-
-### Legacy Components
-- `scripts/distribuir_milp.py` - Original MILP algorithm (kept for reference)
-- `scripts/run_packing_gpu.py` - Standalone GPU algorithm
-- Multiple visualization variants in `scripts/core/visualization_*.py` - Different 3D rendering approaches
-
-### Data Files
-- `data/produtos_simulados.csv` - Sample product dataset for testing
-- `streamlit/config.toml` - Streamlit-specific configuration
-
-## Branch Strategy
-- `v1-clean` - Current minimal functional version (14 essential files)
-- `main` - Primary development branch
-- `copilot_v0` - Historical version with full development history
+## Branches
+- `v1-clean`: Versão limpa atual
+- `main`: Branch principal
