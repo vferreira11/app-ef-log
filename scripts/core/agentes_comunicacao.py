@@ -1,172 +1,158 @@
 """
-Interface de comunicação entre agentes do sistema.
-Gerencia o fluxo de mensagens e validações.
+Sistema de comunicação entre agentes com validação de escopo.
 """
-
-from typing import Dict, Any, Optional, List
-from enum import Enum
 import asyncio
 import logging
-from .validador_escopo import ValidadorEscopo, ResultadoValidacao, StatusValidacao
-
-# Configuração de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class TipoMensagem(Enum):
-    """Tipos de mensagem suportados na comunicação entre agentes."""
-    SOLICITACAO = "solicitacao"
-    RESPOSTA = "resposta"
-    VALIDACAO = "validacao"
-    ERRO = "erro"
+from datetime import datetime
+from typing import Dict, Optional, Callable
+from .validador_escopo import ValidadorEscopo, Entrega, ResultadoValidacao
+from .interceptador import InterceptadorAgentes
 
 class AgenteComunicacao:
-    """
-    Gerencia comunicação entre agentes com suporte a validação assíncrona.
-    """
-
-    def __init__(self, nome_agente: str, validador: ValidadorEscopo):
-        """
-        Inicializa o gerenciador de comunicação.
+    def __init__(self):
+        self.validador = ValidadorEscopo()
+        self.interceptador = InterceptadorAgentes()
+        self._callbacks: Dict[str, Callable] = {}
+        self.logger = logging.getLogger(__name__)
+        self._fila_mensagens: asyncio.Queue = asyncio.Queue()
+        self._processando = False
+        asyncio.create_task(self._processar_fila())
         
-        Args:
-            nome_agente: Nome do agente para identificação
-            validador: Instância do ValidadorEscopo para validações
-        """
-        self.nome = nome_agente
-        self.validador = validador
-        self.fila_mensagens = asyncio.Queue()
-        self._callbacks: Dict[str, Any] = {}
-        self._lock = asyncio.Lock()
-        logger.info(f"Agente '{nome_agente}' inicializado")
-
     async def enviar_mensagem(
         self,
-        destinatario: str,
-        tipo: TipoMensagem,
-        conteudo: Any,
-        validacoes: List[Dict[str, Any]] = None
+        agente_origem: str,
+        agente_destino: str,
+        conteudo: dict,
+        escopo: dict,
+        timeout: float = 30.0,
+        profundidade: int = 0
     ) -> ResultadoValidacao:
-        """
-        Envia mensagem para outro agente com validação opcional.
+        """Envia mensagem entre agentes com validação e interceptação."""
         
-        Args:
-            destinatario: Nome do agente destinatário
-            tipo: Tipo da mensagem
-            conteudo: Conteúdo da mensagem
-            validacoes: Lista de validações a serem executadas
+        # Intercepta operação
+        if not await self.interceptador.interceptar(
+            agente_origem,
+            agente_destino,
+            "envio_mensagem",
+            conteudo,
+            profundidade
+        ):
+            return ResultadoValidacao(
+                valido=False,
+                mensagem="Operação bloqueada pelo interceptador",
+                detalhes={"origem": agente_origem, "destino": agente_destino}
+            )
             
-        Returns:
-            Resultado das validações se houver
-        """
-        mensagem = {
-            'origem': self.nome,
-            'destino': destinatario,
-            'tipo': tipo,
-            'conteudo': conteudo
-        }
-
-        # Executa validações se especificadas
-        if validacoes:
-            resultado = await self.validador.validar_multiplos(validacoes)
-            if any(r.status == StatusValidacao.ERRO for r in resultado.values()):
-                logger.error(f"Erro nas validações da mensagem para {destinatario}")
-                return ResultadoValidacao(
-                    status=StatusValidacao.ERRO,
-                    mensagem="Falha nas validações",
-                    detalhes=resultado
-                )
-            mensagem['validacoes'] = resultado
-
-        # Adiciona à fila de mensagens
-        await self.fila_mensagens.put(mensagem)
-        logger.info(f"Mensagem enviada para {destinatario}")
-
-        return ResultadoValidacao(
-            status=StatusValidacao.CONCLUIDO,
-            mensagem="Mensagem enviada com sucesso",
-            detalhes={'validacoes': validacoes} if validacoes else None
+        entrega = Entrega(
+            agente_origem=agente_origem,
+            agente_destino=agente_destino,
+            conteudo=conteudo,
+            timestamp=datetime.now(),
+            escopo_original=escopo
         )
-
-    async def receber_mensagem(self) -> Dict[str, Any]:
-        """
-        Recebe próxima mensagem da fila de forma assíncrona.
         
-        Returns:
-            Dicionário com dados da mensagem
-        """
-        mensagem = await self.fila_mensagens.get()
-        logger.info(f"Mensagem recebida de {mensagem['origem']}")
-        return mensagem
-
-    async def registrar_callback(
-        self,
-        tipo_mensagem: TipoMensagem,
-        callback: callable
-    ) -> None:
-        """
-        Registra callback para processar mensagens de um tipo específico.
-        
-        Args:
-            tipo_mensagem: Tipo de mensagem para acionar o callback
-            callback: Função a ser chamada
-        """
-        async with self._lock:
-            self._callbacks[tipo_mensagem] = callback
-            logger.info(f"Callback registrado para mensagens do tipo {tipo_mensagem}")
-
-    async def processar_mensagens(self) -> None:
-        """
-        Processa mensagens da fila continuamente,
-        executando callbacks registrados.
-        """
-        while True:
-            try:
-                mensagem = await self.receber_mensagem()
-                tipo = mensagem['tipo']
-
-                if tipo in self._callbacks:
-                    callback = self._callbacks[tipo]
-                    await callback(mensagem)
-                else:
-                    logger.warning(f"Nenhum callback registrado para mensagens do tipo {tipo}")
-
-            except Exception as e:
-                logger.error(f"Erro ao processar mensagem: {str(e)}")
-                continue
-
-    async def validar_mensagem(
-        self,
-        mensagem: Dict[str, Any],
-        validacoes: List[Dict[str, Any]]
-    ) -> ResultadoValidacao:
-        """
-        Valida uma mensagem usando o ValidadorEscopo.
-        
-        Args:
-            mensagem: Mensagem a ser validada
-            validacoes: Lista de validações a executar
+        try:
+            # Valida entrega com timeout
+            resultado = await asyncio.wait_for(
+                self.validador.validar_entrega(entrega),
+                timeout=timeout/2  # Divide timeout entre validação e notificação
+            )
             
-        Returns:
-            Resultado das validações
+            if resultado.valido:
+                try:
+                    # Notifica agente destino com timeout
+                    await asyncio.wait_for(
+                        self._notificar_agente(agente_destino, entrega),
+                        timeout=timeout/2
+                    )
+                except asyncio.TimeoutError:
+                    self.logger.error(
+                        f"Timeout na notificação: {agente_origem} -> {agente_destino}"
+                    )
+                    return ResultadoValidacao(
+                        valido=False,
+                        mensagem="Timeout na notificação do agente",
+                        detalhes={
+                            "origem": agente_origem,
+                            "destino": agente_destino,
+                            "timeout": timeout/2
+                        }
+                    )
+                
+            return resultado
+        except asyncio.TimeoutError:
+            self.logger.error(
+                f"Timeout na comunicação: {agente_origem} -> {agente_destino}"
+            )
+            return ResultadoValidacao(
+                valido=False,
+                mensagem="Timeout na comunicação entre agentes",
+                detalhes={
+                    "origem": agente_origem,
+                    "destino": agente_destino,
+                    "timeout": timeout
+                }
+            )
+        
+    def registrar_callback(
+        self,
+        agente: str,
+        callback: Callable[[Entrega], None]
+    ) -> None:
+        """Registra callback para recebimento de mensagens."""
+        self._callbacks[agente] = callback
+        
+    async def _notificar_agente(self, agente: str, entrega: Entrega) -> None:
+        """Notifica um agente sobre nova mensagem."""
+        await self._fila_mensagens.put((agente, entrega))
+
+    async def _processar_fila(self):
+        """Processa mensagens da fila de forma assíncrona."""
+        while True:
+            agente, entrega = await self._fila_mensagens.get()
+            if callback := self._callbacks.get(agente):
+                try:
+                    await callback(entrega)
+                except Exception as e:
+                    self.logger.error(f"Erro ao notificar agente {agente}: {str(e)}")
+            self._fila_mensagens.task_done()
+                
+class Agente:
+    """Classe base para agentes do sistema."""
+    
+    def __init__(self, nome: str, comunicador: AgenteComunicacao):
+        self.nome = nome
+        self.comunicador = comunicador
+        self.logger = logging.getLogger(__name__)
+        
+        # Registra callback para receber mensagens
+        comunicador.registrar_callback(nome, self._receber_mensagem)
+        
+    async def enviar_para(
+        self,
+        agente_destino: str,
+        conteudo: dict,
+        escopo: dict,
+        timeout: float = 30.0
+    ) -> ResultadoValidacao:
+        """Envia mensagem para outro agente."""
+        return await self.comunicador.enviar_mensagem(
+            self.nome,
+            agente_destino,
+            conteudo,
+            escopo
+        )
+        
+    async def _receber_mensagem(self, entrega: Entrega) -> None:
+        """Processa mensagem recebida."""
+        try:
+            await self.processar_mensagem(entrega)
+        except Exception as e:
+            self.logger.error(f"Erro ao processar mensagem: {str(e)}")
+            
+    async def processar_mensagem(self, entrega: Entrega) -> None:
         """
-        return await self.validador.validar_multiplos(validacoes)
-
-    def iniciar_processamento(self) -> None:
-        """Inicia o processamento assíncrono de mensagens."""
-        asyncio.create_task(self.processar_mensagens())
-        logger.info(f"Processamento de mensagens iniciado para agente {self.nome}")
-
-    async def parar_processamento(self) -> None:
+        Processa mensagem recebida.
+        Deve ser implementado pelos agentes específicos.
         """
-        Para o processamento de mensagens e limpa recursos.
-        """
-        # Limpa callbacks
-        async with self._lock:
-            self._callbacks.clear()
-
-        # Limpa fila de mensagens
-        while not self.fila_mensagens.empty():
-            await self.fila_mensagens.get()
-
-        logger.info(f"Processamento de mensagens interrompido para agente {self.nome}")
+        raise NotImplementedError
