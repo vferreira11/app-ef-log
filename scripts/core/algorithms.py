@@ -1,8 +1,9 @@
 # --- STUBS para compatibilidade com app_gpu_fixed.py ---
 def gpu_hybrid_ultra_intelligent_packing(container, block_dims, produtos_df):
     """
-    Stub para compatibilidade. Redireciona para hybrid_intelligent_packing.
+    Stub para compatibilidade. Redireciona para hybrid_intelligent_packing com agrupamento.
     """
+    print("[DEBUG] 🚀 GPU STUB: Redirecionando para algoritmo híbrido com agrupamento por tipos")
     return hybrid_intelligent_packing(container, block_dims, produtos_df)
 
 def check_gpu_availability():
@@ -50,6 +51,7 @@ Algoritmos de empacotamento 3D otimizados com lógica biomecânica.
 
 import numpy as np
 import itertools
+import subprocess
 from typing import List, Tuple, Dict
 from .models import ContainerConfig
 
@@ -63,20 +65,45 @@ ZONA_CRITICA = (0, 3)        # 0-30cm: Chão → Flexão severa (evitar se poss�
 
 def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], produtos_df) -> List[tuple]:
     """
-    🎯 ALGORITMO HÍBRIDO INTELIGENTE - FUSÃO ABC + BIOMECÂNICO + GREEDY
-    =====================================================================
-    FLUXO OTIMIZADO DE 4 INTELIGÊNCIAS:
-    1. 📊 ABC: Classificação por demanda/giro (prioridade operacional)
-    2. 🧬 BIOMECÂNICO: Zoneamento ergonômico inteligente (ABC + peso + categoria)
-    3. 🏭 CHÃO DO GALPÃO: Empilhamento estável + validação física
-    4. 🚀 GREEDY OTIMIZADO: Ajuste fino + preenchimento de lacunas
+    🎯 ALGORITMO HÍBRIDO INTELIGENTE COM AGRUPAMENTO POR TIPO
+    ========================================================
+    FLUXO OTIMIZADO DE 5 INTELIGÊNCIAS:
+    1. 🎯 AGRUPAMENTO: Divisão vertical por tipos de produtos (produtos iguais ficam juntos)
+    2. 📊 ABC: Classificação por demanda/giro (prioridade operacional)
+    3. 🧬 BIOMECÂNICO: Zoneamento ergonômico inteligente (ABC + peso + categoria)
+    4. 🏭 CHÃO DO GALPÃO: Empilhamento estável + validação física
+    5. 🚀 GREEDY OTIMIZADO: Ajuste fino + preenchimento de lacunas
     
     SEQUÊNCIA OTIMIZADA:
-    ABC → Biomecânica → Física → Greedy → Compactação Final
+    Agrupamento → ABC → Biomecânica → Física → Greedy → Compactação Final
     """
-    print("[DEBUG] === 🎯 ALGORITMO HÍBRIDO INTELIGENTE (4 INTELIGÊNCIAS) ===")
+    print("[DEBUG] === 🎯 ALGORITMO HÍBRIDO INTELIGENTE COM AGRUPAMENTO (5 INTELIGÊNCIAS) ===")
     print(f"[DEBUG] Container: {container.dx}x{container.dy}x{container.dz}")
     print(f"[DEBUG] Blocos a processar: {len(block_dims)}")
+    
+    # 🎯 ETAPA 0: ANÁLISE DE TIPOS E DIVISÃO VERTICAL DO CONTAINER
+    tipos_unicos = list(set(block_dims))
+    print(f"[DEBUG] 🎯 Tipos únicos de produtos: {len(tipos_unicos)}")
+    for i, tipo in enumerate(tipos_unicos):
+        count = block_dims.count(tipo)
+        print(f"[DEBUG] 🎯 Tipo {i+1}: {tipo[0]}x{tipo[1]}x{tipo[2]} - {count} unidades")
+    
+    # Calcula divisão do container em colunas (Y) por tipo de produto
+    num_tipos = len(tipos_unicos)
+    largura_por_tipo = container.dy // num_tipos
+    resto_largura = container.dy % num_tipos
+    
+    # Calcula limites de cada coluna por tipo
+    limites_colunas = {}
+    y_atual = 0
+    for i, tipo in enumerate(tipos_unicos):
+        # Distribui o resto das divisões nos primeiros tipos
+        largura_coluna = largura_por_tipo + (1 if i < resto_largura else 0)
+        y_inicio = y_atual
+        y_fim = y_atual + largura_coluna
+        limites_colunas[tipo] = (y_inicio, y_fim)
+        y_atual = y_fim
+        print(f"[DEBUG] 🎯 Tipo {tipo}: Coluna Y={y_inicio} até Y={y_fim-1} (largura={largura_coluna})")
     
     # 📊 ETAPA 1: ANÁLISE ABC + BIOMECÂNICA INTELIGENTE
     produtos_com_abc = []
@@ -96,15 +123,16 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
         
         produtos_com_abc.append((i, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
     
-    # 📊 ORDENAÇÃO INTELIGENTE: ABC → Demanda → Zona → Peso
+    # 📊 ORDENAÇÃO INTELIGENTE: Tipo → ABC → Demanda → Zona → Peso
     produtos_com_abc.sort(key=lambda x: (
-        0 if x[4] == 'A' else 1 if x[4] == 'B' else 2,  # ABC primeiro
+        tipos_unicos.index(x[1]),  # Agrupa por tipo primeiro
+        0 if x[4] == 'A' else 1 if x[4] == 'B' else 2,  # ABC dentro do tipo
         -x[6],  # Demanda decrescente dentro da classe
         0 if x[5] == ZONA_PREMIUM else 1,  # Zona premium preferencial
         -x[2] if x[4] in ['A', 'B'] else x[2]  # Peso: pesados primeiro para A/B, leves primeiro para C
     ))
     
-    print(f"[DEBUG] 📊 Ordenação ABC inteligente - Primeiros 5: {[(p[0], f'{p[2]:.1f}kg', p[4], f'{p[6]}dem', p[3]) for p in produtos_com_abc[:5]]}")
+    print(f"[DEBUG] 📊 Ordenação por Tipo+ABC inteligente - Primeiros 5: {[(p[0], p[1], f'{p[2]:.1f}kg', p[4], f'{p[6]}dem', p[3]) for p in produtos_com_abc[:5]]}")
     
     alocacoes = []
     produtos_nao_alocados = []  # 🤖 LISTA PARA GREEDY
@@ -136,6 +164,54 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
         else:  # >180cm: Zona crítica
             return peso <= 4.0  # Produtos até 4kg na zona crítica
     
+    # 🚀 FUNÇÃO DE SCORE ABC + COMPACTAÇÃO + AGRUPAMENTO
+    def calcular_score_abc_inteligente_com_agrupamento(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica, y_inicio, y_fim, bonus_agrupamento):
+        """Score que considera ABC + proximidade + adjacência + agrupamento por tipo"""
+        # Base: proximidade ao canto (0,0,0)
+        score = x + y + z * 0.1
+        
+        # 🎯 BONUS MASSIVO PARA FICAR DENTRO DA COLUNA DO TIPO
+        centro_y_coluna = (y_inicio + y_fim) / 2
+        distancia_centro_coluna = abs(y + d/2 - centro_y_coluna)
+        score -= (50.0 - distancia_centro_coluna)  # Quanto mais central na coluna, melhor
+        
+        # 📊 BONUS/PENALIZAÇÃO ABC MASSIVA
+        z_min, z_max = zona_ergonomica
+        if classe_abc == 'A':
+            if z_min <= z <= z_max:
+                score -= 100.0  # BONUS ENORME para A na zona correta
+            else:
+                score += 50.0   # PENALIZAÇÃO SEVERA para A fora da zona
+        elif classe_abc == 'B':
+            if z_min <= z <= z_max + 3:  # Tolerância para B
+                score -= 20.0   # Bonus moderado
+            else:
+                score += 10.0   # Penalização leve
+        # Classe C não tem bonus/penalização (flexível)
+        
+        # 🎯 BONUS MASSIVO POR AGRUPAMENTO DE MESMO TIPO
+        score -= bonus_agrupamento
+        
+        # Bonus por adjacência geral (blocos vizinhos)
+        bonus_adjacencia = 0
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                for dz in [-1, 0, 1]:
+                    if dx == 0 and dy == 0 and dz == 0:
+                        continue
+                    if (x + dx, y + dy, z + dz) in posicoes_ocupadas:
+                        bonus_adjacencia += 1
+        
+        score -= bonus_adjacencia * 2.0  # Forte incentivo à proximidade geral
+        
+        # 🧬 Bonus biomecânico por categoria (secundário)
+        if categoria in ['Brinquedos', 'Organizadores']:
+            score -= 3.0  # Prioriza itens acessíveis (menor que ABC)
+        elif categoria == 'Utilidades':
+            score += 1.0  # Pode ficar em locais menos acessíveis
+            
+        return score
+
     # 🚀 FUNÇÃO DE SCORE ABC + COMPACTAÇÃO
     def calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica):
         """Score que considera ABC + proximidade + adjacência"""
@@ -176,14 +252,25 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
             
         return score
     
-    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL (ABC + BIOMECÂNICA + FÍSICA)
+    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL COM AGRUPAMENTO (TIPO + ABC + BIOMECÂNICA + FÍSICA)
     for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_com_abc:
         w, d, h = dims
         melhor_posicao = None
         melhor_score = float('inf')
         
+        # 🎯 OBTÉM LIMITES DA COLUNA PARA ESTE TIPO DE PRODUTO
+        y_inicio, y_fim = limites_colunas[dims]
+        largura_disponivel = y_fim - y_inicio
+        
         print(f"[DEBUG] 🎯 Processando produto {produto_idx}: {w}x{d}x{h}, {peso:.1f}kg, {classe_abc}, {categoria}")
+        print(f"[DEBUG] 🎯 Tipo {dims}: Coluna Y={y_inicio}-{y_fim-1} (largura={largura_disponivel})")
         print(f"[DEBUG] 📐 Container disponível: {container.dx}x{container.dy}x{container.dz}")
+        
+        # Verifica se o produto cabe na sua coluna dedicada
+        if d > largura_disponivel:
+            print(f"[DEBUG] ❌ Produto {produto_idx} não cabe na coluna do seu tipo (precisa {d}, tem {largura_disponivel})")
+            produtos_nao_alocados.append((produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
+            continue
         
         # 🏭 CHÃO DO GALPÃO: Força prioridade por camadas (Z crescente)
         for z in range(0, container.dz - h + 1):
@@ -195,12 +282,13 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                 print(f"[DEBUG] ❌ Zona ABC+biomecânica rejeitou Z={z} para {classe_abc}")
                 continue
                 
-            # Busca posição na camada atual
+            # Busca posição na camada atual DENTRO DA COLUNA DO TIPO
             encontrou_nesta_camada = False
             posicoes_testadas = 0
             
             for x in range(0, container.dx - w + 1):
-                for y in range(0, container.dy - d + 1):
+                # 🎯 RESTRINGE Y À COLUNA DO TIPO DE PRODUTO
+                for y in range(y_inicio, y_fim - d + 1):
                     posicoes_testadas += 1
                     
                     # Verifica colisões
@@ -237,16 +325,40 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                         print(f"[DEBUG] ⚠️ Posição ({x},{y},{z}) instável - suporte {suporte_percent:.1f}% (mín 60%)")
                         continue
                     
-                    # 🚀 SCORE ABC INTELIGENTE: Calcula score integrado
-                    score = calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica)
+                    # 🎯 BONUS ADICIONAL PARA PROXIMIDADE DENTRO DO MESMO TIPO
+                    bonus_agrupamento = 0
+                    for dx in [-1, 0, 1]:
+                        for dy in [-1, 0, 1]:
+                            for dz in [-1, 0, 1]:
+                                if dx == 0 and dy == 0 and dz == 0:
+                                    continue
+                                adj_pos = (x + dx, y + dy, z + dz)
+                                if adj_pos in posicoes_ocupadas:
+                                    # Verifica se o bloco adjacente é do mesmo tipo
+                                    for alocacao in alocacoes:
+                                        ax, ay, az, aidx = alocacao
+                                        if (ax <= x + dx < ax + block_dims[aidx][0] and 
+                                            ay <= y + dy < ay + block_dims[aidx][1] and 
+                                            az <= z + dz < az + block_dims[aidx][2]):
+                                            if block_dims[aidx] == dims:  # Mesmo tipo
+                                                bonus_agrupamento += 5.0  # BONUS FORTE para mesmo tipo
+                                            else:
+                                                bonus_agrupamento += 1.0  # Bonus fraco para tipos diferentes
+                                            break
+                    
+                    # 🚀 SCORE ABC INTELIGENTE COM AGRUPAMENTO: Calcula score integrado
+                    score = calcular_score_abc_inteligente_com_agrupamento(
+                        x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica, 
+                        y_inicio, y_fim, bonus_agrupamento
+                    )
                     
                     if score < melhor_score:
                         melhor_score = score
                         melhor_posicao = (x, y, z)
                         encontrou_nesta_camada = True
-                        print(f"[DEBUG] 🚀 Nova melhor posição: ({x},{y},{z}) - Score: {score:.2f}")
+                        print(f"[DEBUG] 🎯 Nova melhor posição: ({x},{y},{z}) - Score: {score:.2f} (Agrup: +{bonus_agrupamento:.1f})")
             
-            print(f"[DEBUG] 📊 Z={z}: testadas {posicoes_testadas} posições, encontrou válida? {encontrou_nesta_camada}")
+            print(f"[DEBUG] 📊 Z={z}: testadas {posicoes_testadas} posições na coluna {y_inicio}-{y_fim-1}, encontrou válida? {encontrou_nesta_camada}")
             
             # 🏭 CHÃO DO GALPÃO: Se encontrou posição nesta camada, para (prioriza camadas baixas)
             if encontrou_nesta_camada:
@@ -283,8 +395,8 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
             -x[2]   # Peso decrescente (estabilidade)
         ))
         
-        alocacoes_greedy = aplicar_greedy_inteligente(
-            container, produtos_nao_alocados, posicoes_ocupadas
+        alocacoes_greedy = aplicar_greedy_inteligente_com_agrupamento(
+            container, produtos_nao_alocados, posicoes_ocupadas, limites_colunas, block_dims, alocacoes
         )
         
         alocacoes.extend(alocacoes_greedy)
@@ -292,6 +404,170 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
     
     print(f"[DEBUG] === 🎯 HÍBRIDO INTELIGENTE CONCLUÍDO: {len(alocacoes)}/{len(block_dims)} produtos alocados ===")
     return alocacoes
+
+
+def aplicar_greedy_inteligente_com_agrupamento(container: ContainerConfig, produtos_nao_alocados: List[tuple], 
+                                              posicoes_ocupadas: set, limites_colunas: dict, 
+                                              block_dims: List[tuple], alocacoes: List[tuple]) -> List[tuple]:
+    """
+    🤖 GREEDY INTELIGENTE COM AGRUPAMENTO: Recupera produtos rejeitados tentando manter agrupamento por tipos
+    
+    Args:
+        container: Configuração do container
+        produtos_nao_alocados: Lista de produtos que falharam na alocação ABC
+        posicoes_ocupadas: Set de posições já ocupadas (modificado in-place)
+        limites_colunas: Dict com limites de colunas por tipo de produto
+        block_dims: Lista original de dimensões para consulta
+        alocacoes: Lista de alocações já feitas para calcular bonus de proximidade
+        
+    Returns:
+        Lista de alocações recuperadas pelo Greedy
+    """
+    alocacoes_greedy = []
+    
+    for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_nao_alocados:
+        w, d, h = dims
+        melhor_posicao = None
+        melhor_score = float('inf')
+        
+        print(f"[DEBUG] 🤖 GREEDY processando {produto_idx} ({classe_abc}): {w}x{d}x{h}")
+        
+        # 🎯 PRIMEIRA TENTATIVA: Tentar manter na coluna do tipo (mais flexível)
+        if dims in limites_colunas:
+            y_inicio, y_fim = limites_colunas[dims]
+            largura_disponivel = y_fim - y_inicio
+            
+            if d <= largura_disponivel:
+                print(f"[DEBUG] 🎯 GREEDY: Tentando manter {produto_idx} na coluna do tipo {dims}")
+                
+                for z in range(0, container.dz - h + 1):
+                    for x in range(0, container.dx - w + 1):
+                        for y in range(y_inicio, y_fim - d + 1):
+                            
+                            # Verifica colisões
+                            colidiu = False
+                            for check_x in range(x, x + w):
+                                for check_y in range(y, y + d):
+                                    for check_z in range(z, z + h):
+                                        if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                            colidiu = True
+                                            break
+                                    if colidiu:
+                                        break
+                                if colidiu:
+                                    break
+                            
+                            if colidiu:
+                                continue
+                            
+                            # 🏭 Verifica estabilidade básica (30% de suporte mínimo - bem flexível)
+                            estavel = True
+                            if z > 0:
+                                area_com_suporte = 0
+                                area_total = w * d
+                                for check_x in range(x, x + w):
+                                    for check_y in range(y, y + d):
+                                        if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                            area_com_suporte += 1
+                                if (area_com_suporte / area_total) < 0.30:
+                                    estavel = False
+                            
+                            if not estavel:
+                                continue
+                            
+                            # 🎯 Score com BONUS MASSIVO para ficar na coluna do tipo
+                            score = x + y + z * 0.1
+                            score -= 50.0  # BONUS ENORME por ficar na coluna do tipo
+                            
+                            # Bonus adicional por proximidade com mesmo tipo
+                            bonus_tipo = 0
+                            for ax, ay, az, aidx in alocacoes + alocacoes_greedy:
+                                if block_dims[aidx] == dims:  # Mesmo tipo
+                                    distancia = abs(x - ax) + abs(y - ay) + abs(z - az)
+                                    if distancia <= 3:  # Muito próximo
+                                        bonus_tipo += 10.0 / (distancia + 1)
+                            
+                            score -= bonus_tipo
+                            
+                            if score < melhor_score:
+                                melhor_score = score
+                                melhor_posicao = (x, y, z)
+        
+        # 🤖 SEGUNDA TENTATIVA: Se não coube na coluna do tipo, busca QUALQUER lugar
+        if melhor_posicao is None:
+            print(f"[DEBUG] 🤖 GREEDY: Produto {produto_idx} não coube na coluna do tipo, buscando qualquer lugar...")
+            
+            for z in range(0, container.dz - h + 1):
+                for x in range(0, container.dx - w + 1):
+                    for y in range(0, container.dy - d + 1):
+                        
+                        # Verifica colisões
+                        colidiu = False
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                for check_z in range(z, z + h):
+                                    if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                        colidiu = True
+                                        break
+                                if colidiu:
+                                    break
+                            if colidiu:
+                                break
+                        
+                        if colidiu:
+                            continue
+                        
+                        # 🏭 Verifica estabilidade básica (20% de suporte mínimo - muito flexível)
+                        estavel = True
+                        if z > 0:
+                            area_com_suporte = 0
+                            area_total = w * d
+                            for check_x in range(x, x + w):
+                                for check_y in range(y, y + d):
+                                    if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                        area_com_suporte += 1
+                            if (area_com_suporte / area_total) < 0.20:
+                                estavel = False
+                        
+                        if not estavel:
+                            continue
+                        
+                        # 🤖 Score Greedy geral: prioriza proximidade + prefere zona ABC quando possível
+                        score = x + y + z * 0.1
+                        
+                        # Bonus se conseguir ficar na zona ABC ideal (mas não obrigatório)
+                        z_min, z_max = zona_ergonomica
+                        if z_min <= z <= z_max:
+                            score -= 10.0  # Bonus por zona correta
+                        
+                        # Bonus por classe (tenta salvar classe A)
+                        if classe_abc == 'A':
+                            score -= 5.0  # Prioriza classe A
+                        elif classe_abc == 'B':
+                            score -= 2.0  # Prioriza classe B
+                        
+                        if score < melhor_score:
+                            melhor_score = score
+                            melhor_posicao = (x, y, z)
+        
+        # Aloca se encontrou posição
+        if melhor_posicao:
+            x, y, z = melhor_posicao
+            
+            # Marca posições como ocupadas
+            for check_x in range(x, x + w):
+                for check_y in range(y, y + d):
+                    for check_z in range(z, z + h):
+                        posicoes_ocupadas.add((check_x, check_y, check_z))
+            
+            alocacoes_greedy.append((x, y, z, produto_idx))
+            zona = "chão" if z <= 5 else "baixa" if z <= 30 else "ideal" if z <= 120 else "alta" if z <= 180 else "crítica"
+            tipo_coluna = "coluna do tipo" if dims in limites_colunas and limites_colunas[dims][0] <= y < limites_colunas[dims][1] else "fora da coluna"
+            print(f"[DEBUG] 🤖 GREEDY salvou {produto_idx} ({classe_abc}) em ({x},{y},{z}) - Zona: {zona}, {tipo_coluna}")
+        else:
+            print(f"[DEBUG] 🤖 GREEDY falhou: {produto_idx} ({classe_abc}) sem espaço")
+    
+    return alocacoes_greedy
 
 
 def aplicar_greedy_inteligente(container: ContainerConfig, produtos_nao_alocados: List[tuple], posicoes_ocupadas: set) -> List[tuple]:
