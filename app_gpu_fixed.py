@@ -28,6 +28,9 @@ import streamlit as st
 import pandas as pd
 import time
 import random
+import plotly.graph_objects as go
+import plotly.colors as pc
+import numpy as np
 
 # Adiciona o diretório scripts ao path para imports
 scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
@@ -65,6 +68,256 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+def render_custom_css():
+    """Injeta CSS customizado otimizado para performance e responsividade."""
+    st.markdown("""
+    <style>
+    /* ======================
+       PERFORMANCE OPTIMIZATIONS
+       ====================== */
+    
+    /* Reduce repaints and enable hardware acceleration */
+    .stat-card, .modern-header, .loading-container {
+        will-change: transform;
+        transform: translateZ(0);
+    }
+    
+    /* ======================
+       RESPONSIVE STAT CARDS
+       ====================== */
+    .stat-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E6EAF1;
+        border-left: 5px solid #00D4AA;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+        text-align: left;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px) translateZ(0);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .stat-card h3 {
+        font-size: 1rem;
+        color: #5A6474;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    
+    .stat-card p {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1A1C24;
+        margin: 0;
+        line-height: 1.2;
+    }
+    
+    .stat-card small {
+        font-size: 0.85rem;
+        color: #8A94A6;
+        display: block;
+        margin-top: 4px;
+    }
+    
+    /* ======================
+       MODERN HEADER
+       ====================== */
+    .modern-header {
+        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #00D4AA 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
+    }
+    
+    .modern-header h1 {
+        color: white;
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .modern-header p {
+        color: rgba(255,255,255,0.95);
+        margin: 0.5rem 0 0 0;
+        font-size: 1.1rem;
+        font-weight: 400;
+    }
+    
+    /* ======================
+       IMPROVED LOADING
+       ====================== */
+    .modern-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 3rem 2rem;
+        background: rgba(26, 28, 36, 0.98);
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .loading-spinner-modern {
+        border: 3px solid rgba(0, 212, 170, 0.1);
+        border-top: 3px solid #00D4AA;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1.5rem;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text-modern {
+        color: white;
+        font-size: 1.2rem;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .loading-progress {
+        width: 200px;
+        height: 4px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+    
+    .loading-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #00D4AA, #FF6B35);
+        border-radius: 2px;
+        animation: progress 2s ease-in-out infinite;
+    }
+    
+    @keyframes progress {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+    }
+    
+    /* ======================
+       RESPONSIVE BREAKPOINTS
+       ====================== */
+    
+    /* Tablet */
+    @media (max-width: 1024px) {
+        .modern-header h1 {
+            font-size: 2rem;
+        }
+        
+        .stat-card {
+            padding: 16px;
+        }
+        
+        .stat-card p {
+            font-size: 1.8rem;
+        }
+    }
+    
+    /* Mobile */
+    @media (max-width: 768px) {
+        .modern-header {
+            padding: 1.5rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modern-header h1 {
+            font-size: 1.6rem;
+        }
+        
+        .modern-header p {
+            font-size: 0.95rem;
+        }
+        
+        .stat-card {
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9rem;
+        }
+        
+        .stat-card p {
+            font-size: 1.5rem;
+        }
+        
+        .loading-spinner-modern {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .loading-text-modern {
+            font-size: 1rem;
+        }
+    }
+    
+    /* Small Mobile */
+    @media (max-width: 480px) {
+        .modern-header {
+            padding: 1rem;
+        }
+        
+        .modern-header h1 {
+            font-size: 1.4rem;
+        }
+        
+        .stat-card {
+            padding: 12px;
+        }
+        
+        .stat-card p {
+            font-size: 1.3rem;
+        }
+    }
+    
+    /* ======================
+       ACCESSIBILITY
+       ====================== */
+    @media (prefers-reduced-motion: reduce) {
+        .stat-card, .loading-spinner-modern, .loading-progress-bar {
+            animation: none;
+            transition: none;
+        }
+        
+        .stat-card:hover {
+            transform: none;
+        }
+    }
+    
+    /* High contrast mode */
+    @media (prefers-contrast: high) {
+        .stat-card {
+            border-width: 2px;
+            border-left-width: 6px;
+        }
+        
+        .modern-header {
+            background: #1a1c24;
+            border: 2px solid #00D4AA;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+def render_stat_card(title, value, help_text="", icon="📦"):
+    """Renderiza um card de estatística customizado."""
+    st.markdown(f"""
+    <div class="stat-card"><h3>{icon} {title}</h3><p>{value}</p><small>{help_text}</small></div>
+    """, unsafe_allow_html=True)
 
 def format_br_number(value, decimals=0):
     """
@@ -265,8 +518,68 @@ def show_completion_screen(placeholder, style):
 
 
 def render_header():
-    """Renderiza cabeçalho e descrição do aplicativo."""
-    st.title("📦 MAXIMIZAÇÃO DO USO DO ESTOQUE")
+    """Renderiza cabeçalho moderno e otimizado."""
+    st.markdown("""
+    <div class="modern-header">
+        <h1>🚀 PARADOXO - Empacotamento 3D</h1>
+        <p>Otimização Inteligente com IA e Aceleração GPU</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_modern_loading(message="Processando...", progress=0):
+    """
+    Renderiza loading moderno com progress bar.
+    
+    Args:
+        message: Mensagem a ser exibida
+        progress: Progresso de 0 a 100
+    """
+    return st.markdown(f"""
+    <div class="modern-loading">
+        <div class="loading-spinner-modern"></div>
+        <div class="loading-text-modern">{message}</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar" style="width: {progress}%;"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def create_progress_tracker():
+    """Cria um tracker de progresso para operações longas."""
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    return progress_bar, status_text
+
+
+def update_progress(progress_bar, status_text, current, total, message):
+    """Atualiza o progresso de uma operação."""
+    percentage = int((current / total) * 100)
+    progress_bar.progress(percentage)
+    status_text.text(f"{message} ({current}/{total}) - {percentage}%")
+
+
+def render_optimized_stat_card(title, value, delta=None, icon="�", color="#00D4AA"):
+    """
+    Renderiza card de estatística otimizado com melhor performance.
+    
+    Args:
+        title: Título do card
+        value: Valor principal
+        delta: Variação (opcional)
+        icon: Ícone do card
+        color: Cor de destaque
+    """
+    delta_html = f"<small style='color: {color}; font-weight: 600;'>△ {delta}</small>" if delta else ""
+    
+    st.markdown(f"""
+    <div class="stat-card" style="border-left-color: {color};">
+        <h3>{icon} {title}</h3>
+        <p style="color: {color};">{value}</p>
+        {delta_html}
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("""
     *Otimização avançada de empacotamento 3D com aceleração GPU e algoritmos inteligentes de distribuição e rotação*
     
@@ -433,18 +746,13 @@ def render_gpu_parameters() -> tuple:
         gpu_status = gpu_algorithms.check_gpu_availability()
     except Exception as e:
         st.error(f"Erro na detecção GPU: {e}")
-        gpu_status = {
-            'gpu_available': False,
-            'cuda_available': False,
-            'cupy_available': False,
-            'ortools_available': False
-        }
+        gpu_status = False
     
     # Debug: mostra status detalhado
     with st.expander("🔍 Debug GPU Status", expanded=True):
         st.json(gpu_status)
-        st.write(f"**Condição:** gpu_available={gpu_status['gpu_available']} AND cuda_available={gpu_status['cuda_available']}")
-        st.write(f"**Resultado:** {gpu_status['gpu_available'] and gpu_status['cuda_available']}")
+        st.write(f"**Condição:** gpu_available={gpu_status} AND cuda_available={gpu_status}")
+        st.write(f"**Resultado:** {gpu_status}")
     
     if gpu_status['gpu_available'] and gpu_status['cuda_available']:
         st.success("✅ RTX 3070 Ti detectada - Modo GPU ativado")
@@ -721,61 +1029,68 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
             st.write(f"   • Tipo {i}: {block_type[0]}×{block_type[1]}×{block_type[2]} ({count_this_type} unidades)")
     
     # Cria colunas de métricas
-    col1, col2, col3, col4 = st.columns(4)
-    
+    placed_count = len(placements)
+    total_count = len(block_dims)
+    efficiency = calculate_efficiency(placed_count, total_count)
+
+    # Renderiza Stat Cards
+    col1, col2 = st.columns(2)
     with col1:
-        if container.quantidade == 1:
-            st.metric(
-                "Volume do Container",
-                format_br_number(container.volume),
-                help="Capacidade total do container"
+        if container.quantidade > 1:
+            render_stat_card(
+                "Volume Total",
+                format_br_number(container.volume_total),
+                f"Capacidade total de {container.quantidade} containers",
+                "🧊"
             )
         else:
-            st.metric(
-                f"Volume Total ({container.quantidade} containers)",
-                format_br_number(container.volume_total),
-                help=f"Capacidade total de {container.quantidade} containers"
+            render_stat_card(
+                "Volume do Container",
+                format_br_number(container.volume),
+                "Capacidade total do container",
+                "🧊"
             )
-    
-    with col2:
-        st.metric(
-            "Tipos de Bloco", 
-            unique_count,
-            help="Número de tipos diferentes de bloco"
-        )
-    
-    with col3:
-        placed_count = len(placements)
-        total_count = len(block_dims)
-        st.metric(
+        render_stat_card(
             "Blocos Alocados",
-            f"{placed_count}/{total_count}",
-            help="Blocos alocados com sucesso"
+            f"{placed_count} / {total_count}",
+            "Blocos alocados com sucesso vs. total",
+            "✅"
         )
-    
-    with col4:
-        efficiency = calculate_efficiency(placed_count, total_count)
-        st.metric(
-            "Eficiência",
+    with col2:
+        render_stat_card(
+            "Tipos de Bloco",
+            str(unique_count),
+            "Número de dimensões diferentes de blocos",
+            "🎨"
+        )
+        render_stat_card(
+            "Eficiência de Ocupação",
             format_br_percentage(efficiency),
-            help="Percentual de eficiência do empacotamento"
+            "Percentual de blocos alocados com sucesso",
+            "🎯"
         )
-    
-    # Resumo detalhado por produto (se orders_df disponível)
-    if orders_df is not None:
-        st.markdown("### 📋 Resumo por Produto")
-        packing_summary = generate_packing_summary(orders_df, placements, total_count)
-        
-        # Métricas de resumo
-        col1, col2, col3 = st.columns(3)
+
+    # Mensagens de status
+    if placements:
+        if placed_count == total_count:
+            st.success(UI_MESSAGES['success_perfect'].format(total_count))
+        elif placed_count > 0:
+            missing = total_count - placed_count
+            st.warning(UI_MESSAGES['warning_partial'].format(missing))
+        else:
+            st.error(UI_MESSAGES['error_no_blocks'])
+
+    # Tabela de resumo detalhado por produto
+    if orders_df is not None and not orders_df.empty:
+        st.markdown("---")
+        st.markdown("### 📋 Detalhamento por Produto")
+        packing_summary = generate_packing_summary(orders_df, placements, block_dims)
+
         with col1:
-            st.metric("Total de Blocos", format_br_number(packing_summary['total_blocks']))
+            render_stat_card("Total de Blocos", format_br_number(packing_summary['total_blocks']), "Total de itens previstos para empacotar", "🔢")
         with col2:
-            st.metric("Blocos Empacotados", format_br_number(packing_summary['packed_blocks']))
-        with col3:
-            st.metric("Eficiência Geral", format_br_percentage(packing_summary['efficiency']))
-        
-        # Tabela detalhada por produto
+            render_stat_card("Blocos Empacotados", format_br_number(packing_summary['packed_blocks']), "Itens que couberam no container", "📥")
+
         if packing_summary['products']:
             df_summary = pd.DataFrame(packing_summary['products'])
             st.dataframe(
@@ -792,20 +1107,6 @@ def display_analysis_metrics(container: ContainerConfig, block_dims: list, place
                     "dimensoes": st.column_config.TextColumn("Dimensões", width="small")
                 }
             )
-    
-    # Mensagens de status (só exibe se houver processamento real)
-    if placements:  # Só mostra se realmente processou algum empacotamento
-        placed_count = len(placements)
-        total_count = len(block_dims)
-        
-        if placed_count == total_count:
-            st.success(UI_MESSAGES['success_perfect'].format(total_count))
-        elif placed_count > 0:
-            missing = total_count - placed_count
-            st.warning(UI_MESSAGES['warning_partial'].format(missing))
-        else:
-            st.error(UI_MESSAGES['error_no_blocks'])
-
 
 def run_packing_algorithm(container: ContainerConfig, block_dims: list, algoritmo_tipo: str, 
                          config: dict, produtos_df=None) -> list:
@@ -889,9 +1190,30 @@ def run_packing_algorithm(container: ContainerConfig, block_dims: list, algoritm
     return placements
 
 
+@st.cache_data(show_spinner=False)
+def _cached_create_visualization(container_dict, placements_tuple, block_dims_tuple):
+    """
+    Cria visualização 3D com cache para melhor performance.
+    
+    Args:
+        container_dict: Container serializado como dict
+        placements_tuple: Placements como tupla (imutável para cache)
+        block_dims_tuple: Block dims como tupla (imutável para cache)
+    
+    Returns:
+        Figure do Plotly serializada
+    """
+    # Reconstrói objetos a partir dos dados cached
+    container = ContainerConfig(**container_dict)
+    placements = list(placements_tuple)
+    block_dims = list(block_dims_tuple)
+    
+    return create_3d_plot(container, placements, block_dims)
+
+
 def render_visualization(container: ContainerConfig, placements: list, block_dims: list, orders_df=None):
     """
-    Renderiza visualização 3D do empacotamento.
+    Renderiza visualização 3D otimizada com cache e lazy loading.
     
     Args:
         container: Configuração do container
@@ -908,15 +1230,68 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
     try:
         st.write("🔄 Gerando visualização 3D...")
         
-        # Renderiza a visualização 3D
-        # Cria visualização 3D diretamente com Plotly
-        import plotly.graph_objects as go
-        import plotly.colors as pc
-        import numpy as np
+        # Progress tracker para visualização
+        progress_bar, status_text = create_progress_tracker()
         
-        st.write("🔄 Gerando visualização 3D...")
-        
-        fig = go.Figure()
+        try:
+            # Converte dados para formato cacheable
+            container_dict = {
+                'dx': container.dx,
+                'dy': container.dy, 
+                'dz': container.dz,
+                'quantidade': container.quantidade
+            }
+            
+            placements_tuple = tuple(tuple(p) if isinstance(p, (list, tuple)) else p for p in placements)
+            block_dims_tuple = tuple(tuple(bd) if isinstance(bd, (list, tuple)) else bd for bd in block_dims)
+            
+            # Atualiza progresso - Preparação
+            update_progress(progress_bar, status_text, 1, 4, "Preparando dados")
+            
+            # Usa visualização cacheada
+            update_progress(progress_bar, status_text, 2, 4, "Gerando visualização 3D")
+            fig = _cached_create_visualization(container_dict, placements_tuple, block_dims_tuple)
+            
+            # Atualiza progresso - Configuração
+            update_progress(progress_bar, status_text, 3, 4, "Configurando interatividade")
+            
+            # Configuração otimizada para performance
+            config = {
+                'displayModeBar': True,
+                'staticPlot': False,
+                'responsive': True,
+                'displaylogo': False,
+                'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d'],
+                'toImageButtonOptions': {
+                    'format': 'png',
+                    'filename': 'empacotamento_3d',
+                    'height': 800,
+                    'width': 1200,
+                    'scale': 1
+                }
+            }
+            
+            # Finaliza progresso
+            update_progress(progress_bar, status_text, 4, 4, "Renderizando")
+            
+            # Remove progress bar
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Renderiza visualização otimizada
+            st.markdown("### 🎨 Visualização 3D Interativa")
+            
+            # Container lazy loading para visualização
+            with st.container():
+                st.plotly_chart(fig, use_container_width=True, config=config)
+                
+            st.success("✅ Visualização 3D renderizada com sucesso!")
+            
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"❌ Erro ao gerar visualização: {str(e)}")
+            return
         
         # 1. Adiciona chão cinza claro
         dx, dy, dz = container.dx, container.dy, container.dz
@@ -1244,12 +1619,25 @@ def render_legend_and_stats(block_colors, orders_df, placements, block_dims):
 
 
 def main():
-    """Ponto de entrada principal da aplicação."""
+    """Ponto de entrada principal da aplicação otimizada."""
+    
+    # Aplica CSS otimizado
+    render_custom_css()
     
     # ========================================
-    # SEÇÃO 1: APRESENTAÇÃO
+    # SEÇÃO 1: APRESENTAÇÃO MODERNA
     # ========================================
     render_header()
+    
+    # Quick stats no topo
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        render_optimized_stat_card("Status", "Sistema Online", icon="🟢", color="#00D4AA")
+    with col2:
+        render_optimized_stat_card("GPU", "Disponível" if check_gpu_availability() else "CPU Mode", 
+                                  icon="⚡", color="#FF6B35")
+    with col3:
+        render_optimized_stat_card("Otimização", "Ativa", icon="🚀", color="#F7931E")
     
     # Linha separadora
     st.markdown("---")
@@ -1272,7 +1660,7 @@ def main():
         st.markdown("---")
     
     # ========================================
-    # SEÇÃO 4: EXECUÇÃO
+    # SEÇÃO 4: EXECUÇÃO OTIMIZADA
     # ========================================
     st.subheader("🚀 Processamento")
     

@@ -1,0 +1,89 @@
+{
+  "sistema_agentes": {
+    "versao": "1.0.0",
+    "ativo": true,
+    "contexto_incremental": true,
+    "auto_branch_pr": true,
+    "agente_ativo": null,
+    "sessao_id": null
+  },
+  "triggers": {
+    "@frontend": {
+      "agente": "frontend_expert",
+      "emoji": "🎨",
+      "cor": "#FF6B35",
+      "persona_file": "agentes/personas/frontend_expert.md",
+      "aliases": ["ative frontend expert", "front-end", "especialista frontend", "ui", "ux"]
+    },
+    "@backend": {
+      "agente": "backend_expert", 
+      "emoji": "🔧",
+      "cor": "#00B33C",
+      "persona_file": "agentes/personas/backend_expert.md",
+      "aliases": ["ative backend expert", "back-end", "especialista backend", "api", "servidor"]
+    },
+    "@ia": {
+      "agente": "ia_specialist",
+      "emoji": "🤖", 
+      "cor": "#9900FF",
+      "persona_file": "agentes/personas/ia_specialist.md",
+      "aliases": ["ative ia specialist", "machine learning", "ml", "ai", "inteligencia artificial"]
+    },
+    "@security": {
+      "agente": "security_expert",
+      "emoji": "🛡️",
+      "cor": "#FF0000", 
+      "persona_file": "agentes/personas/security_expert.md",
+      "aliases": ["ative security expert", "segurança", "sec", "vulnerabilidade"]
+    },
+    "@devops": {
+      "agente": "devops_expert",
+      "emoji": "🚀",
+      "cor": "#0066CC",
+      "persona_file": "agentes/personas/devops_expert.md", 
+      "aliases": ["ative devops expert", "deploy", "ci/cd", "infraestrutura"]
+    }
+  },
+  "mcp_functions": {
+    "github_core": [
+      "mcp_mcp-vinao_create_branch",
+      "mcp_mcp-vinao_create_pull_request",
+      "mcp_mcp-vinao_create_or_update_file",
+      "mcp_mcp-vinao_get_file_contents",
+      "mcp_mcp-vinao_list_branches",
+      "mcp_mcp-vinao_get_pull_request",
+      "mcp_mcp-vinao_merge_pull_request"
+    ],
+    "github_analysis": [
+      "mcp_mcp-vinao_get_pull_request_diff",
+      "mcp_mcp-vinao_get_pull_request_files", 
+      "mcp_mcp-vinao_list_commits",
+      "mcp_mcp-vinao_get_commit"
+    ],
+    "github_workflows": [
+      "mcp_mcp-vinao_list_workflows",
+      "mcp_mcp-vinao_run_workflow",
+      "mcp_mcp-vinao_get_workflow_run"
+    ],
+    "github_issues": [
+      "mcp_mcp-vinao_create_issue",
+      "mcp_mcp-vinao_update_issue",
+      "mcp_mcp-vinao_list_issues"
+    ]
+  },
+  "workflows": {
+    "padrao": {
+      "1": "🔍 Analisar contexto do projeto",
+      "2": "🎭 Assumir persona do agente",
+      "3": "📋 Identificar tarefas específicas", 
+      "4": "🔧 Implementar soluções",
+      "5": "📝 Criar branch + PR quando necessário",
+      "6": "✅ Validar e reportar resultados"
+    },
+    "emergencia": {
+      "1": "🚨 Avaliar urgência",
+      "2": "⚡ Ação direta sem PR",
+      "3": "📢 Comunicar mudanças"
+    }
+  }
+}
