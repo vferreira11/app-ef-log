@@ -164,6 +164,68 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
         else:  # >180cm: Zona crítica
             return peso <= 4.0  # Produtos até 4kg na zona crítica
     
+    # 🚀 FUNÇÃO DE SCORE ABC + COMPACTAÇÃO + AGRUPAMENTO + DISTRIBUIÇÃO OTIMIZADA
+    def calcular_score_distribuicao_otimizada(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica, y_inicio, y_fim, bonus_agrupamento):
+        """Score otimizado que prioriza: linha guia Y=0 + esquerda para direita + agrupamento por tipo + ABC"""
+        # Base: proximidade ao canto (0,0,0) - mas com peso diferente para Y
+        score = x + z * 0.1
+        
+        # 🎯 PRIORIZAÇÃO MASSIVA PARA LINHA GUIA Y=0 (profundidade 0)
+        if y == 0:
+            score -= 200.0  # BONUS GIGANTESCO para Y=0 (linha guia obrigatória)
+            print(f"[DEBUG] 🎯 BONUS LINHA GUIA: Produto em Y=0 recebe bonus -200.0")
+        else:
+            # Penalização crescente por distância da linha guia Y=0
+            score += y * 5.0  # Penalização forte por se afastar da linha guia
+            print(f"[DEBUG] 🎯 PENALIZAÇÃO Y={y}: +{y * 5.0} por se afastar da linha guia")
+        
+        # 🎯 BONUS PARA FICAR DENTRO DA COLUNA DO TIPO (secundário à linha guia)
+        centro_y_coluna = (y_inicio + y_fim) / 2
+        distancia_centro_coluna = abs(y + d/2 - centro_y_coluna)
+        bonus_coluna = (50.0 - distancia_centro_coluna)
+        score -= bonus_coluna
+        print(f"[DEBUG] 🎯 BONUS COLUNA: {bonus_coluna:.1f} (dist centro: {distancia_centro_coluna:.1f})")
+        
+        # 🚀 BONUS ESQUERDA PARA DIREITA: Prioriza X menores (preenche da esquerda)
+        score += x * 0.5  # Pequena penalização por X maiores (força esquerda->direita)
+        
+        # 📊 BONUS/PENALIZAÇÃO ABC MASSIVA
+        z_min, z_max = zona_ergonomica
+        if classe_abc == 'A':
+            if z_min <= z <= z_max:
+                score -= 100.0  # BONUS ENORME para A na zona correta
+            else:
+                score += 50.0   # PENALIZAÇÃO SEVERA para A fora da zona
+        elif classe_abc == 'B':
+            if z_min <= z <= z_max + 3:  # Tolerância para B
+                score -= 20.0   # Bonus moderado
+            else:
+                score += 10.0   # Penalização leve
+        # Classe C não tem bonus/penalização (flexível)
+        
+        # 🎯 BONUS MASSIVO POR AGRUPAMENTO DE MESMO TIPO
+        score -= bonus_agrupamento
+        
+        # Bonus por adjacência geral (blocos vizinhos)
+        bonus_adjacencia = 0
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                for dz in [-1, 0, 1]:
+                    if dx == 0 and dy == 0 and dz == 0:
+                        continue
+                    if (x + dx, y + dy, z + dz) in posicoes_ocupadas:
+                        bonus_adjacencia += 1
+        
+        score -= bonus_adjacencia * 2.0  # Forte incentivo à proximidade geral
+        
+        # 🧬 Bonus biomecânico por categoria (secundário)
+        if categoria in ['Brinquedos', 'Organizadores']:
+            score -= 3.0  # Prioriza itens acessíveis (menor que ABC)
+        elif categoria == 'Utilidades':
+            score += 1.0  # Pode ficar em locais menos acessíveis
+            
+        return score
+
     # 🚀 FUNÇÃO DE SCORE ABC + COMPACTAÇÃO + AGRUPAMENTO
     def calcular_score_abc_inteligente_com_agrupamento(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica, y_inicio, y_fim, bonus_agrupamento):
         """Score que considera ABC + proximidade + adjacência + agrupamento por tipo"""
@@ -252,7 +314,7 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
             
         return score
     
-    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL COM AGRUPAMENTO (TIPO + ABC + BIOMECÂNICA + FÍSICA)
+    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL COM AGRUPAMENTO (TIPO + ABC + BIOMECÂNICA + FÍSICA + DISTRIBUIÇÃO OTIMIZADA)
     for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_com_abc:
         w, d, h = dims
         melhor_posicao = None
@@ -282,13 +344,36 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                 print(f"[DEBUG] ❌ Zona ABC+biomecânica rejeitou Z={z} para {classe_abc}")
                 continue
                 
-            # Busca posição na camada atual DENTRO DA COLUNA DO TIPO
+            # 🎯 DISTRIBUIÇÃO OTIMIZADA: Esquerda para direita + Linha guia Y=0
             encontrou_nesta_camada = False
             posicoes_testadas = 0
             
+            # PRIMEIRO: Busca posições que começam na linha guia (Y=0) dentro da coluna
             for x in range(0, container.dx - w + 1):
-                # 🎯 RESTRINGE Y À COLUNA DO TIPO DE PRODUTO
-                for y in range(y_inicio, y_fim - d + 1):
+                # 🎯 PRIORIDADE MÁXIMA: Posições que começam na linha guia Y=0 (profundidade 0)
+                y_candidatos = []
+                
+                # Primeira prioridade: Y=0 se estiver dentro da coluna do tipo
+                if y_inicio <= 0 < y_fim and d <= (y_fim - 0):
+                    y_candidatos.append(0)
+                
+                # Segunda prioridade: Y=y_inicio (início da coluna do tipo)
+                if y_inicio != 0 and d <= largura_disponivel:
+                    y_candidatos.append(y_inicio)
+                
+                # Terceira prioridade: outras posições na coluna, priorizando mais próximas de Y=0
+                for y_teste in range(max(y_inicio, 0), y_fim - d + 1):
+                    if y_teste not in y_candidatos:
+                        y_candidatos.append(y_teste)
+                
+                # Ordena Y candidatos por prioridade: Y=0 primeiro, depois proximidade com Y=0
+                y_candidatos.sort(key=lambda y: (
+                    0 if y == 0 else 1,  # Y=0 tem prioridade absoluta
+                    abs(y - 0),          # Depois, proximidade com Y=0
+                    y                    # Por último, ordem crescente
+                ))
+                
+                for y in y_candidatos:
                     posicoes_testadas += 1
                     
                     # Verifica colisões
@@ -346,8 +431,8 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                                                 bonus_agrupamento += 1.0  # Bonus fraco para tipos diferentes
                                             break
                     
-                    # 🚀 SCORE ABC INTELIGENTE COM AGRUPAMENTO: Calcula score integrado
-                    score = calcular_score_abc_inteligente_com_agrupamento(
+                    # 🚀 SCORE ABC INTELIGENTE COM DISTRIBUIÇÃO OTIMIZADA
+                    score = calcular_score_distribuicao_otimizada(
                         x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica, 
                         y_inicio, y_fim, bonus_agrupamento
                     )
@@ -356,7 +441,8 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                         melhor_score = score
                         melhor_posicao = (x, y, z)
                         encontrou_nesta_camada = True
-                        print(f"[DEBUG] 🎯 Nova melhor posição: ({x},{y},{z}) - Score: {score:.2f} (Agrup: +{bonus_agrupamento:.1f})")
+                        linha_tipo = "linha guia Y=0" if y == 0 else f"linha Y={y}"
+                        print(f"[DEBUG] 🎯 Nova melhor posição: ({x},{y},{z}) - Score: {score:.2f} ({linha_tipo}, Agrup: +{bonus_agrupamento:.1f})")
             
             print(f"[DEBUG] 📊 Z={z}: testadas {posicoes_testadas} posições na coluna {y_inicio}-{y_fim-1}, encontrou válida? {encontrou_nesta_camada}")
             
@@ -432,7 +518,7 @@ def aplicar_greedy_inteligente_com_agrupamento(container: ContainerConfig, produ
         
         print(f"[DEBUG] 🤖 GREEDY processando {produto_idx} ({classe_abc}): {w}x{d}x{h}")
         
-        # 🎯 PRIMEIRA TENTATIVA: Tentar manter na coluna do tipo (mais flexível)
+        # 🎯 PRIMEIRA TENTATIVA: Tentar manter na coluna do tipo (mais flexível) + LINHA GUIA
         if dims in limites_colunas:
             y_inicio, y_fim = limites_colunas[dims]
             largura_disponivel = y_fim - y_inicio
@@ -442,7 +528,30 @@ def aplicar_greedy_inteligente_com_agrupamento(container: ContainerConfig, produ
                 
                 for z in range(0, container.dz - h + 1):
                     for x in range(0, container.dx - w + 1):
-                        for y in range(y_inicio, y_fim - d + 1):
+                        # 🎯 GREEDY COM DISTRIBUIÇÃO OTIMIZADA: Prioriza linha guia Y=0
+                        y_candidatos = []
+                        
+                        # Primeira prioridade: Y=0 se estiver dentro da coluna do tipo
+                        if y_inicio <= 0 < y_fim and d <= (y_fim - 0):
+                            y_candidatos.append(0)
+                        
+                        # Segunda prioridade: Y=y_inicio (início da coluna do tipo)
+                        if y_inicio != 0 and d <= largura_disponivel:
+                            y_candidatos.append(y_inicio)
+                        
+                        # Terceira prioridade: outras posições na coluna, priorizando proximidade com Y=0
+                        for y_teste in range(max(y_inicio, 0), y_fim - d + 1):
+                            if y_teste not in y_candidatos:
+                                y_candidatos.append(y_teste)
+                        
+                        # Ordena Y candidatos por prioridade
+                        y_candidatos.sort(key=lambda y: (
+                            0 if y == 0 else 1,  # Y=0 tem prioridade absoluta
+                            abs(y - 0),          # Depois, proximidade com Y=0
+                            y                    # Por último, ordem crescente
+                        ))
+                        
+                        for y in y_candidatos:
                             
                             # Verifica colisões
                             colidiu = False
@@ -475,8 +584,15 @@ def aplicar_greedy_inteligente_com_agrupamento(container: ContainerConfig, produ
                             if not estavel:
                                 continue
                             
-                            # 🎯 Score com BONUS MASSIVO para ficar na coluna do tipo
-                            score = x + y + z * 0.1
+                            # 🎯 Score com DISTRIBUIÇÃO OTIMIZADA + BONUS para coluna do tipo
+                            score = x + z * 0.1
+                            
+                            # BONUS GIGANTESCO para linha guia Y=0
+                            if y == 0:
+                                score -= 100.0  # BONUS ENORME para linha guia
+                            else:
+                                score += y * 3.0  # Penalização por se afastar da linha guia
+                            
                             score -= 50.0  # BONUS ENORME por ficar na coluna do tipo
                             
                             # Bonus adicional por proximidade com mesmo tipo

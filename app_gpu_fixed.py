@@ -24,14 +24,15 @@ if sys.platform.startswith('win'):
         # Fallback: define ambiente UTF-8
         os.environ['PYTHONIOENCODING'] = 'utf-8'
 
+
 import streamlit as st
 import pandas as pd
 import time
 import random
+import plotly.express as px
 import plotly.graph_objects as go
-import plotly.colors as pc
 import numpy as np
-
+    
 # Adiciona o diretório scripts ao path para imports
 scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts')
 sys.path.append(scripts_dir)
@@ -69,247 +70,24 @@ st.set_page_config(
 )
 
 def render_custom_css():
-    """Injeta CSS customizado otimizado para performance e responsividade."""
+    """Injeta CSS customizado com paleta Viridis e layout moderno."""
     st.markdown("""
     <style>
-    /* ======================
-       PERFORMANCE OPTIMIZATIONS
-       ====================== */
-    
-    /* Reduce repaints and enable hardware acceleration */
-    .stat-card, .modern-header, .loading-container {
-        will-change: transform;
-        transform: translateZ(0);
-    }
-    
-    /* ======================
-       RESPONSIVE STAT CARDS
-       ====================== */
-    .stat-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E6EAF1;
-        border-left: 5px solid #00D4AA;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 16px;
-        text-align: left;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-3px) translateZ(0);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-    }
-    
-    .stat-card h3 {
-        font-size: 1rem;
-        color: #5A6474;
-        margin-bottom: 8px;
-        font-weight: 600;
-    }
-    
-    .stat-card p {
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #1A1C24;
-        margin: 0;
-        line-height: 1.2;
-    }
-    
-    .stat-card small {
-        font-size: 0.85rem;
-        color: #8A94A6;
-        display: block;
-        margin-top: 4px;
-    }
-    
-    /* ======================
-       MODERN HEADER
-       ====================== */
-    .modern-header {
-        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #00D4AA 100%);
-        padding: 2rem;
-        border-radius: 12px;
-        margin-bottom: 2rem;
-        text-align: center;
-        box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
-    }
-    
-    .modern-header h1 {
-        color: white;
-        margin: 0;
-        font-size: 2.5rem;
-        font-weight: 800;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    .modern-header p {
-        color: rgba(255,255,255,0.95);
-        margin: 0.5rem 0 0 0;
-        font-size: 1.1rem;
-        font-weight: 400;
-    }
-    
-    /* ======================
-       IMPROVED LOADING
-       ====================== */
-    .modern-loading {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 3rem 2rem;
-        background: rgba(26, 28, 36, 0.98);
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-    }
-    
-    .loading-spinner-modern {
-        border: 3px solid rgba(0, 212, 170, 0.1);
-        border-top: 3px solid #00D4AA;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1s linear infinite;
-        margin-bottom: 1.5rem;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .loading-text-modern {
-        color: white;
-        font-size: 1.2rem;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-    
-    .loading-progress {
-        width: 200px;
-        height: 4px;
-        background: rgba(255,255,255,0.2);
-        border-radius: 2px;
-        overflow: hidden;
-        margin-top: 1rem;
-    }
-    
-    .loading-progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #00D4AA, #FF6B35);
-        border-radius: 2px;
-        animation: progress 2s ease-in-out infinite;
-    }
-    
-    @keyframes progress {
-        0% { width: 0%; }
-        50% { width: 70%; }
-        100% { width: 100%; }
-    }
-    
-    /* ======================
-       RESPONSIVE BREAKPOINTS
-       ====================== */
-    
-    /* Tablet */
-    @media (max-width: 1024px) {
-        .modern-header h1 {
-            font-size: 2rem;
-        }
-        
-        .stat-card {
-            padding: 16px;
-        }
-        
-        .stat-card p {
-            font-size: 1.8rem;
-        }
-    }
-    
-    /* Mobile */
-    @media (max-width: 768px) {
-        .modern-header {
-            padding: 1.5rem 1rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .modern-header h1 {
-            font-size: 1.6rem;
-        }
-        
-        .modern-header p {
-            font-size: 0.95rem;
-        }
-        
-        .stat-card {
-            padding: 15px;
-            margin-bottom: 12px;
-        }
-        
-        .stat-card h3 {
-            font-size: 0.9rem;
-        }
-        
-        .stat-card p {
-            font-size: 1.5rem;
-        }
-        
-        .loading-spinner-modern {
-            width: 40px;
-            height: 40px;
-        }
-        
-        .loading-text-modern {
-            font-size: 1rem;
-        }
-    }
-    
-    /* Small Mobile */
-    @media (max-width: 480px) {
-        .modern-header {
-            padding: 1rem;
-        }
-        
-        .modern-header h1 {
-            font-size: 1.4rem;
-        }
-        
-        .stat-card {
-            padding: 12px;
-        }
-        
-        .stat-card p {
-            font-size: 1.3rem;
-        }
-    }
-    
-    /* ======================
-       ACCESSIBILITY
-       ====================== */
-    @media (prefers-reduced-motion: reduce) {
-        .stat-card, .loading-spinner-modern, .loading-progress-bar {
-            animation: none;
-            transition: none;
-        }
-        
-        .stat-card:hover {
-            transform: none;
-        }
-    }
-    
-    /* High contrast mode */
-    @media (prefers-contrast: high) {
-        .stat-card {
-            border-width: 2px;
-            border-left-width: 6px;
-        }
-        
-        .modern-header {
-            background: #1a1c24;
-            border: 2px solid #00D4AA;
-        }
-    }
+        body { background-color: #F8F9FA; }
+        .main { background-color: #FFF; border-radius: 12px; box-shadow: 0 2px 8px #E0E0E0; }
+        h1, h2, h3 { color: #440154; font-family: 'Segoe UI', 'Roboto', sans-serif; }
+        .stButton>button { color: #FFF; background: linear-gradient(90deg, #440154, #31688e, #35b779, #fde725); border-radius: 8px; border: 1px solid #440154; font-weight: bold; }
+        .stButton>button:hover { filter: brightness(1.1); box-shadow: 0 2px 8px #31688e33; }
+        .stDataFrame thead { background-color: #31688e !important; color: #FFF; }
+        .stDataFrame tbody tr:hover { background-color: #eaf6f3 !important; }
+        .stMetric { color: #440154; font-weight: bold; }
+        .stSidebar { background: #fff; border-right: 2px solid #44015422; }
+        .stDivider { border-top: 2px solid #35b779; margin: 2rem 0; }
+        .stat-card { background: #fff; border: 1.5px solid #31688e; border-radius: 10px; box-shadow: 0 2px 8px #31688e22; margin-bottom: 1.2rem; padding: 1.2rem; }
+        .stat-card h3 { color: #440154; font-weight: bold; }
+        .stat-card p { color: #31688e; font-size: 2rem; font-weight: bold; }
+        .stat-card small { color: #35b779; }
+        .footer { color: #888; text-align: center; margin-top: 2rem; font-size: 0.9rem; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -517,12 +295,14 @@ def show_completion_screen(placeholder, style):
     placeholder.empty()  # Remove a tela de loading
 
 
+
 def render_header():
-    """Renderiza cabeçalho moderno e otimizado."""
+    """Renderiza header fixo com Viridis."""
     st.markdown("""
-    <div class="modern-header">
-        <h1>🚀 PARADOXO - Empacotamento 3D</h1>
-        <p>Otimização Inteligente com IA e Aceleração GPU</p>
+    <div style='background: linear-gradient(90deg, #440154, #31688e, #35b779, #fde725); padding: 1.5rem 0 1rem 0; border-radius: 0 0 18px 18px; box-shadow: 0 2px 8px #31688e33; text-align: center;'>
+        <img src='https://raw.githubusercontent.com/matplotlib/cmocean/master/cmocean/rgb/viridis.png' width='120' style='margin-bottom: 0.5rem;'/><br>
+        <span style='font-size:2.2rem; font-weight: bold; color: #fff; letter-spacing: 2px;'>PARADOXO</span><br>
+        <span style='font-size:1.1rem; color: #fde725; font-weight: 500;'>Empacotamento 3D Inteligente com GPU</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -587,143 +367,13 @@ def render_optimized_stat_card(title, value, delta=None, icon="�", color="#00D
     """)
 
 
+
 def render_footer():
-    """Renderiza rodapé profissional com informações de copyright."""
-    st.markdown("---")
-    
-    # Layout responsivo usando colunas do Streamlit
-    col1, col2, col3 = st.columns([2, 1, 2])
-    
-    # CSS para estilos
+    """Rodapé Viridis minimalista."""
     st.markdown("""
-    <style>
-    .footer-company {
-        font-size: 0.8rem;
-        color: #666;
-    }
-    
-    .footer-version {
-        text-align: center;
-        font-size: 0.75rem;
-        color: #888;
-    }
-    
-    .footer-dev {
-        text-align: right;
-        font-size: 0.8rem;
-        color: #666;
-    }
-    
-    .version-badge {
-        background: linear-gradient(45deg, #FF6B35, #F7931E);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: bold;
-        display: inline-block;
-    }
-    
-    .linkedin-link {
-        color: #0077B5 !important;
-        text-decoration: none !important;
-        border-bottom: 2px solid transparent;
-        transition: all 0.3s ease;
-        display: inline-block;
-    }
-    
-    .linkedin-link:hover {
-        border-bottom: 2px solid #0077B5;
-        transform: translateY(-1px);
-        color: #005885 !important;
-    }
-    
-    .linkedin-copyright {
-        color: #0077B5 !important;
-        text-decoration: none !important;
-        border-bottom: 1px dotted #0077B5;
-        transition: all 0.3s ease;
-    }
-    
-    .linkedin-copyright:hover {
-        border-bottom: 1px solid #0077B5;
-        color: #005885 !important;
-    }
-    
-    .copyright-section {
-        text-align: center;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid #eee;
-        font-size: 0.75rem;
-        color: #888;
-        line-height: 1.4;
-    }
-    
-    /* Responsividade melhorada para mobile */
-    @media (max-width: 768px) {
-        .footer-company, .footer-dev {
-            text-align: center !important;
-            font-size: 0.75rem !important;
-        }
-        .footer-version {
-            font-size: 0.7rem !important;
-        }
-        .version-badge {
-            font-size: 0.7rem !important;
-        }
-        .copyright-section {
-            font-size: 0.7rem !important;
-        }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Primeira linha - Desenvolvedor, Versão, Empresa (ordem trocada)
-    with col1:
-        st.markdown("""
-        <div class="footer-company">
-            <strong>
-                <a href="https://www.linkedin.com/in/viniciusferreira11/" 
-                   target="_blank" 
-                   class="linkedin-link">
-                    💼 Vinícius Ferreira
-                </a>
-            </strong><br>
-            Resolvedor de problemas
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="footer-version">
-            <span class="version-badge">VERSÃO BETA</span><br>
-            <small>Sujeito a alterações</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <div class="footer-dev">
-            <strong>PARADOXO</strong><br>
-            IA feita a mão.
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Segunda linha - Copyright centralizado
-    st.markdown("""
-    <div class="copyright-section">
-        © 2025 <strong>PARADOXO</strong>. Todos os direitos reservados. 
-        Desenvolvido por 
-        <strong>
-            <a href="https://www.linkedin.com/in/viniciusferreira11/" 
-               target="_blank" 
-               class="linkedin-copyright">
-                Vinícius Ferreira
-            </a>
-        </strong> no Brasil 🇧🇷<br>
-        <small style="color: #aaa;">
-            Este software é protegido por direitos autorais. A reprodução não autorizada é proibida por lei.
-        </small>
+    <hr style='border-top:2px solid #35b779; margin:2rem 0 1rem 0;'>
+    <div class='footer'>
+        © 2025 PARADOXO • Desenvolvido por <a href='https://www.linkedin.com/in/viniciusferreira11/' target='_blank' style='color:#31688e;font-weight:bold;text-decoration:none;'>Vinícius Ferreira</a> • Powered by Streamlit & Viridis
     </div>
     """, unsafe_allow_html=True)
 
@@ -735,29 +385,27 @@ def render_gpu_parameters() -> tuple:
     Retorna:
         Tuple: (Tipo de algoritmo, Status GPU)
     """
-    st.subheader("🚀 Algoritmo GPU Ultra-Inteligente")
+    st.subheader("⚡ Check GPU")
     
     # Verifica status da GPU com debug (força re-detecção)
     try:
-        # Força reimport para garantir detecção correta
         import importlib
         from scripts.core import gpu_algorithms
         importlib.reload(gpu_algorithms)
         gpu_status = gpu_algorithms.check_gpu_availability()
     except Exception as e:
         st.error(f"Erro na detecção GPU: {e}")
-        gpu_status = False
-    
-    # Debug: mostra status detalhado
-    with st.expander("🔍 Debug GPU Status", expanded=True):
-        st.json(gpu_status)
-        st.write(f"**Condição:** gpu_available={gpu_status} AND cuda_available={gpu_status}")
-        st.write(f"**Resultado:** {gpu_status}")
-    
-    if gpu_status['gpu_available'] and gpu_status['cuda_available']:
+        gpu_status = {'gpu_available': False, 'cuda_available': False}
+
+
+    # Exibe todos os parâmetros em um expander retraído, menos destacado
+    with st.expander("Parâmetros de diagnóstico da GPU", expanded=False):
+        for key, value in gpu_status.items():
+            st.write(f"**{key}:** {value}")
+
+    if gpu_status.get('gpu_available') and gpu_status.get('cuda_available'):
         st.success("✅ RTX 3070 Ti detectada - Modo GPU ativado")
         algo_tipo = "GPU Ultra-Inteligente"
-        
         st.info("""
         🚀 **Algoritmo GPU Ultra-Inteligente (99% Acurácia):**
         - 📊 **ABC + Biomecânica**: Classificação CUDA massiva (4096 cores)
@@ -765,45 +413,55 @@ def render_gpu_parameters() -> tuple:
         - ⚖️ **Validação Tensorial**: Física realista GPU
         - 🧬 **Refinamento Evolutivo**: Algoritmo genético paralelo
         """)
-        
     else:
         st.warning("⚠️ GPU não disponível - Usando algoritmo híbrido CPU")
         algo_tipo = "Híbrido CPU"
-        
         st.info("""
         🔄 **Fallback: Algoritmo Híbrido CPU:**
         - 🧬 **Biomecânico**: Zoneamento ergonômico por peso/categoria
         - 🏭 **Chão do Galpão**: Empilhamento estável iniciando em Z=0
         - 🚀 **Otimização**: Compactação inteligente com adjacência
         """)
-    
-    # Parâmetros avançados
-    with st.expander("⚙️ Configurações Avançadas", expanded=False):
-        precision_level = st.selectbox(
-            "Nível de Precisão",
-            ["Rápido (90-95%)", "Balanceado (95-97%)", "Ultra (97-99%)"],
-            index=1,
-            help="Balança velocidade vs acurácia"
-        )
-        
-        enable_physics = st.checkbox(
-            "Validação Física Avançada",
-            value=True,
-            help="Ativa cálculos de estabilidade e centro de massa"
-        )
-        
-        enable_evolution = st.checkbox(
-            "Refinamento Evolutivo",
-            value=True,
-            help="Usa algoritmo genético para otimização final"
-        )
-    
-    return algo_tipo, {
+
+    # Parâmetros avançados (padrão)
+    precision_level = "Balanceado (95-97%)"
+    enable_physics = True
+    enable_evolution = True
+    config = {
         'precision': precision_level,
         'physics': enable_physics,
         'evolution': enable_evolution,
         'gpu_status': gpu_status
     }
+    return algo_tipo, config
+def main():
+    render_custom_css()
+    render_header()
+
+    # Sidebar Viridis
+    with st.sidebar:
+        st.header("Navegação", divider="rainbow")
+        st.button("Página 1")
+        st.button("Página 2")
+
+    # Dashboard cards
+    st.subheader("Dashboard")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Indicador 1", "123")
+    with col2:
+        st.metric("Indicador 2", "456")
+
+    st.divider()
+
+    # Gráfico Viridis
+    st.subheader("Gráfico Viridis")
+    x = np.linspace(0, 10, 100)
+    y = np.sin(x)
+    fig = px.line(x=x, y=y, color_discrete_sequence=px.colors.sequential.Viridis)
+    st.plotly_chart(fig, use_container_width=True)
+
+    render_footer()
 
 
 def render_container_section() -> ContainerConfig:
@@ -1335,8 +993,11 @@ def render_visualization(container: ContainerConfig, placements: list, block_dim
         
         # 3. Mapeamento de cores Viridis por tipo de produto
         unique_dims = list(set(block_dims))
-        viridis_colors = pc.sample_colorscale('Viridis', np.linspace(0, 1, len(unique_dims)))
-        dim_to_color = {dim: color for dim, color in zip(unique_dims, viridis_colors)}
+        # Usa paleta Viridis do plotly express
+        viridis_colors = px.colors.sequential.Viridis
+        # Repete cores se necessário
+        color_cycle = viridis_colors * ((len(unique_dims) // len(viridis_colors)) + 1)
+        dim_to_color = {dim: color for dim, color in zip(unique_dims, color_cycle)}
         
         # 4. Adiciona blocos com cores por tipo
         for i, placement in enumerate(placements):
