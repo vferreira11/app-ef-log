@@ -1,3 +1,49 @@
+# --- STUBS para compatibilidade com app_gpu_fixed.py ---
+def gpu_hybrid_ultra_intelligent_packing(container, block_dims, produtos_df):
+    """
+    Stub para compatibilidade. Redireciona para hybrid_intelligent_packing.
+    """
+    return hybrid_intelligent_packing(container, block_dims, produtos_df)
+
+def check_gpu_availability():
+    """
+    Checa a disponibilidade real de GPU, CUDA, CuPy e OR-Tools.
+    """
+    cuda_available = False
+    cupy_available = False
+    gpu_available = False
+    ortools_available = False
+    # Checa CUDA (nvidia-smi)
+    try:
+        import subprocess
+        result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cuda_available = result.returncode == 0
+    except Exception:
+        cuda_available = False
+    # Checa CuPy
+    try:
+        import cupy
+        cupy_available = True
+        # Checa se há GPU disponível para CuPy
+        try:
+            n_gpus = cupy.cuda.runtime.getDeviceCount()
+            gpu_available = n_gpus > 0
+        except Exception:
+            gpu_available = False
+    except ImportError:
+        cupy_available = False
+    # Checa OR-Tools
+    try:
+        import ortools
+        ortools_available = True
+    except ImportError:
+        ortools_available = False
+    return {
+        'gpu_available': gpu_available,
+        'cuda_available': cuda_available,
+        'cupy_available': cupy_available,
+        'ortools_available': ortools_available
+    }
 """
 Algoritmos de empacotamento 3D otimizados com lógica biomecânica.
 """

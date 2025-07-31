@@ -8,6 +8,7 @@ from typing import Dict, List, Tuple, Union, Optional
 import cupy as cp
 import numpy as np
 from dataclasses import dataclass
+from .models import ContainerConfig
 
 # Configuração de logging
 logger = logging.getLogger(__name__)
@@ -218,5 +219,12 @@ def gpu_hybrid_ultra_intelligent_packing(container: ContainerConfig, items: List
     Returns:
         np.ndarray: Array NumPy com resultado do empacotamento
     """
+    # Cria configuração padrão se não fornecida
+    config = None
+    if config_df is not None:
+        # Aqui você pode customizar a criação do GPUConfig a partir do config_df se necessário
+        pass
     optimizer = GPUOptimizer(config)
+    # Extrai as dimensões do container
+    container_dims = (container.dx, container.dy, container.dz)
     return optimizer.optimize_packing(items, container_dims)
