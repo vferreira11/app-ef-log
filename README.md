@@ -49,5 +49,19 @@ streamlit run app_gpu_fixed.py
 - **`v1-clean`** - Versão mínima funcional (14 arquivos essenciais)
 - **`copilot_v0`** - Versão base com histórico completo
 
+## 🗺️ Roadmap de Desenvolvimento
+
+### Implementado
+- ✅ Sistema completo de identificação automática de agentes
+- ✅ Validador de escopo assíncrono
+- ✅ Suporte a GPU com CuPy e algoritmos otimizados
+- ✅ Documentação robusta para criação de novos agentes
+
+### Próximas Etapas
+- ⏳ Implementação de agentes especializados adicionais
+- ⏳ Otimização do sistema de orquestração
+- ⏳ Expansão dos testes automatizados
+- ⏳ Refinamento da interface de usuário
+
 ---
 *Sistema desenvolvido para otimização logística e análise espacial 3D*
