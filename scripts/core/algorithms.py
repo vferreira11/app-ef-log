@@ -15,20 +15,140 @@ ZONA_ACEITAVEL = (7, 10)     # 70-100cm: Flexão leve → Cintura (esforço baix
 ZONA_RUIM = (3, 7)           # 30-70cm: Flexão moderada → Joelhos (esforço alto)
 ZONA_CRITICA = (0, 3)        # 0-30cm: Chão → Flexão severa (evitar se possível)
 
+def garantir_acessibilidade_frontal_agrupada(container: ContainerConfig, produtos_com_abc: List[tuple], posicoes_ocupadas: set) -> List[tuple]:
+    """
+    🚪 ACESSIBILIDADE FRONTAL AGRUPADA: Garante que todos os tipos de produtos
+    estejam disponíveis na profundidade = 0 (frente do container), organizados em grupos.
+    
+    Regra: Na linha frontal (profundidade = 0), cada tipo de produto deve aparecer
+    pelo menos uma vez, mas produtos do mesmo tipo ficam agrupados consecutivamente.
+    
+    Exemplo: |Verde|Verde|Verde|Amarelo|Amarelo|Roxo|Roxo|Roxo|
+    """
+    print("[DEBUG] === 🚪 GARANTINDO ACESSIBILIDADE FRONTAL AGRUPADA ===")
+    
+    alocacoes_frontais = []
+    
+    # 1. Identificar todos os tipos únicos de produtos
+    tipos_produtos = {}  # categoria -> lista de produtos
+    for produto_info in produtos_com_abc:
+        produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda = produto_info
+        if categoria not in tipos_produtos:
+            tipos_produtos[categoria] = []
+        tipos_produtos[categoria].append(produto_info)
+    
+    print(f"[DEBUG] 🏷️ Tipos de produtos identificados: {list(tipos_produtos.keys())}")
+    
+    # 2. Ordenar tipos por prioridade (classe ABC + demanda)
+    tipos_ordenados = []
+    for categoria, produtos_categoria in tipos_produtos.items():
+        # Calcular prioridade média da categoria
+        total_demanda = sum(p[6] for p in produtos_categoria)  # demanda
+        qtd_classe_a = sum(1 for p in produtos_categoria if p[4] == 'A')
+        qtd_classe_b = sum(1 for p in produtos_categoria if p[4] == 'B')
+        
+        # Score: prioriza categorias com mais classe A e maior demanda
+        score_categoria = (qtd_classe_a * 100) + (qtd_classe_b * 50) + total_demanda
+        tipos_ordenados.append((categoria, produtos_categoria, score_categoria))
+    
+    # Ordena por score decrescente (categorias mais importantes primeiro)
+    tipos_ordenados.sort(key=lambda x: x[2], reverse=True)
+    
+    print(f"[DEBUG] 📊 Ordem de prioridade dos tipos: {[(t[0], f'score:{t[2]:.0f}') for t in tipos_ordenados]}")
+    
+    # 3. Distribuir na linha frontal (profundidade = 0) em grupos
+    largura_atual = 0
+    produtos_usados_frontalmente = set()
+    
+    for categoria, produtos_categoria, score in tipos_ordenados:
+        if largura_atual >= container.dx:
+            print(f"[DEBUG] ⚠️ Largura frontal esgotada em {largura_atual}/{container.dx}")
+            break
+            
+        # Ordenar produtos da categoria por prioridade interna
+        produtos_categoria.sort(key=lambda p: (
+            0 if p[4] == 'A' else 1 if p[4] == 'B' else 2,  # ABC
+            -p[6],  # demanda decrescente
+            p[1][2]  # altura crescente (mais baixos primeiro na frente)
+        ))
+        
+        grupo_alocado = False
+        produtos_categoria_alocados = 0
+        
+        # Tentar alocar pelo menos um produto desta categoria na frente
+        for produto_info in produtos_categoria:
+            produto_idx, dims, peso, categoria_prod, classe_abc, zona_ergonomica, demanda = produto_info
+            w, d, h = dims
+            
+            # Verificar se cabe na largura restante
+            if largura_atual + w > container.dx:
+                if not grupo_alocado:  # Se não conseguiu alocar nenhum desta categoria
+                    print(f"[DEBUG] ⚠️ Categoria {categoria} não cabe na largura restante {largura_atual + w} > {container.dx}")
+                break
+            
+            # Tentar posicionar na profundidade 0
+            x = largura_atual
+            y = 0  # profundidade = 0 (frente)
+            z = 0  # começar no chão
+            
+            # Verificar se a posição é válida (sem colisões)
+            posicao_valida = True
+            for check_x in range(x, x + w):
+                for check_y in range(y, y + d):
+                    for check_z in range(z, z + h):
+                        if check_y >= container.dy or check_z >= container.dz:
+                            posicao_valida = False
+                            break
+                        if (check_x, check_y, check_z) in posicoes_ocupadas:
+                            posicao_valida = False
+                            break
+                    if not posicao_valida:
+                        break
+                if not posicao_valida:
+                    break
+            
+            if posicao_valida:
+                # Alocar produto na linha frontal
+                for check_x in range(x, x + w):
+                    for check_y in range(y, y + d):
+                        for check_z in range(z, z + h):
+                            posicoes_ocupadas.add((check_x, check_y, check_z))
+                
+                alocacoes_frontais.append((x, y, z, produto_idx))
+                produtos_usados_frontalmente.add(produto_idx)
+                largura_atual += w
+                grupo_alocado = True
+                produtos_categoria_alocados += 1
+                
+                print(f"[DEBUG] 🚪 Alocado frontalmente: {categoria} produto {produto_idx} em ({x},{y},{z}) - Largura: {largura_atual}/{container.dx}")
+                
+                # Limitar quantos produtos por categoria na frente (evitar dominação de uma categoria)
+                if produtos_categoria_alocados >= 3:  # máximo 3 produtos por categoria na frente
+                    break
+            else:
+                print(f"[DEBUG] ❌ Produto {produto_idx} de {categoria} não cabe na posição frontal ({x},{y},{z})")
+    
+    print(f"[DEBUG] 🚪 ACESSIBILIDADE FRONTAL: {len(alocacoes_frontais)} produtos alocados na frente")
+    print(f"[DEBUG] 🏷️ Tipos representados na frente: {len(set(p[3] for p in produtos_com_abc if p[0] in produtos_usados_frontalmente))}")
+    
+    return alocacoes_frontais, produtos_usados_frontalmente
+
+
 def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tuple[int, int, int]], produtos_df) -> List[tuple]:
     """
-    🎯 ALGORITMO HÍBRIDO INTELIGENTE - FUSÃO ABC + BIOMECÂNICO + GREEDY
-    =====================================================================
-    FLUXO OTIMIZADO DE 4 INTELIGÊNCIAS:
-    1. 📊 ABC: Classificação por demanda/giro (prioridade operacional)
-    2. 🧬 BIOMECÂNICO: Zoneamento ergonômico inteligente (ABC + peso + categoria)
-    3. 🏭 CHÃO DO GALPÃO: Empilhamento estável + validação física
-    4. 🚀 GREEDY OTIMIZADO: Ajuste fino + preenchimento de lacunas
+    🎯 ALGORITMO HÍBRIDO INTELIGENTE - FUSÃO ABC + BIOMECÂNICO + GREEDY + ACESSIBILIDADE
+    ==================================================================================
+    FLUXO OTIMIZADO DE 5 INTELIGÊNCIAS:
+    1. 🚪 ACESSIBILIDADE FRONTAL: Garante todos os tipos na profundidade = 0 (agrupados)
+    2. 📊 ABC: Classificação por demanda/giro (prioridade operacional)
+    3. 🧬 BIOMECÂNICO: Zoneamento ergonômico inteligente (ABC + peso + categoria)
+    4. 🏭 CHÃO DO GALPÃO: Empilhamento estável + validação física
+    5. 🚀 GREEDY OTIMIZADO: Ajuste fino + preenchimento de lacunas
     
     SEQUÊNCIA OTIMIZADA:
-    ABC → Biomecânica → Física → Greedy → Compactação Final
+    Acessibilidade Frontal → ABC → Biomecânica → Física → Greedy → Compactação Final
     """
-    print("[DEBUG] === 🎯 ALGORITMO HÍBRIDO INTELIGENTE (4 INTELIGÊNCIAS) ===")
+    print("[DEBUG] === 🎯 ALGORITMO HÍBRIDO INTELIGENTE (5 INTELIGÊNCIAS) ===")
     print(f"[DEBUG] Container: {container.dx}x{container.dy}x{container.dz}")
     print(f"[DEBUG] Blocos a processar: {len(block_dims)}")
     
@@ -50,21 +170,33 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
         
         produtos_com_abc.append((i, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
     
-    # 📊 ORDENAÇÃO INTELIGENTE: ABC → Demanda → Zona → Peso
-    produtos_com_abc.sort(key=lambda x: (
+    # Variáveis globais do algoritmo
+    alocacoes = []
+    produtos_nao_alocados = []  # 🤖 LISTA PARA GREEDY
+    posicoes_ocupadas = set()
+    
+    # 🚪 ETAPA 1.5: ACESSIBILIDADE FRONTAL AGRUPADA (NOVA FUNCIONALIDADE)
+    print("[DEBUG] === 🚪 INICIANDO ACESSIBILIDADE FRONTAL AGRUPADA ===")
+    alocacoes_frontais, produtos_frontais = garantir_acessibilidade_frontal_agrupada(
+        container, produtos_com_abc, posicoes_ocupadas
+    )
+    alocacoes.extend(alocacoes_frontais)
+    
+    # Remove produtos já alocados frontalmente da lista principal
+    produtos_restantes = [p for p in produtos_com_abc if p[0] not in produtos_frontais]
+    print(f"[DEBUG] 🚪 Produtos restantes após alocação frontal: {len(produtos_restantes)}")
+    
+    # 📊 ORDENAÇÃO INTELIGENTE: ABC → Demanda → Zona → Peso (para produtos restantes)
+    produtos_restantes.sort(key=lambda x: (
         0 if x[4] == 'A' else 1 if x[4] == 'B' else 2,  # ABC primeiro
         -x[6],  # Demanda decrescente dentro da classe
         0 if x[5] == ZONA_PREMIUM else 1,  # Zona premium preferencial
         -x[2] if x[4] in ['A', 'B'] else x[2]  # Peso: pesados primeiro para A/B, leves primeiro para C
     ))
     
-    print(f"[DEBUG] 📊 Ordenação ABC inteligente - Primeiros 5: {[(p[0], f'{p[2]:.1f}kg', p[4], f'{p[6]}dem', p[3]) for p in produtos_com_abc[:5]]}")
+    print(f"[DEBUG] 📊 Ordenação ABC inteligente - Primeiros 5 restantes: {[(p[0], f'{p[2]:.1f}kg', p[4], f'{p[6]}dem', p[3]) for p in produtos_restantes[:5]]}")
     
-    alocacoes = []
-    produtos_nao_alocados = []  # 🤖 LISTA PARA GREEDY
-    posicoes_ocupadas = set()
-    
-    # 🏭 CHÃO DO GALPÃO: Define zonas ABC + biomecânicas baseadas na altura
+    # � CHÃO DO GALPÃO: Define zonas ABC + biomecânicas baseadas na altura
     def get_zona_abc_biomecanica(z, peso, classe_abc, zona_ergonomica):
         """Determina adequação ABC + biomecânica por altura, peso e demanda"""
         z_min, z_max = zona_ergonomica
@@ -130,8 +262,8 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
             
         return score
     
-    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL (ABC + BIOMECÂNICA + FÍSICA)
-    for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_com_abc:
+    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL (ABC + BIOMECÂNICA + FÍSICA) - Produtos restantes
+    for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_restantes:
         w, d, h = dims
         melhor_posicao = None
         melhor_score = float('inf')
