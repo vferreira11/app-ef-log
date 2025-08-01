@@ -5,7 +5,7 @@ Funções de visualização 3D com Plotly.
 import numpy as np
 import plotly.graph_objects as go
 from typing import List, Tuple, Dict
-from .models import ContainerConfig
+from scripts.core.models import ContainerConfig
 
 
 def create_container_wireframe(container: ContainerConfig, fig: go.Figure) -> None:

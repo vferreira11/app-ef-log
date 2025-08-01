@@ -38,9 +38,9 @@ sys.path.append(scripts_dir)
 
 # Importa componentes modulares
 from scripts.core.models import ContainerConfig, Placement
-from scripts.core.algorithms import gpu_optimize_packing, hybrid_intelligent_packing
-from scripts.core.gpu_algorithms import gpu_hybrid_ultra_intelligent_packing, check_gpu_availability
-from scripts.core.visualization import create_3d_plot
+from ef_log.core.algorithms import hybrid_intelligent_packing
+from ef_log.gpu.algorithms import gpu_hybrid_ultra_intelligent_packing, check_gpu_availability
+from ef_log.gpu.visualization.standard import create_3d_plot
 from scripts.core.utils import (
     calculate_max_capacity, 
     map_block_colors, 
@@ -741,20 +741,20 @@ def render_gpu_parameters() -> tuple:
     try:
         # Força reimport para garantir detecção correta
         import importlib
-        from scripts.core import gpu_algorithms
+        from ef_log.gpu.algorithms import check_gpu_availability
         importlib.reload(gpu_algorithms)
-        gpu_status = gpu_algorithms.check_gpu_availability()
+        gpu_status = check_gpu_availability()
     except Exception as e:
         st.error(f"Erro na detecção GPU: {e}")
-        gpu_status = False
+        gpu_status = {'gpu_available': False, 'cuda_available': False, 'error': str(e)}
     
     # Debug: mostra status detalhado
     with st.expander("🔍 Debug GPU Status", expanded=True):
         st.json(gpu_status)
-        st.write(f"**Condição:** gpu_available={gpu_status} AND cuda_available={gpu_status}")
-        st.write(f"**Resultado:** {gpu_status}")
+        st.write(f"**Condição:** gpu_available={gpu_status.get('gpu_available', False)} AND cuda_available={gpu_status.get('cuda_available', False)}")
+        st.write(f"**Resultado:** {gpu_status.get('gpu_available', False) and gpu_status.get('cuda_available', False)}")
     
-    if gpu_status['gpu_available'] and gpu_status['cuda_available']:
+    if gpu_status.get('gpu_available', False) and gpu_status.get('cuda_available', False):
         st.success("✅ RTX 3070 Ti detectada - Modo GPU ativado")
         algo_tipo = "GPU Ultra-Inteligente"
         
@@ -1634,7 +1634,7 @@ def main():
     with col1:
         render_optimized_stat_card("Status", "Sistema Online", icon="🟢", color="#00D4AA")
     with col2:
-        render_optimized_stat_card("GPU", "Disponível" if check_gpu_availability() else "CPU Mode", 
+        render_optimized_stat_card("GPU", "Disponível" if check_gpu_availability().get('gpu_available', False) else "CPU Mode", 
                                   icon="⚡", color="#FF6B35")
     with col3:
         render_optimized_stat_card("Otimização", "Ativa", icon="🚀", color="#F7931E")

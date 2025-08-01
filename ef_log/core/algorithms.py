@@ -130,85 +130,67 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
             
         return score
     
-    # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL (ABC + BIOMECÂNICA + FÍSICA)
+    # 🏗️ ESTRUTURA AUXILIAR: Mapa de áreas definidas no chão (Z=0) por tipo de objeto
+    areas_chao_por_tipo = {}  # {(w,d,h): [(x1,y1,x2,y2), ...]} - áreas ocupadas no chão
+    objetos_por_tipo = {}     # {(w,d,h): [produto_idx, ...]} - objetos do mesmo tipo
+    
+    # Agrupa objetos por tipo (dimensões)
     for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_com_abc:
-        w, d, h = dims
-        melhor_posicao = None
-        melhor_score = float('inf')
+        if dims not in objetos_por_tipo:
+            objetos_por_tipo[dims] = []
+        objetos_por_tipo[dims].append((produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
+    
+    print(f"[DEBUG] 🏗️ Tipos de objetos encontrados: {len(objetos_por_tipo)}")
+    for tipo, lista in objetos_por_tipo.items():
+        print(f"[DEBUG] 🏗️ Tipo {tipo}: {len(lista)} objetos")
+    
+    # 🎯 ETAPA 2A: DEFINIR ÁREAS NO CHÃO (Z=0) - PRIMEIRA FASE
+    print("[DEBUG] === 🏗️ FASE 1: DEFININDO ÁREAS NO CHÃO ===")
+    
+    for tipo_dims, produtos_tipo in objetos_por_tipo.items():
+        w, d, h = tipo_dims
+        areas_chao_por_tipo[tipo_dims] = []
         
-        print(f"[DEBUG] 🎯 Processando produto {produto_idx}: {w}x{d}x{h}, {peso:.1f}kg, {classe_abc}, {categoria}")
-        print(f"[DEBUG] 📐 Container disponível: {container.dx}x{container.dy}x{container.dz}")
+        print(f"[DEBUG] 🏗️ Definindo área no chão para tipo {tipo_dims} ({len(produtos_tipo)} objetos)")
         
-        # 🏭 CHÃO DO GALPÃO: Força prioridade por camadas (Z crescente)
-        for z in range(0, container.dz - h + 1):
-            
-            # 📊 ABC + 🧬 BIOMECÂNICO: Verifica adequação integrada
-            zona_adequada = get_zona_abc_biomecanica(z, peso, classe_abc, zona_ergonomica)
-            print(f"[DEBUG] 📊🧬 Z={z}: zona ABC+bio adequada para {classe_abc}({peso:.1f}kg)? {zona_adequada}")
-            if not zona_adequada:
-                print(f"[DEBUG] ❌ Zona ABC+biomecânica rejeitou Z={z} para {classe_abc}")
-                continue
+        # Posiciona apenas o primeiro objeto de cada tipo no chão (Z=0)
+        primeiro_produto = produtos_tipo[0]
+        produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda = primeiro_produto
+        
+        melhor_posicao_chao = None
+        melhor_score_chao = float('inf')
+        
+        # Busca melhor posição no chão (Z=0 apenas)
+        for x in range(0, container.dx - w + 1):
+            for y in range(0, container.dy - d + 1):
+                z = 0  # FORÇAR CHÃO
                 
-            # Busca posição na camada atual
-            encontrou_nesta_camada = False
-            posicoes_testadas = 0
-            
-            for x in range(0, container.dx - w + 1):
-                for y in range(0, container.dy - d + 1):
-                    posicoes_testadas += 1
-                    
-                    # Verifica colisões
-                    colidiu = False
-                    for check_x in range(x, x + w):
-                        for check_y in range(y, y + d):
-                            for check_z in range(z, z + h):
-                                if (check_x, check_y, check_z) in posicoes_ocupadas:
-                                    colidiu = True
-                                    break
-                            if colidiu:
+                # Verifica colisões no chão
+                colidiu = False
+                for check_x in range(x, x + w):
+                    for check_y in range(y, y + d):
+                        for check_z in range(z, z + h):
+                            if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                colidiu = True
                                 break
                         if colidiu:
                             break
-                    
                     if colidiu:
-                        continue
-                    
-                    # 🏭 CHÃO DO GALPÃO: Verifica estabilidade (60% de suporte mínimo)
-                    estavel = True
-                    if z > 0:
-                        area_com_suporte = 0
-                        area_total = w * d
-                        for check_x in range(x, x + w):
-                            for check_y in range(y, y + d):
-                                if (check_x, check_y, z - 1) in posicoes_ocupadas:
-                                    area_com_suporte += 1
-                        # 60% de suporte mínimo (equilibrio entre realismo e flexibilidade)
-                        if (area_com_suporte / area_total) < 0.60:
-                            estavel = False
-                    
-                    if not estavel:
-                        suporte_percent = (area_com_suporte / area_total) * 100 if z > 0 else 100
-                        print(f"[DEBUG] ⚠️ Posição ({x},{y},{z}) instável - suporte {suporte_percent:.1f}% (mín 60%)")
-                        continue
-                    
-                    # 🚀 SCORE ABC INTELIGENTE: Calcula score integrado
-                    score = calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica)
-                    
-                    if score < melhor_score:
-                        melhor_score = score
-                        melhor_posicao = (x, y, z)
-                        encontrou_nesta_camada = True
-                        print(f"[DEBUG] 🚀 Nova melhor posição: ({x},{y},{z}) - Score: {score:.2f}")
-            
-            print(f"[DEBUG] 📊 Z={z}: testadas {posicoes_testadas} posições, encontrou válida? {encontrou_nesta_camada}")
-            
-            # 🏭 CHÃO DO GALPÃO: Se encontrou posição nesta camada, para (prioriza camadas baixas)
-            if encontrou_nesta_camada:
-                break
+                        break
+                
+                if colidiu:
+                    continue
+                
+                # Score para posicionamento no chão (prioriza proximidade)
+                score = x + y
+                
+                if score < melhor_score_chao:
+                    melhor_score_chao = score
+                    melhor_posicao_chao = (x, y, z)
         
-        # Aloca na melhor posição encontrada
-        if melhor_posicao:
-            x, y, z = melhor_posicao
+        # Posiciona o primeiro objeto no chão
+        if melhor_posicao_chao:
+            x, y, z = melhor_posicao_chao
             
             # Marca posições como ocupadas
             for check_x in range(x, x + w):
@@ -216,13 +198,113 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                     for check_z in range(z, z + h):
                         posicoes_ocupadas.add((check_x, check_y, check_z))
             
+            # Define área no chão para este tipo
+            area_chao = (x, y, x + w, y + d)
+            areas_chao_por_tipo[tipo_dims] = [area_chao]
+            
             alocacoes.append((x, y, z, produto_idx))
-            zona = "chão" if z <= 5 else "baixa" if z <= 30 else "ideal" if z <= 120 else "alta" if z <= 180 else "crítica"
-            print(f"[DEBUG] ✅ Produto {produto_idx} ({classe_abc}) alocado em ({x},{y},{z}) - Zona: {zona}, Score: {melhor_score:.2f}")
+            print(f"[DEBUG] 🏗️ Área definida no chão para tipo {tipo_dims}: {area_chao}")
+            print(f"[DEBUG] ✅ Primeiro objeto {produto_idx} posicionado em ({x},{y},{z})")
+            
+            # Remove da lista de produtos a processar
+            produtos_tipo.remove(primeiro_produto)
         else:
-            # 🤖 ADICIONA À LISTA GREEDY
-            produtos_nao_alocados.append((produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
-            print(f"[DEBUG] ⏳ Produto {produto_idx} ({classe_abc}) não alocado - será processado pelo GREEDY")
+            print(f"[DEBUG] ❌ Não foi possível definir área no chão para tipo {tipo_dims}")
+    
+    # 🎯 ETAPA 2B: EMPILHAMENTO VERTICAL RESTRITO - SEGUNDA FASE
+    print("[DEBUG] === 🏗️ FASE 2: EMPILHAMENTO VERTICAL RESTRITO ===")
+    
+    for tipo_dims, produtos_tipo in objetos_por_tipo.items():
+        if not produtos_tipo:  # Se não há mais objetos deste tipo
+            continue
+            
+        w, d, h = tipo_dims
+        areas_chao = areas_chao_por_tipo.get(tipo_dims, [])
+        
+        if not areas_chao:  # Se não definiu área no chão, pula
+            continue
+            
+        area_chao = areas_chao[0]  # Usa a primeira (e única) área definida
+        x_min, y_min, x_max, y_max = area_chao
+        
+        print(f"[DEBUG] 🔝 Empilhando {len(produtos_tipo)} objetos do tipo {tipo_dims}")
+        print(f"[DEBUG] 🔝 Área restrita: X={x_min}-{x_max}, Y={y_min}-{y_max}")
+        
+        for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_tipo:
+            melhor_posicao = None
+            melhor_score = float('inf')
+            
+            print(f"[DEBUG] 🔝 Empilhando produto {produto_idx}: {w}x{d}x{h}")
+            
+            # RESTRIÇÃO: Só pode empilhar dentro dos limites da área do chão
+            for z in range(1, container.dz - h + 1):  # Começa do Z=1 (acima do chão)
+                encontrou_nesta_camada = False
+                
+                # ÁREA RESTRITA: Só testa posições dentro dos limites do objeto do chão
+                for x in range(x_min, x_max - w + 1):
+                    for y in range(y_min, y_max - d + 1):
+                        
+                        # Verifica colisões
+                        colidiu = False
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                for check_z in range(z, z + h):
+                                    if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                        colidiu = True
+                                        break
+                                if colidiu:
+                                    break
+                            if colidiu:
+                                break
+                        
+                        if colidiu:
+                            continue
+                        
+                        # Verifica estabilidade (100% de suporte para empilhamento vertical)
+                        estavel = True
+                        area_com_suporte = 0
+                        area_total = w * d
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                    area_com_suporte += 1
+                        
+                        # Para empilhamento vertical, exige 90% de suporte
+                        if (area_com_suporte / area_total) < 0.90:
+                            estavel = False
+                        
+                        if not estavel:
+                            continue
+                        
+                        # Score simples: prioriza posições mais baixas
+                        score = z * 10 + x + y
+                        
+                        if score < melhor_score:
+                            melhor_score = score
+                            melhor_posicao = (x, y, z)
+                            encontrou_nesta_camada = True
+                            print(f"[DEBUG] 🔝 Nova posição empilhada: ({x},{y},{z}) - Score: {score:.2f}")
+                
+                # Para na primeira camada onde conseguir empilhar
+                if encontrou_nesta_camada:
+                    break
+            
+            # Aloca na melhor posição encontrada
+            if melhor_posicao:
+                x, y, z = melhor_posicao
+                
+                # Marca posições como ocupadas
+                for check_x in range(x, x + w):
+                    for check_y in range(y, y + d):
+                        for check_z in range(z, z + h):
+                            posicoes_ocupadas.add((check_x, check_y, check_z))
+                
+                alocacoes.append((x, y, z, produto_idx))
+                print(f"[DEBUG] ✅ Produto {produto_idx} empilhado em ({x},{y},{z}) - Coluna vertical")
+            else:
+                # Se não conseguiu empilhar, adiciona para o Greedy
+                produtos_nao_alocados.append((produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
+                print(f"[DEBUG] ⏳ Produto {produto_idx} não empilhado - será processado pelo GREEDY")
     
     print(f"[DEBUG] 📊 ETAPA 2 CONCLUÍDA: {len(alocacoes)} alocados, {len(produtos_nao_alocados)} para GREEDY")
     

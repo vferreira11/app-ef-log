@@ -206,6 +206,8 @@ def check_gpu_availability() -> Dict[str, bool]:
     """Função helper para verificar GPU."""
     return GPUManager().status
 
+from scripts.core.models import ContainerConfig
+
 def gpu_hybrid_ultra_intelligent_packing(container: ContainerConfig, items: List[Tuple[int, int, int]], config_df=None) -> list:
     """
     Função principal de empacotamento GPU.
