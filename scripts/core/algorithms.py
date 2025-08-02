@@ -56,9 +56,11 @@ def garantir_acessibilidade_frontal_agrupada(container: ContainerConfig, produto
     
     print(f"[DEBUG] 📊 Ordem de prioridade dos tipos: {[(t[0], f'score:{t[2]:.0f}') for t in tipos_ordenados]}")
     
-    # 3. Distribuir na linha frontal (profundidade = 0) em grupos
+    # 3. Distribuir na linha frontal (profundidade = 0) em ZONAS AGRUPADAS
     largura_atual = 0
     produtos_usados_frontalmente = set()
+    
+    print(f"[DEBUG] 🎯 INICIANDO DISTRIBUIÇÃO EM ZONAS AGRUPADAS NA LINHA FRONTAL")
     
     for categoria, produtos_categoria, score in tipos_ordenados:
         if largura_atual >= container.dx:
@@ -69,18 +71,22 @@ def garantir_acessibilidade_frontal_agrupada(container: ContainerConfig, produto
         produtos_categoria.sort(key=lambda p: (
             0 if p[4] == 'A' else 1 if p[4] == 'B' else 2,  # ABC
             -p[6],  # demanda decrescente
-            p[1][2]  # altura crescente (mais baixos primeiro na frente)
+            p[1][0] * p[1][1]  # área da base decrescente (produtos maiores primeiro)
         ))
         
-        grupo_alocado = False
-        produtos_categoria_alocados = 0
+        print(f"[DEBUG] 🏗️ CRIANDO ZONA PARA {categoria} - {len(produtos_categoria)} produtos disponíveis")
         
-        # Tentar alocar pelo menos um produto desta categoria na frente
+        # ESTRATÉGIA DE ZONA: Aloca TODOS os produtos possíveis desta categoria consecutivamente
+        largura_zona_inicial = largura_atual
+        produtos_categoria_alocados = 0
+        produtos_zona_atual = []
+        
+        # Primeira passada: tenta alocar quantos produtos desta categoria couber na linha frontal
         for produto_info in produtos_categoria:
             produto_idx, dims, peso, categoria_prod, classe_abc, zona_ergonomica, demanda = produto_info
             original_dims = dims
             
-            # 🔄 ROTAÇÃO INTELIGENTE: Testa todas as orientações para maximizar agrupamento frontal
+            # 🔄 ROTAÇÃO INTELIGENTE: Testa todas as orientações para maximizar agrupamento
             orientacoes = get_orientations(*original_dims)
             # Ordena orientações: prioriza largura menor para economizar espaço frontal
             orientacoes_ordenadas = sorted(orientacoes, key=lambda o: (o[0], o[1], o[2]))
@@ -124,36 +130,62 @@ def garantir_acessibilidade_frontal_agrupada(container: ContainerConfig, produto
                 w, d, h = melhor_orientacao
                 x, y, z = melhor_posicao
                 
-                # Alocar produto na linha frontal
+                # Adiciona à zona atual (ainda não aloca - primeiro planeja a zona completa)
+                produtos_zona_atual.append({
+                    'produto_idx': produto_idx,
+                    'posicao': (x, y, z),
+                    'orientacao': (w, d, h),
+                    'dims_originais': original_dims
+                })
+                
+                largura_atual += w
+                produtos_categoria_alocados += 1
+                
+                print(f"[DEBUG] 🏗️ Planejado para zona {categoria}: produto {produto_idx} em ({x},{y},{z}) - Orientação: {melhor_orientacao}")
+                
+                # 🎯 ESTRATÉGIA ZONA COMPLETA: Continua até esgotar espaço ou produtos da categoria
+                # Não há limite artificial - a zona cresce conforme necessário
+                
+            else:
+                # Se não cabe mais produtos desta categoria, finaliza a zona
+                print(f"[DEBUG] 🏁 Zona {categoria} finalizada - não cabe mais produtos")
+                break
+        
+        # Segunda passada: efetivamente aloca todos os produtos planejados para esta zona
+        if produtos_zona_atual:
+            largura_zona_final = largura_atual
+            largura_zona = largura_zona_final - largura_zona_inicial
+            
+            print(f"[DEBUG] 🎯 ALOCANDO ZONA {categoria}: {len(produtos_zona_atual)} produtos, largura da zona: {largura_zona}cm")
+            
+            for produto_zona in produtos_zona_atual:
+                x, y, z = produto_zona['posicao']
+                w, d, h = produto_zona['orientacao']
+                produto_idx = produto_zona['produto_idx']
+                
+                # Aloca efetivamente o produto na linha frontal
                 for check_x in range(x, x + w):
                     for check_y in range(y, y + d):
                         for check_z in range(z, z + h):
                             posicoes_ocupadas.add((check_x, check_y, check_z))
                 
                 # Armazena com a orientação otimizada
-                alocacoes_frontais.append((x, y, z, produto_idx, melhor_orientacao))
+                alocacoes_frontais.append((x, y, z, produto_idx, produto_zona['orientacao']))
                 produtos_usados_frontalmente.add(produto_idx)
-                largura_atual += w
-                grupo_alocado = True
-                produtos_categoria_alocados += 1
                 
-                print(f"[DEBUG] 🚪 Alocado frontalmente: {categoria} produto {produto_idx} em ({x},{y},{z}) - Orientação: {melhor_orientacao} - Largura: {largura_atual}/{container.dx}")
-                
-                # ⚖️ ESTRATÉGIA DE AGRUPAMENTO: Tenta alocar mais produtos da mesma categoria consecutivamente
-                # Mas limita para evitar dominação excessiva de uma categoria
-                if produtos_categoria_alocados >= 3:  # máximo 3 produtos por categoria na frente
-                    break
-                    
-                # 🎯 BONUS AGRUPAMENTO: Se ainda há espaço e produtos da mesma categoria, continua
-                espaco_restante = container.dx - largura_atual
-                if espaco_restante < 5:  # Se sobrou pouco espaço (menos de 5cm), para para dar chance a outras categorias
-                    print(f"[DEBUG] ⚖️ Espaço frontal limitado ({espaco_restante}cm), mudando para próxima categoria")
-                    break
-                    
-            else:
-                if not grupo_alocado:  # Se não conseguiu alocar nenhum desta categoria
-                    print(f"[DEBUG] ⚠️ Categoria {categoria} não cabe na largura frontal restante - testadas todas as orientações")
-                print(f"[DEBUG] ❌ Produto {produto_idx} de {categoria} não cabe na posição frontal - nenhuma orientação válida")
+                print(f"[DEBUG] ✅ ZONA {categoria}: produto {produto_idx} alocado em ({x},{y},{z}) - Orientação: {produto_zona['orientacao']}")
+            
+            print(f"[DEBUG] 🏆 ZONA {categoria} CONCLUÍDA: largura {largura_zona_inicial}-{largura_zona_final} ({largura_zona}cm)")
+            
+        else:
+            print(f"[DEBUG] ❌ ZONA {categoria}: nenhum produto coube na linha frontal")
+            
+        # 🚧 SEPARADOR VISUAL entre zonas (opcional - pode ser removido se causar problemas)
+        espaco_restante = container.dx - largura_atual
+        if espaco_restante >= 1 and len(tipos_ordenados) > 1:  # Se há mais categorias e espaço
+            # Deixa 1cm de espaço entre zonas para separação visual (opcional)
+            # largura_atual += 1
+            pass  # Por enquanto sem separador
     
     print(f"[DEBUG] 🚪 ACESSIBILIDADE FRONTAL: {len(alocacoes_frontais)} produtos alocados na frente")
     print(f"[DEBUG] 🏷️ Tipos representados na frente: {len(set(p[3] for p in produtos_com_abc if p[0] in produtos_usados_frontalmente))}")
