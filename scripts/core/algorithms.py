@@ -78,55 +78,82 @@ def garantir_acessibilidade_frontal_agrupada(container: ContainerConfig, produto
         # Tentar alocar pelo menos um produto desta categoria na frente
         for produto_info in produtos_categoria:
             produto_idx, dims, peso, categoria_prod, classe_abc, zona_ergonomica, demanda = produto_info
-            w, d, h = dims
+            original_dims = dims
             
-            # Verificar se cabe na largura restante
-            if largura_atual + w > container.dx:
-                if not grupo_alocado:  # Se não conseguiu alocar nenhum desta categoria
-                    print(f"[DEBUG] ⚠️ Categoria {categoria} não cabe na largura restante {largura_atual + w} > {container.dx}")
-                break
+            # 🔄 ROTAÇÃO INTELIGENTE: Testa todas as orientações para maximizar agrupamento frontal
+            orientacoes = get_orientations(*original_dims)
+            # Ordena orientações: prioriza largura menor para economizar espaço frontal
+            orientacoes_ordenadas = sorted(orientacoes, key=lambda o: (o[0], o[1], o[2]))
             
-            # Tentar posicionar na profundidade 0
-            x = largura_atual
-            y = 0  # profundidade = 0 (frente)
-            z = 0  # começar no chão
+            melhor_orientacao = None
+            melhor_posicao = None
             
-            # Verificar se a posição é válida (sem colisões)
-            posicao_valida = True
-            for check_x in range(x, x + w):
-                for check_y in range(y, y + d):
-                    for check_z in range(z, z + h):
-                        if check_y >= container.dy or check_z >= container.dz:
-                            posicao_valida = False
-                            break
-                        if (check_x, check_y, check_z) in posicoes_ocupadas:
-                            posicao_valida = False
+            for w, d, h in orientacoes_ordenadas:
+                # Verificar se cabe na largura restante
+                if largura_atual + w > container.dx:
+                    continue  # Tenta próxima orientação
+                
+                # Tentar posicionar na profundidade 0
+                x = largura_atual
+                y = 0  # profundidade = 0 (frente)
+                z = 0  # começar no chão
+                
+                # Verificar se a posição é válida (sem colisões)
+                posicao_valida = True
+                for check_x in range(x, x + w):
+                    for check_y in range(y, y + d):
+                        for check_z in range(z, z + h):
+                            if check_y >= container.dy or check_z >= container.dz:
+                                posicao_valida = False
+                                break
+                            if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                posicao_valida = False
+                                break
+                        if not posicao_valida:
                             break
                     if not posicao_valida:
                         break
-                if not posicao_valida:
-                    break
+                
+                if posicao_valida:
+                    melhor_orientacao = (w, d, h)
+                    melhor_posicao = (x, y, z)
+                    print(f"[DEBUG] 🔄 Orientação válida encontrada para {categoria}: {w}x{d}x{h} (original: {original_dims})")
+                    break  # Primeira orientação válida é a melhor (largura mínima)
             
-            if posicao_valida:
+            if melhor_orientacao and melhor_posicao:
+                w, d, h = melhor_orientacao
+                x, y, z = melhor_posicao
+                
                 # Alocar produto na linha frontal
                 for check_x in range(x, x + w):
                     for check_y in range(y, y + d):
                         for check_z in range(z, z + h):
                             posicoes_ocupadas.add((check_x, check_y, check_z))
                 
-                alocacoes_frontais.append((x, y, z, produto_idx))
+                # Armazena com a orientação otimizada
+                alocacoes_frontais.append((x, y, z, produto_idx, melhor_orientacao))
                 produtos_usados_frontalmente.add(produto_idx)
                 largura_atual += w
                 grupo_alocado = True
                 produtos_categoria_alocados += 1
                 
-                print(f"[DEBUG] 🚪 Alocado frontalmente: {categoria} produto {produto_idx} em ({x},{y},{z}) - Largura: {largura_atual}/{container.dx}")
+                print(f"[DEBUG] 🚪 Alocado frontalmente: {categoria} produto {produto_idx} em ({x},{y},{z}) - Orientação: {melhor_orientacao} - Largura: {largura_atual}/{container.dx}")
                 
-                # Limitar quantos produtos por categoria na frente (evitar dominação de uma categoria)
+                # ⚖️ ESTRATÉGIA DE AGRUPAMENTO: Tenta alocar mais produtos da mesma categoria consecutivamente
+                # Mas limita para evitar dominação excessiva de uma categoria
                 if produtos_categoria_alocados >= 3:  # máximo 3 produtos por categoria na frente
                     break
+                    
+                # 🎯 BONUS AGRUPAMENTO: Se ainda há espaço e produtos da mesma categoria, continua
+                espaco_restante = container.dx - largura_atual
+                if espaco_restante < 5:  # Se sobrou pouco espaço (menos de 5cm), para para dar chance a outras categorias
+                    print(f"[DEBUG] ⚖️ Espaço frontal limitado ({espaco_restante}cm), mudando para próxima categoria")
+                    break
+                    
             else:
-                print(f"[DEBUG] ❌ Produto {produto_idx} de {categoria} não cabe na posição frontal ({x},{y},{z})")
+                if not grupo_alocado:  # Se não conseguiu alocar nenhum desta categoria
+                    print(f"[DEBUG] ⚠️ Categoria {categoria} não cabe na largura frontal restante - testadas todas as orientações")
+                print(f"[DEBUG] ❌ Produto {produto_idx} de {categoria} não cabe na posição frontal - nenhuma orientação válida")
     
     print(f"[DEBUG] 🚪 ACESSIBILIDADE FRONTAL: {len(alocacoes_frontais)} produtos alocados na frente")
     print(f"[DEBUG] 🏷️ Tipos representados na frente: {len(set(p[3] for p in produtos_com_abc if p[0] in produtos_usados_frontalmente))}")
@@ -264,83 +291,84 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
     
     # 🎯 ETAPA 2: ALOCAÇÃO PRINCIPAL (ABC + BIOMECÂNICA + FÍSICA) - Produtos restantes
     for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_restantes:
-        w, d, h = dims
+        original_dims = dims
         melhor_posicao = None
         melhor_score = float('inf')
+        melhor_orientacao = None
         
-        print(f"[DEBUG] 🎯 Processando produto {produto_idx}: {w}x{d}x{h}, {peso:.1f}kg, {classe_abc}, {categoria}")
+        print(f"[DEBUG] 🎯 Processando produto {produto_idx}: {original_dims}, {peso:.1f}kg, {classe_abc}, {categoria}")
         print(f"[DEBUG] 📐 Container disponível: {container.dx}x{container.dy}x{container.dz}")
         
-        # 🏭 CHÃO DO GALPÃO: Força prioridade por camadas (Z crescente)
-        for z in range(0, container.dz - h + 1):
+        # 🔄 TESTA TODAS AS ORIENTAÇÕES POSSÍVEIS
+        orientacoes = get_orientations(*original_dims)
+        
+        for w, d, h in orientacoes:
+            print(f"[DEBUG] 🔄 Testando orientação {w}x{d}x{h} para produto {produto_idx}")
             
-            # 📊 ABC + 🧬 BIOMECÂNICO: Verifica adequação integrada
-            zona_adequada = get_zona_abc_biomecanica(z, peso, classe_abc, zona_ergonomica)
-            print(f"[DEBUG] 📊🧬 Z={z}: zona ABC+bio adequada para {classe_abc}({peso:.1f}kg)? {zona_adequada}")
-            if not zona_adequada:
-                print(f"[DEBUG] ❌ Zona ABC+biomecânica rejeitou Z={z} para {classe_abc}")
-                continue
+            # 🏭 CHÃO DO GALPÃO: Força prioridade por camadas (Z crescente)
+            for z in range(0, container.dz - h + 1):
                 
-            # Busca posição na camada atual
-            encontrou_nesta_camada = False
-            posicoes_testadas = 0
-            
-            for x in range(0, container.dx - w + 1):
-                for y in range(0, container.dy - d + 1):
-                    posicoes_testadas += 1
+                # 📊 ABC + 🧬 BIOMECÂNICO: Verifica adequação integrada
+                zona_adequada = get_zona_abc_biomecanica(z, peso, classe_abc, zona_ergonomica)
+                if not zona_adequada:
+                    continue
                     
-                    # Verifica colisões
-                    colidiu = False
-                    for check_x in range(x, x + w):
-                        for check_y in range(y, y + d):
-                            for check_z in range(z, z + h):
-                                if (check_x, check_y, check_z) in posicoes_ocupadas:
-                                    colidiu = True
+                # Busca posição na camada atual
+                encontrou_nesta_camada = False
+                
+                for x in range(0, container.dx - w + 1):
+                    for y in range(0, container.dy - d + 1):
+                        
+                        # Verifica colisões
+                        colidiu = False
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                for check_z in range(z, z + h):
+                                    if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                        colidiu = True
+                                        break
+                                if colidiu:
                                     break
                             if colidiu:
                                 break
+                        
                         if colidiu:
-                            break
-                    
-                    if colidiu:
-                        continue
-                    
-                    # 🏭 CHÃO DO GALPÃO: Verifica estabilidade (60% de suporte mínimo)
-                    estavel = True
-                    if z > 0:
-                        area_com_suporte = 0
-                        area_total = w * d
-                        for check_x in range(x, x + w):
-                            for check_y in range(y, y + d):
-                                if (check_x, check_y, z - 1) in posicoes_ocupadas:
-                                    area_com_suporte += 1
-                        # 60% de suporte mínimo (equilibrio entre realismo e flexibilidade)
-                        if (area_com_suporte / area_total) < 0.60:
-                            estavel = False
-                    
-                    if not estavel:
-                        suporte_percent = (area_com_suporte / area_total) * 100 if z > 0 else 100
-                        print(f"[DEBUG] ⚠️ Posição ({x},{y},{z}) instável - suporte {suporte_percent:.1f}% (mín 60%)")
-                        continue
-                    
-                    # 🚀 SCORE ABC INTELIGENTE: Calcula score integrado
-                    score = calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica)
-                    
-                    if score < melhor_score:
-                        melhor_score = score
-                        melhor_posicao = (x, y, z)
-                        encontrou_nesta_camada = True
-                        print(f"[DEBUG] 🚀 Nova melhor posição: ({x},{y},{z}) - Score: {score:.2f}")
-            
-            print(f"[DEBUG] 📊 Z={z}: testadas {posicoes_testadas} posições, encontrou válida? {encontrou_nesta_camada}")
-            
-            # 🏭 CHÃO DO GALPÃO: Se encontrou posição nesta camada, para (prioriza camadas baixas)
-            if encontrou_nesta_camada:
-                break
+                            continue
+                        
+                        # 🏭 CHÃO DO GALPÃO: Verifica estabilidade (60% de suporte mínimo)
+                        estavel = True
+                        if z > 0:
+                            area_com_suporte = 0
+                            area_total = w * d
+                            for check_x in range(x, x + w):
+                                for check_y in range(y, y + d):
+                                    if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                        area_com_suporte += 1
+                            # 60% de suporte mínimo (equilibrio entre realismo e flexibilidade)
+                            if (area_com_suporte / area_total) < 0.60:
+                                estavel = False
+                        
+                        if not estavel:
+                            continue
+                        
+                        # 🚀 SCORE ABC INTELIGENTE: Calcula score integrado
+                        score = calcular_score_abc_inteligente(x, y, z, w, d, h, peso, categoria, classe_abc, zona_ergonomica)
+                        
+                        if score < melhor_score:
+                            melhor_score = score
+                            melhor_posicao = (x, y, z)
+                            melhor_orientacao = (w, d, h)
+                            encontrou_nesta_camada = True
+                            print(f"[DEBUG] 🚀 Nova melhor posição: ({x},{y},{z}) - Orientação: {w}x{d}x{h} - Score: {score:.2f}")
+                
+                # 🏭 CHÃO DO GALPÃO: Se encontrou posição nesta camada, para (prioriza camadas baixas)
+                if encontrou_nesta_camada:
+                    break
         
         # Aloca na melhor posição encontrada
-        if melhor_posicao:
+        if melhor_posicao and melhor_orientacao:
             x, y, z = melhor_posicao
+            w, d, h = melhor_orientacao
             
             # Marca posições como ocupadas
             for check_x in range(x, x + w):
@@ -348,12 +376,12 @@ def hybrid_intelligent_packing(container: ContainerConfig, block_dims: List[Tupl
                     for check_z in range(z, z + h):
                         posicoes_ocupadas.add((check_x, check_y, check_z))
             
-            alocacoes.append((x, y, z, produto_idx))
+            alocacoes.append((x, y, z, produto_idx, melhor_orientacao))
             zona = "chão" if z <= 5 else "baixa" if z <= 30 else "ideal" if z <= 120 else "alta" if z <= 180 else "crítica"
-            print(f"[DEBUG] ✅ Produto {produto_idx} ({classe_abc}) alocado em ({x},{y},{z}) - Zona: {zona}, Score: {melhor_score:.2f}")
+            print(f"[DEBUG] ✅ Produto {produto_idx} ({classe_abc}) alocado em ({x},{y},{z}) - Orientação: {melhor_orientacao} - Zona: {zona}, Score: {melhor_score:.2f}")
         else:
             # 🤖 ADICIONA À LISTA GREEDY
-            produtos_nao_alocados.append((produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
+            produtos_nao_alocados.append((produto_idx, original_dims, peso, categoria, classe_abc, zona_ergonomica, demanda))
             print(f"[DEBUG] ⏳ Produto {produto_idx} ({classe_abc}) não alocado - será processado pelo GREEDY")
     
     print(f"[DEBUG] 📊 ETAPA 2 CONCLUÍDA: {len(alocacoes)} alocados, {len(produtos_nao_alocados)} para GREEDY")
@@ -395,70 +423,77 @@ def aplicar_greedy_inteligente(container: ContainerConfig, produtos_nao_alocados
     alocacoes_greedy = []
     
     for produto_idx, dims, peso, categoria, classe_abc, zona_ergonomica, demanda in produtos_nao_alocados:
-        w, d, h = dims
+        original_dims = dims
         melhor_posicao = None
         melhor_score = float('inf')
+        melhor_orientacao = None
         
-        print(f"[DEBUG] 🤖 GREEDY processando {produto_idx} ({classe_abc}): {w}x{d}x{h}")
+        print(f"[DEBUG] 🤖 GREEDY processando {produto_idx} ({classe_abc}): {original_dims}")
         
-        # 🤖 GREEDY: Busca QUALQUER posição válida (sem restrições ABC)
-        for z in range(0, container.dz - h + 1):
-            for x in range(0, container.dx - w + 1):
-                for y in range(0, container.dy - d + 1):
-                    
-                    # Verifica colisões
-                    colidiu = False
-                    for check_x in range(x, x + w):
-                        for check_y in range(y, y + d):
-                            for check_z in range(z, z + h):
-                                if (check_x, check_y, check_z) in posicoes_ocupadas:
-                                    colidiu = True
+        # 🔄 GREEDY COM ROTAÇÃO: Testa todas as orientações possíveis
+        orientacoes = get_orientations(*original_dims)
+        
+        for w, d, h in orientacoes:
+            # 🤖 GREEDY: Busca QUALQUER posição válida (sem restrições ABC)
+            for z in range(0, container.dz - h + 1):
+                for x in range(0, container.dx - w + 1):
+                    for y in range(0, container.dy - d + 1):
+                        
+                        # Verifica colisões
+                        colidiu = False
+                        for check_x in range(x, x + w):
+                            for check_y in range(y, y + d):
+                                for check_z in range(z, z + h):
+                                    if (check_x, check_y, check_z) in posicoes_ocupadas:
+                                        colidiu = True
+                                        break
+                                if colidiu:
                                     break
                             if colidiu:
                                 break
+                        
                         if colidiu:
-                            break
-                    
-                    if colidiu:
-                        continue
-                    
-                    # 🏭 Verifica estabilidade básica (mais flexível que ABC)
-                    estavel = True
-                    if z > 0:
-                        area_com_suporte = 0
-                        area_total = w * d
-                        for check_x in range(x, x + w):
-                            for check_y in range(y, y + d):
-                                if (check_x, check_y, z - 1) in posicoes_ocupadas:
-                                    area_com_suporte += 1
-                        # 40% de suporte mínimo (mais flexível que os 60% do ABC)
-                        if (area_com_suporte / area_total) < 0.40:
-                            estavel = False
-                    
-                    if not estavel:
-                        continue
-                    
-                    # 🤖 Score Greedy: prioriza proximidade + prefere zona ABC quando possível
-                    score = x + y + z * 0.1
-                    
-                    # Bonus se conseguir ficar na zona ABC ideal (mas não obrigatório)
-                    z_min, z_max = zona_ergonomica
-                    if z_min <= z <= z_max:
-                        score -= 10.0  # Bonus por zona correta
-                    
-                    # Bonus por classe (tenta salvar classe A)
-                    if classe_abc == 'A':
-                        score -= 5.0  # Prioriza classe A
-                    elif classe_abc == 'B':
-                        score -= 2.0  # Prioriza classe B
-                    
-                    if score < melhor_score:
-                        melhor_score = score
-                        melhor_posicao = (x, y, z)
+                            continue
+                        
+                        # 🏭 Verifica estabilidade básica (mais flexível que ABC)
+                        estavel = True
+                        if z > 0:
+                            area_com_suporte = 0
+                            area_total = w * d
+                            for check_x in range(x, x + w):
+                                for check_y in range(y, y + d):
+                                    if (check_x, check_y, z - 1) in posicoes_ocupadas:
+                                        area_com_suporte += 1
+                            # 40% de suporte mínimo (mais flexível que os 60% do ABC)
+                            if (area_com_suporte / area_total) < 0.40:
+                                estavel = False
+                        
+                        if not estavel:
+                            continue
+                        
+                        # 🤖 Score Greedy: prioriza proximidade + prefere zona ABC quando possível
+                        score = x + y + z * 0.1
+                        
+                        # Bonus se conseguir ficar na zona ABC ideal (mas não obrigatório)
+                        z_min, z_max = zona_ergonomica
+                        if z_min <= z <= z_max:
+                            score -= 10.0  # Bonus por zona correta
+                        
+                        # Bonus por classe (tenta salvar classe A)
+                        if classe_abc == 'A':
+                            score -= 5.0  # Prioriza classe A
+                        elif classe_abc == 'B':
+                            score -= 2.0  # Prioriza classe B
+                        
+                        if score < melhor_score:
+                            melhor_score = score
+                            melhor_posicao = (x, y, z)
+                            melhor_orientacao = (w, d, h)
         
         # Aloca se encontrou posição
-        if melhor_posicao:
+        if melhor_posicao and melhor_orientacao:
             x, y, z = melhor_posicao
+            w, d, h = melhor_orientacao
             
             # Marca posições como ocupadas
             for check_x in range(x, x + w):
@@ -466,9 +501,9 @@ def aplicar_greedy_inteligente(container: ContainerConfig, produtos_nao_alocados
                     for check_z in range(z, z + h):
                         posicoes_ocupadas.add((check_x, check_y, check_z))
             
-            alocacoes_greedy.append((x, y, z, produto_idx))
+            alocacoes_greedy.append((x, y, z, produto_idx, melhor_orientacao))
             zona = "chão" if z <= 5 else "baixa" if z <= 30 else "ideal" if z <= 120 else "alta" if z <= 180 else "crítica"
-            print(f"[DEBUG] 🤖 GREEDY salvou {produto_idx} ({classe_abc}) em ({x},{y},{z}) - Zona: {zona}")
+            print(f"[DEBUG] 🤖 GREEDY salvou {produto_idx} ({classe_abc}) em ({x},{y},{z}) - Orientação: {melhor_orientacao} - Zona: {zona}")
         else:
             print(f"[DEBUG] 🤖 GREEDY falhou: {produto_idx} ({classe_abc}) sem espaço")
     
