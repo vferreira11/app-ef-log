@@ -5,7 +5,8 @@ import numpy as np
 import random
 from math import ceil
 from numba import cuda
-from ef_log.core.algorithms import Cuboid
+from ef_log.core.models import ContainerConfig
+from ef_log.utils.visualization import create_3d_plot
 
 # -----------------------------------------------------------------------------
 def filter_collisions(placements, block_dims, dx, dy, dz):
@@ -129,8 +130,12 @@ def main():
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     if args.save_plot:
-        cube = Cuboid(dx, dy, dz)
-        cube.plot_solution(placements, block_dims, output_path=args.plot_file)
+        container = ContainerConfig(dx=dx, dy=dy, dz=dz)
+        fig = create_3d_plot(container, placements, block_dims)
+        if args.plot_file:
+            fig.write_image(args.plot_file)
+        else:
+            fig.show()
 
 if __name__=='__main__':
     main()
